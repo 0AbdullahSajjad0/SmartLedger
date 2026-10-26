@@ -1,6 +1,10 @@
 @SmartLedger.Api_HostAddress = http://localhost:5217
 
-GET {{SmartLedger.Api_HostAddress}}/weatherforecast/
+### Health check
+GET {{SmartLedger.Api_HostAddress}}/health
+
+### Unknown route (returns a ProblemDetails 404)
+GET {{SmartLedger.Api_HostAddress}}/does-not-exist
 Accept: application/json
 
 ###
