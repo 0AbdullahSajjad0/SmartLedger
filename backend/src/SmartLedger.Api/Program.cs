@@ -19,6 +19,14 @@ builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 
 builder.Services.AddHealthChecks();
 
+// Only the Angular app's origins may call the API from a browser. Set per environment in configuration.
+const string FrontendCorsPolicy = "Frontend";
+var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
+builder.Services.AddCors(options => options.AddPolicy(FrontendCorsPolicy, policy => policy
+    .WithOrigins(allowedOrigins)
+    .AllowAnyHeader()
+    .AllowAnyMethod()));
+
 var app = builder.Build();
 
 app.UseExceptionHandler();
@@ -31,6 +39,9 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+// Must run before authorization so browser preflight (OPTIONS) requests are answered.
+app.UseCors(FrontendCorsPolicy);
 
 app.UseAuthorization();
 
