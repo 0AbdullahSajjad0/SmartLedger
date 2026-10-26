@@ -1,4 +1,4 @@
-name: Backend CI
+name: Backend CI/CD
 
 on:
   pull_request:
@@ -13,16 +13,19 @@ on:
       - ".github/workflows/backend-ci.yml"
   workflow_dispatch:
 
-# A newer push to the same branch or PR cancels the run that is still going.
+# A newer push to the same PR cancels the run that is still going.
+# Runs on main are never cancelled, so a deployment is not interrupted halfway.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
 
 env:
   IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/smartledger-api
+  AZURE_RESOURCE_GROUP: rg-smartledger
+  AZURE_CONTAINER_APP: ca-smartledger-api
 
 jobs:
   build-and-test:
@@ -86,3 +89,50 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+  deploy:
+    name: Deploy to Azure
+    needs: docker
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: ${{ steps.app.outputs.url }}
+    permissions:
+      contents: read
+      id-token: write # lets azure/login exchange GitHub's OIDC token for Azure access, no stored password
+    steps:
+      - name: Log in to Azure
+        uses: azure/login@v3
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      # Deploy the image built from this exact commit, not "latest", so every revision maps to a commit.
+      - name: Update Container App image
+        run: |
+          az config set extension.use_dynamic_install=yes_without_prompt
+          image="${IMAGE_NAME,,}:sha-${GITHUB_SHA}"
+          az containerapp update \
+            --name "$AZURE_CONTAINER_APP" \
+            --resource-group "$AZURE_RESOURCE_GROUP" \
+            --image "$image" \
+            --output none
+          echo "Deployed $image"
+
+      - name: Get app URL
+        id: app
+        run: |
+          fqdn=$(az containerapp show \
+            --name "$AZURE_CONTAINER_APP" \
+            --resource-group "$AZURE_RESOURCE_GROUP" \
+            --query properties.configuration.ingress.fqdn --output tsv)
+          echo "url=https://$fqdn" >> "$GITHUB_OUTPUT"
+
+      # The app may be starting from zero replicas, so allow time for a cold start.
+      - name: Smoke test /health
+        run: |
+          curl --fail --silent --show-error \
+            --retry 10 --retry-delay 6 --retry-all-errors --max-time 30 \
+            "${{ steps.app.outputs.url }}/health"
