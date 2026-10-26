@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/SmartLedger.Api/SmartLedger.Api.csproj" Id="d35c9b51-9cb5-4a6c-8c3d-28421f166926" />
+    <Project Path="src/SmartLedger.Application/SmartLedger.Application.csproj" Id="f8ff4a01-3fa1-41b9-a434-43c0f3494330" />
+    <Project Path="src/SmartLedger.Domain/SmartLedger.Domain.csproj" Id="6e6fb3ed-2b24-41cd-8471-7b22dbaf67e0" />
+    <Project Path="src/SmartLedger.Infrastructure/SmartLedger.Infrastructure.csproj" Id="c34fc9a0-9f8f-48dd-b36f-87362ea1f95d" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/SmartLedger.UnitTests/SmartLedger.UnitTests.csproj" Id="3acdbe72-3e1d-44f1-9b71-e9eae28e468c" />
+  </Folder>
+</Solution>
