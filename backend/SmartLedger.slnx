@@ -1,4 +1,9 @@
 <Solution>
+  <Folder Name="/Solution Items/">
+    <File Path="Directory.Build.props" />
+    <File Path="Directory.Packages.props" />
+    <File Path="global.json" />
+  </Folder>
   <Folder Name="/src/">
     <Project Path="src/SmartLedger.Api/SmartLedger.Api.csproj" Id="d35c9b51-9cb5-4a6c-8c3d-28421f166926" />
     <Project Path="src/SmartLedger.Application/SmartLedger.Application.csproj" Id="f8ff4a01-3fa1-41b9-a434-43c0f3494330" />
