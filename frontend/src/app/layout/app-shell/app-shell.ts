@@ -18,8 +18,12 @@ interface NavItem {
 export class AppShell {
   protected readonly auth = inject(AuthStore);
 
-  /** Grows as features ship: Receipts, Scan, Reports, Categories. */
-  protected readonly nav: readonly NavItem[] = [{ label: 'Overview', path: '/overview' }];
+  /** Grows as features ship: Reports and Categories come later. */
+  protected readonly nav: readonly NavItem[] = [
+    { label: 'Overview', path: '/overview' },
+    { label: 'Receipts', path: '/receipts' },
+    { label: 'Scan', path: '/scan' },
+  ];
 
   protected signOut(): void {
     void this.auth.signOut();

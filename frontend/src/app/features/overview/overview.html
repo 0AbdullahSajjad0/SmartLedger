@@ -4,11 +4,15 @@
 </section>
 
 <section class="empty" aria-labelledby="empty-title">
-  <h2 id="empty-title" class="empty__title">Your ledger is empty</h2>
+  <h2 id="empty-title" class="empty__title">Your statement starts with a scan</h2>
   <p class="empty__text">
-    Scanning receipts is the next feature to land. Once it does, this page becomes your monthly statement:
+    Scan or upload your receipts. Once AI extraction lands, this page becomes your monthly statement:
     what you spent, what's waiting for review and how each category is tracking against its budget.
   </p>
+  <div class="empty__actions">
+    <a class="btn" routerLink="/scan">Scan a receipt</a>
+    <a class="btn btn--ghost" routerLink="/receipts">Open the ledger</a>
+  </div>
   <dl class="empty__facts mono">
     <dt>Reporting currency</dt>
     <dd>{{ user()?.baseCurrency }}</dd>

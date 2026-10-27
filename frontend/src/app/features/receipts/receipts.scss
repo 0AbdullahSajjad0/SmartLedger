@@ -1,0 +1,93 @@
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 28px;
+  margin: 24px 0 20px;
+  border-bottom: var(--rule);
+
+  &__tab {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    color: var(--color-muted);
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    text-decoration: none;
+
+    &:hover {
+      color: var(--color-ink);
+    }
+
+    &--active {
+      color: var(--color-ink);
+      border-bottom-color: var(--color-accent);
+    }
+  }
+}
+
+.col-no {
+  width: 64px;
+}
+
+.muted {
+  color: var(--color-muted);
+  font-size: 13px;
+}
+
+.faint {
+  color: var(--color-faint);
+  font-size: 12px;
+}
+
+.vendor {
+  font-weight: 500;
+
+  &--pending {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    font-weight: 400;
+    color: var(--color-muted);
+  }
+}
+
+.currency {
+  font-size: 11px;
+  color: var(--color-muted);
+}
+
+// While a new page loads, keep the old rows visible but dimmed.
+.is-refreshing {
+  opacity: 0.55;
+  transition: opacity 150ms ease;
+}
+
+.pager {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding-top: 20px;
+
+  &__buttons {
+    display: flex;
+    gap: 12px;
+  }
+}
+
+.notice {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 32px 0;
+  font-size: 15px;
+
+  &--error {
+    color: var(--color-negative);
+  }
+}
