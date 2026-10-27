@@ -1,0 +1,99 @@
+<header class="page-header">
+  <div class="page-header__titles">
+    <span class="eyebrow">The ledger @if (range(); as r) { · {{ r.total }} {{ r.total === 1 ? 'entry' : 'entries' }} }</span>
+    <h1 class="page-header__title">Receipts</h1>
+  </div>
+  <a class="btn" routerLink="/scan">Scan a receipt</a>
+</header>
+
+<nav class="tabs" aria-label="Filter by status">
+  @for (tab of tabs; track tab.label) {
+    <a
+      class="tabs__tab"
+      [class.tabs__tab--active]="tab.status === status()"
+      [attr.aria-current]="tab.status === status() ? 'page' : null"
+      routerLink="/receipts"
+      [queryParams]="{ status: tab.status, page: null }"
+      >{{ tab.label }}</a
+    >
+  }
+</nav>
+
+@if (errorMessage(); as message) {
+  <div class="notice notice--error" role="alert">
+    <p>{{ message }}</p>
+    <button type="button" class="link-button" (click)="ledger.reload()">Try again</button>
+  </div>
+} @else if (ledger.hasValue()) {
+  @let result = ledger.value();
+
+  @if (result.items.length === 0) {
+    <div class="notice">
+      @if (status()) {
+        <p>No receipts with this status.</p>
+      } @else {
+        <p>Your ledger is empty. Scan your first receipt to start it.</p>
+        <a class="btn" routerLink="/scan">Scan a receipt</a>
+      }
+    </div>
+  } @else {
+    <div class="ledger-scroll" [class.is-refreshing]="ledger.isLoading()">
+      <table class="ledger">
+        <thead>
+          <tr>
+            <th scope="col" class="col-no">No.</th>
+            <th scope="col">Received</th>
+            <th scope="col">Vendor</th>
+            <th scope="col">Receipt date</th>
+            <th scope="col" class="num">Amount</th>
+            <th scope="col">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (receipt of result.items; track receipt.id) {
+            <tr>
+              <td class="mono faint">{{ receipt.number | entryNumber }}</td>
+              <td class="mono muted">{{ receipt.createdAt | date: 'dd MMM y' }}</td>
+              <td>
+                @if (receipt.vendorName) {
+                  <span class="vendor">{{ receipt.vendorName }}</span>
+                } @else {
+                  <span class="vendor vendor--pending">{{ receipt.fileName }}</span>
+                }
+              </td>
+              <td class="mono muted">{{ receipt.receiptDate ? (receipt.receiptDate | date: 'dd MMM y') : '—' }}</td>
+              <td class="num">
+                @if (receipt.total !== null) {
+                  {{ receipt.total | number: '1.2-2' }} <span class="currency">{{ receipt.currency }}</span>
+                } @else {
+                  —
+                }
+              </td>
+              <td><app-status-stamp [status]="receipt.status" /></td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <footer class="pager">
+      @if (range(); as r) {
+        <span class="mono muted">SHOWING {{ r.first }}–{{ r.last }} OF {{ r.total }}</span>
+      }
+      <div class="pager__buttons">
+        @if (page() > 1) {
+          <a class="btn btn--ghost" routerLink="/receipts" [queryParams]="{ page: page() - 1 }" queryParamsHandling="merge"
+            >Previous</a
+          >
+        }
+        @if (page() < totalPages()) {
+          <a class="btn btn--ghost" routerLink="/receipts" [queryParams]="{ page: page() + 1 }" queryParamsHandling="merge"
+            >Next</a
+          >
+        }
+      </div>
+    </footer>
+  }
+} @else {
+  <p class="notice mono muted" aria-live="polite">LOADING THE LEDGER…</p>
+}

@@ -38,6 +38,16 @@ export const routes: Routes = [
         title: 'Overview · SmartLedger',
         loadComponent: () => import('./features/overview/overview').then((m) => m.Overview),
       },
+      {
+        path: 'receipts',
+        title: 'Receipts · SmartLedger',
+        loadComponent: () => import('./features/receipts/receipts').then((m) => m.Receipts),
+      },
+      {
+        path: 'scan',
+        title: 'Scan receipts · SmartLedger',
+        loadComponent: () => import('./features/scan/scan').then((m) => m.Scan),
+      },
     ],
   },
   { path: '**', redirectTo: '' },

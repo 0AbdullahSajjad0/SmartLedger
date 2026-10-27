@@ -1,0 +1,107 @@
+<header class="page-header">
+  <div class="page-header__titles">
+    <span class="eyebrow">Intake</span>
+    <h1 class="page-header__title">Scan receipts</h1>
+  </div>
+  <p class="intro">AI reads each receipt in seconds. Nothing enters your ledger until you approve it.</p>
+</header>
+
+<div class="layout">
+  <section class="scanner" aria-label="Scanner">
+    <div
+      class="bed"
+      [class.bed--active]="dragging()"
+      (dragover)="onDragOver($event)"
+      (dragleave)="dragging.set(false)"
+      (drop)="onDrop($event)"
+    >
+      <span class="bed__corner bed__corner--tl" aria-hidden="true"></span>
+      <span class="bed__corner bed__corner--tr" aria-hidden="true"></span>
+      <span class="bed__corner bed__corner--bl" aria-hidden="true"></span>
+      <span class="bed__corner bed__corner--br" aria-hidden="true"></span>
+      <span class="bed__scanline" aria-hidden="true"></span>
+      <span class="bed__ready mono" aria-hidden="true">{{ queue.busy() ? 'SCANNING' : 'BED READY' }}</span>
+
+      <h2 class="bed__title">Lay the receipt <em>on the bed</em></h2>
+      <p class="bed__text">Drop photos or PDFs anywhere in this frame, up to {{ maxFiles }} at a time.</p>
+
+      <div class="bed__actions">
+        <button type="button" class="btn" (click)="filePicker.click()">Choose from files</button>
+        <button type="button" class="btn btn--light" (click)="camera.click()">Use camera</button>
+      </div>
+
+      <input #filePicker class="visually-hidden" type="file" multiple [accept]="accept" tabindex="-1"
+        aria-hidden="true" (change)="onFilesChosen(filePicker)" />
+      <!-- On phones, "capture" opens the rear camera straight away. -->
+      <input #camera class="visually-hidden" type="file" accept="image/*" capture="environment" tabindex="-1"
+        aria-hidden="true" (change)="onFilesChosen(camera)" />
+    </div>
+
+    <div class="readout mono">
+      <span>FORMATS JPG · PNG · WEBP · HEIC · PDF</span>
+      <span>MAX 10 MB EACH</span>
+      <span>UP TO {{ maxFiles }} AT ONCE</span>
+    </div>
+  </section>
+
+  <aside class="side">
+    <section aria-labelledby="intake-log">
+      <h2 id="intake-log" class="side__title">Intake log</h2>
+
+      <ol class="log" aria-live="polite">
+        @for (item of queue.items(); track item.key) {
+          <li class="log__item" [attr.data-state]="item.state">
+            <div class="log__head">
+              <span class="log__name mono">{{ item.file.name }}</span>
+              <span class="log__size mono">{{ item.file.size | fileSize }}</span>
+            </div>
+
+            @switch (item.state) {
+              @case ('queued') {
+                <span class="log__note mono">WAITING</span>
+              }
+              @case ('uploading') {
+                <div class="log__bar" role="progressbar" aria-label="Upload progress"
+                  [attr.aria-valuenow]="percent(item.progress)" aria-valuemin="0" aria-valuemax="100">
+                  <span [style.width.%]="item.progress * 100"></span>
+                </div>
+                <span class="log__note log__note--accent mono">UPLOADING</span>
+              }
+              @case ('done') {
+                @if (item.receipt; as receipt) {
+                  <div class="log__done">
+                    <span>Entry <span class="mono">{{ receipt.number | entryNumber }}</span> saved.</span>
+                    <app-status-stamp [status]="receipt.status" />
+                  </div>
+                  <span class="log__note">AI extraction is coming next; it will read this receipt automatically.</span>
+                }
+              }
+              @case ('failed') {
+                <span class="log__error">{{ item.error }}</span>
+                <div class="log__actions">
+                  @if (item.retryable) {
+                    <button type="button" class="link-button" (click)="queue.retry(item.key)">Retry</button>
+                  }
+                  <button type="button" class="link-button link-button--muted" (click)="queue.dismiss(item.key)">Dismiss</button>
+                </div>
+              }
+            }
+          </li>
+        } @empty {
+          <li class="log__empty">Nothing scanned yet in this visit.</li>
+        }
+      </ol>
+
+      <a class="side__link mono" routerLink="/receipts">Open the ledger →</a>
+    </section>
+
+    <section aria-labelledby="procedure" class="procedure">
+      <h2 id="procedure" class="label">Procedure</h2>
+      <ol class="procedure__steps">
+        <li><span class="mono">01</span> Scan. The original is archived with the entry.</li>
+        <li><span class="mono">02</span> Extract. AI reads vendor, date, totals, tax and every line item.</li>
+        <li><span class="mono">03</span> Approve. You confirm, and it posts to the ledger.</li>
+      </ol>
+    </section>
+  </aside>
+</div>

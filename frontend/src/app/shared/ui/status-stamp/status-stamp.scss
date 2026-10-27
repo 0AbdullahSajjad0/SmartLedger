@@ -1,0 +1,25 @@
+:host {
+  display: inline-block;
+  padding: 3px 8px;
+  border: 1px solid currentColor;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--color-muted);
+}
+
+:host([data-status='NeedsReview']) {
+  color: var(--color-caution);
+}
+
+:host([data-status='Approved']) {
+  color: var(--color-positive);
+}
+
+:host([data-status='Rejected']),
+:host([data-status='Failed']) {
+  color: var(--color-negative);
+}

@@ -32,6 +32,12 @@
     color: #3a352e;
   }
 
+  &__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
   &__facts {
     display: grid;
     grid-template-columns: 180px minmax(0, 1fr);
