@@ -1,29 +1,34 @@
-import { Component, DestroyRef, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { finalize } from 'rxjs';
-import { HealthApi } from '../../core/api/health-api';
+import { HealthApi } from '../../../core/api/health-api';
 
-type ApiStatus = 'checking' | 'waking' | 'online' | 'offline';
+type ServerStatus = 'checking' | 'waking' | 'online' | 'offline';
 
 /** How long a health check can take before we tell the user the server is waking up. */
 const WAKING_THRESHOLD_MS = 3_000;
 
+/**
+ * One-line server status. The API scales to zero when idle, so the first request can take a while;
+ * this explains the wait instead of leaving the user staring at a button that doesn't respond.
+ */
 @Component({
-  selector: 'app-home',
-  templateUrl: './home.html',
-  styleUrl: './home.scss',
+  selector: 'app-api-status',
+  templateUrl: './api-status.html',
+  styleUrl: './api-status.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class Home {
+export class ApiStatus {
   private readonly healthApi = inject(HealthApi);
   private readonly destroyRef = inject(DestroyRef);
 
-  protected readonly status = signal<ApiStatus>('checking');
+  protected readonly status = signal<ServerStatus>('checking');
 
   constructor() {
-    this.checkApi();
+    this.check();
   }
 
-  protected checkApi(): void {
+  protected check(): void {
     this.status.set('checking');
 
     const wakingTimer = setTimeout(() => {

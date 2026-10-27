@@ -1,0 +1,34 @@
+<div class="auth">
+  <section class="brand">
+    <header class="brand__masthead">
+      <span class="brand__name">SmartLedger</span>
+      <span class="eyebrow brand__tagline">Expenses · Invoices · Receipts</span>
+    </header>
+
+    <h1 class="brand__headline">Every receipt, <em>accounted</em> for.</h1>
+
+    <div class="excerpt" aria-hidden="true">
+      <div class="excerpt__head eyebrow">
+        <span>Ledger excerpt</span>
+        <span>USD</span>
+      </div>
+      @for (row of excerpt; track row.date) {
+        <div class="excerpt__row mono">
+          <span class="excerpt__date">{{ row.date }}</span>
+          <span>{{ row.vendor }}</span>
+          <span class="num">{{ row.amount }}</span>
+        </div>
+      }
+      <div class="excerpt__total mono">
+        <span>October to date</span>
+        <span>4,286.40</span>
+      </div>
+    </div>
+
+    <app-api-status />
+  </section>
+
+  <main class="content">
+    <router-outlet />
+  </main>
+</div>

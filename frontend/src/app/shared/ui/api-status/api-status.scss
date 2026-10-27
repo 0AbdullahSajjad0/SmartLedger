@@ -1,0 +1,42 @@
+.api-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  color: inherit;
+
+  &::before {
+    content: '';
+    width: 7px;
+    height: 7px;
+    background: currentColor;
+    opacity: 0.5;
+  }
+
+  &[data-status='waking']::before {
+    background: #d9a441;
+    opacity: 1;
+  }
+
+  &[data-status='online']::before {
+    background: #8fa36b;
+    opacity: 1;
+  }
+
+  &[data-status='offline']::before {
+    background: var(--color-accent-on-dark);
+    opacity: 1;
+  }
+
+  &__retry {
+    min-height: 32px;
+    padding: 0 4px;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    text-decoration: underline;
+    cursor: pointer;
+  }
+}

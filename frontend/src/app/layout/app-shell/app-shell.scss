@@ -1,0 +1,80 @@
+.masthead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0 40px;
+  padding: 0 var(--gutter);
+  background: var(--color-ink);
+  color: var(--color-on-dark);
+
+  &__brand {
+    display: inline-flex;
+    align-items: center;
+    min-height: 64px;
+    font-family: var(--font-display);
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--color-on-dark);
+    text-decoration: none;
+
+    &:hover {
+      color: #fff;
+    }
+  }
+
+  &__nav {
+    flex: 1 1 auto;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 28px;
+  }
+
+  &__link {
+    display: inline-flex;
+    align-items: center;
+    min-height: 64px;
+    border-bottom: 2px solid transparent;
+    color: var(--color-on-dark-muted);
+    font-family: var(--font-ui);
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    text-decoration: none;
+
+    &:hover {
+      color: var(--color-on-dark);
+    }
+
+    &--active {
+      color: var(--color-on-dark);
+      border-bottom-color: var(--color-accent-on-dark);
+    }
+  }
+
+  &__account {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
+
+  &__user {
+    font-size: 12px;
+    color: var(--color-on-dark-muted);
+  }
+
+  &__signout {
+    padding: 0;
+    border-top: 0;
+    border-left: 0;
+    border-right: 0;
+    background: transparent;
+    cursor: pointer;
+  }
+}
+
+.page {
+  display: block;
+  padding: 48px var(--gutter) 72px;
+}

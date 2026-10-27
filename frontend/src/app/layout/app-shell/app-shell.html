@@ -1,0 +1,24 @@
+<header class="masthead">
+  <a class="masthead__brand" routerLink="/overview">SmartLedger</a>
+
+  <nav class="masthead__nav" aria-label="Main">
+    @for (item of nav; track item.path) {
+      <a
+        class="masthead__link"
+        [routerLink]="item.path"
+        routerLinkActive="masthead__link--active"
+        ariaCurrentWhenActive="page"
+        >{{ item.label }}</a
+      >
+    }
+  </nav>
+
+  <div class="masthead__account">
+    <span class="masthead__user mono">{{ auth.user()?.displayName }}</span>
+    <button type="button" class="masthead__link masthead__signout" (click)="signOut()">Sign out</button>
+  </div>
+</header>
+
+<main class="page">
+  <router-outlet />
+</main>
