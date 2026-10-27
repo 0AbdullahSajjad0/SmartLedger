@@ -1,0 +1,52 @@
+.statement {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-bottom: 24px;
+  border-bottom: var(--rule);
+
+  &__title {
+    font-size: clamp(44px, 6vw, 76px);
+
+    em {
+      font-style: italic;
+    }
+  }
+}
+
+.empty {
+  max-width: 640px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-top: 40px;
+
+  &__title {
+    font-size: 28px;
+    font-weight: 600;
+  }
+
+  &__text {
+    font-size: 16px;
+    line-height: 1.7;
+    color: #3a352e;
+  }
+
+  &__facts {
+    display: grid;
+    grid-template-columns: 180px minmax(0, 1fr);
+    margin: 8px 0 0;
+    font-size: 13px;
+
+    dt,
+    dd {
+      margin: 0;
+      padding: 10px 0;
+      border-top: var(--rule-faint);
+    }
+
+    dt {
+      color: var(--color-muted);
+    }
+  }
+}

@@ -1,0 +1,55 @@
+// Shared by the sign-in and register pages.
+.auth-form {
+  width: 100%;
+  max-width: 380px;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+
+  &__heading {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  &__title {
+    font-size: 44px;
+    font-weight: 600;
+  }
+
+  &__fields {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  &__notice {
+    padding: 12px 0 12px 14px;
+    border-top: 2px solid var(--color-caution);
+    color: var(--color-caution);
+    font-size: 14px;
+  }
+
+  &__switch {
+    padding-top: 24px;
+    border-top: var(--rule);
+    font-size: 14px;
+    color: var(--color-muted);
+  }
+}
+
+.checkbox {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: var(--control-height);
+  font-size: 14px;
+  cursor: pointer;
+
+  input {
+    width: 18px;
+    height: 18px;
+    margin: 0;
+    accent-color: var(--color-accent);
+  }
+}
