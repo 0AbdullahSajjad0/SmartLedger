@@ -1,10 +1,9 @@
 using System.Net;
-using Microsoft.AspNetCore.Mvc.Testing;
 
 namespace SmartLedger.Api.IntegrationTests;
 
-public class HealthEndpointTests(WebApplicationFactory<Program> factory)
-    : IClassFixture<WebApplicationFactory<Program>>
+public class HealthEndpointTests(SmartLedgerApiFactory factory)
+    : IClassFixture<SmartLedgerApiFactory>
 {
     [Fact]
     public async Task Health_ReturnsHealthy()
