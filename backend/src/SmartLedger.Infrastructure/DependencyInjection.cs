@@ -1,3 +1,5 @@
+using Azure.Identity;
+using Azure.Storage.Blobs;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -7,8 +9,12 @@ using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
 using SmartLedger.Application.Auth;
+using SmartLedger.Application.Common.Storage;
+using SmartLedger.Application.Receipts;
 using SmartLedger.Infrastructure.Identity;
 using SmartLedger.Infrastructure.Persistence;
+using SmartLedger.Infrastructure.Repositories;
+using SmartLedger.Infrastructure.Storage;
 
 namespace SmartLedger.Infrastructure;
 
@@ -31,10 +37,37 @@ public static class DependencyInjection
             .AddDbContextCheck<AppDbContext>("database", tags: ["ready"]);
 
         services.AddScoped<DevelopmentDataSeeder>();
+        services.AddScoped<IReceiptRepository, ReceiptRepository>();
 
         AddAuth(services, configuration);
+        AddStorage(services, configuration);
 
         return services;
+    }
+
+    private static void AddStorage(IServiceCollection services, IConfiguration configuration)
+    {
+        services.AddOptions<StorageOptions>()
+            .Bind(configuration.GetSection(StorageOptions.SectionName))
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
+
+        // Chosen when first used, from the validated options: Local in development and tests, AzureBlob in production.
+        services.AddSingleton<IFileStorage>(provider =>
+        {
+            var options = provider.GetRequiredService<IOptions<StorageOptions>>().Value;
+
+            return options.Provider switch
+            {
+                StorageProvider.Local => ActivatorUtilities.CreateInstance<LocalFileStorage>(provider),
+                // No connection string or key: the Container App's managed identity has the
+                // "Storage Blob Data Contributor" role on the account.
+                StorageProvider.AzureBlob => new BlobFileStorage(
+                    new BlobServiceClient(new Uri(options.BlobServiceUri!), new DefaultAzureCredential())
+                        .GetBlobContainerClient(options.ContainerName)),
+                _ => throw new InvalidOperationException($"Unknown storage provider {options.Provider}."),
+            };
+        });
     }
 
     private static void AddAuth(IServiceCollection services, IConfiguration configuration)

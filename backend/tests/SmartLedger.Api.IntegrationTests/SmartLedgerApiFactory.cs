@@ -22,7 +22,13 @@ public class SmartLedgerApiFactory : WebApplicationFactory<Program>, IAsyncLifet
         builder.UseSetting("ConnectionStrings:Default", ConnectionString);
         builder.UseSetting("Jwt:SigningKey", "integration-tests-only-signing-key-0123456789abcdef");
         builder.UseSetting("RateLimiting:AuthPermitLimit", "1000");
+        builder.UseSetting("RateLimiting:UploadPermitLimit", "1000");
+        builder.UseSetting("Storage:Provider", "Local");
+        builder.UseSetting("Storage:LocalPath", StoragePath);
     }
+
+    /// <summary>Uploaded files go to a fresh temporary folder per test run.</summary>
+    public string StoragePath { get; } = Path.Combine(Path.GetTempPath(), "smartledger-tests", Guid.NewGuid().ToString("N"));
 
     public async Task InitializeAsync()
     {
@@ -32,7 +38,14 @@ public class SmartLedgerApiFactory : WebApplicationFactory<Program>, IAsyncLifet
         await db.Database.MigrateAsync();
     }
 
-    Task IAsyncLifetime.DisposeAsync() => DisposeAsync().AsTask();
+    async Task IAsyncLifetime.DisposeAsync()
+    {
+        await DisposeAsync();
+        if (Directory.Exists(StoragePath))
+        {
+            Directory.Delete(StoragePath, recursive: true);
+        }
+    }
 }
 
 /// <summary>
