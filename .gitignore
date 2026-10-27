@@ -426,3 +426,6 @@ FodyWeavers.xsd
 
 # Official VS Code C# Dev Kit Extension exclusion
 #*.lscache
+
+# Receipt files uploaded while running the API locally
+backend/src/SmartLedger.Api/App_Data/

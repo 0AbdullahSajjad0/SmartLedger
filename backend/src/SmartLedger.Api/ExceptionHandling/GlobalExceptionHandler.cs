@@ -16,21 +16,31 @@ internal sealed class GlobalExceptionHandler(
         Exception exception,
         CancellationToken cancellationToken)
     {
-        logger.LogError(exception, "Unhandled exception while processing {Method} {Path}",
-            httpContext.Request.Method, httpContext.Request.Path);
+        // A request Kestrel refused (e.g. over the size limit) is the client's mistake: answer with its status, don't log an error.
+        var problem = exception is BadHttpRequestException badRequest
+            ? new ProblemDetails { Status = badRequest.StatusCode, Title = "The request couldn't be accepted." }
+            : null;
 
-        httpContext.Response.StatusCode = StatusCodes.Status500InternalServerError;
+        if (problem is null)
+        {
+            logger.LogError(exception, "Unhandled exception while processing {Method} {Path}",
+                httpContext.Request.Method, httpContext.Request.Path);
+
+            problem = new ProblemDetails
+            {
+                Status = StatusCodes.Status500InternalServerError,
+                Title = "An unexpected error occurred.",
+                Type = "https://tools.ietf.org/html/rfc9110#section-15.6.1",
+            };
+        }
+
+        httpContext.Response.StatusCode = problem.Status!.Value;
 
         return await problemDetailsService.TryWriteAsync(new ProblemDetailsContext
         {
             HttpContext = httpContext,
             Exception = exception,
-            ProblemDetails = new ProblemDetails
-            {
-                Status = StatusCodes.Status500InternalServerError,
-                Title = "An unexpected error occurred.",
-                Type = "https://tools.ietf.org/html/rfc9110#section-15.6.1"
-            }
+            ProblemDetails = problem,
         });
     }
 }

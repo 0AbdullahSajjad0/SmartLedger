@@ -1,10 +1,14 @@
+using System.Security.Claims;
+using System.Text.Json.Serialization;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.IdentityModel.JsonWebTokens;
 using Scalar.AspNetCore;
 using SmartLedger.Api.Auth;
 using SmartLedger.Api.ExceptionHandling;
+using SmartLedger.Api.Security;
 using SmartLedger.Application;
 using SmartLedger.Application.Common;
 using SmartLedger.Infrastructure;
@@ -17,7 +21,9 @@ builder.Services
     .AddApplication()
     .AddInfrastructure(builder.Configuration);
 
-builder.Services.AddControllers();
+// Enums travel as names ("NeedsReview"), not numbers, so the API is readable and adding a value can't shift others.
+builder.Services.AddControllers()
+    .AddJsonOptions(options => options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 builder.Services.AddOpenApi();
 
 // Errors are returned as ProblemDetails JSON.
@@ -41,6 +47,13 @@ builder.Services.AddRateLimiter(options =>
         _ => new FixedWindowRateLimiterOptions
         {
             PermitLimit = context.RequestServices.GetRequiredService<IConfiguration>().GetValue("RateLimiting:AuthPermitLimit", 10),
+            Window = TimeSpan.FromMinutes(1),
+        }));
+    options.AddPolicy(RateLimitPolicies.Uploads, context => RateLimitPartition.GetFixedWindowLimiter(
+        context.User.FindFirstValue(JwtRegisteredClaimNames.Sub) ?? context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = context.RequestServices.GetRequiredService<IConfiguration>().GetValue("RateLimiting:UploadPermitLimit", 20),
             Window = TimeSpan.FromMinutes(1),
         }));
 });
@@ -70,6 +83,7 @@ if (app.Environment.IsDevelopment() && app.Configuration.GetValue<bool>("Databas
 }
 
 app.UseForwardedHeaders();
+app.UseSecurityHeaders();
 app.UseExceptionHandler();
 app.UseStatusCodePages();
 
@@ -84,8 +98,9 @@ app.UseHttpsRedirection();
 // Must run before authorization so browser preflight (OPTIONS) requests are answered.
 app.UseCors(FrontendCorsPolicy);
 
-app.UseRateLimiter();
+// Authentication first, so per-user rate limits know who the user is.
 app.UseAuthentication();
+app.UseRateLimiter();
 app.UseAuthorization();
 
 app.MapControllers();
