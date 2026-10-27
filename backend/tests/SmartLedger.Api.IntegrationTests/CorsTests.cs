@@ -1,7 +1,7 @@
 namespace SmartLedger.Api.IntegrationTests;
 
+[Collection(ApiCollection.Name)]
 public class CorsTests(SmartLedgerApiFactory factory)
-    : IClassFixture<SmartLedgerApiFactory>
 {
     [Fact]
     public async Task Preflight_FromAllowedOrigin_IsAllowed()

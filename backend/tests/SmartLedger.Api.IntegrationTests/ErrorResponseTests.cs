@@ -4,21 +4,31 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace SmartLedger.Api.IntegrationTests;
 
+[Collection(ApiCollection.Name)]
 public class ErrorResponseTests(SmartLedgerApiFactory factory)
-    : IClassFixture<SmartLedgerApiFactory>
 {
     [Fact]
-    public async Task UnknownRoute_ReturnsProblemDetails()
+    public async Task UnknownRoute_WhenSignedIn_ReturnsProblemDetails404()
     {
         var client = factory.CreateClient();
+        var auth = await TestAuth.RegisterAsync(client);
 
-        var response = await client.GetAsync("/does-not-exist");
+        var response = await client.Authorize(auth.AccessToken).GetAsync("/does-not-exist");
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
         Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
 
         var problem = await response.Content.ReadFromJsonAsync<ProblemDetails>();
-        Assert.NotNull(problem);
-        Assert.Equal(404, problem.Status);
+        Assert.Equal(404, problem!.Status);
+    }
+
+    [Fact]
+    public async Task AnyRoute_WhenAnonymous_ReturnsProblemDetails401()
+    {
+        // Endpoints require sign-in by default, so anonymous callers can't even probe which routes exist.
+        var response = await factory.CreateClient().GetAsync("/does-not-exist");
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
     }
 }

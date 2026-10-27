@@ -20,6 +20,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, TimeProvider t
 
     public DbSet<MonthlyInsight> MonthlyInsights => Set<MonthlyInsight>();
 
+    public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
