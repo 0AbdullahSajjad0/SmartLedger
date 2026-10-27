@@ -22,6 +22,7 @@ env:
   IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/smartledger-api
   AZURE_RESOURCE_GROUP: rg-smartledger
   AZURE_CONTAINER_APP: ca-smartledger-api
+  AZURE_SQL_DATABASE: sqldb-smartledger
   FRONTEND_DIST: frontend/dist/smartledger-web/browser
 
 jobs:
@@ -73,6 +74,25 @@ jobs:
 
       - name: Test
         run: dotnet test SmartLedger.slnx --configuration Release --no-build
+
+      # A self-contained executable that applies pending EF Core migrations; built on every run
+      # so a broken migration fails the PR, and run by the deploy job before the new API goes live.
+      - name: Build migration bundle
+        run: |
+          dotnet tool restore
+          dotnet ef migrations bundle \
+            --project src/SmartLedger.Infrastructure \
+            --startup-project src/SmartLedger.Api \
+            --configuration Release \
+            --self-contained --target-runtime linux-x64 \
+            --output efbundle --force
+
+      - name: Upload migration bundle
+        uses: actions/upload-artifact@v7
+        with:
+          name: efbundle
+          path: backend/efbundle
+          if-no-files-found: error
 
   backend-docker:
     name: Backend Docker image
@@ -131,6 +151,38 @@ jobs:
           tenant-id: ${{ vars.AZURE_TENANT_ID }}
           subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
 
+      - name: Download migration bundle
+        uses: actions/download-artifact@v8
+        with:
+          name: efbundle
+
+      # The SQL firewall only admits Azure services; let this runner in for the migration and remove it afterwards.
+      - name: Open SQL firewall for this runner
+        run: |
+          runner_ip=$(curl --fail --silent https://api.ipify.org)
+          az sql server firewall-rule create \
+            --resource-group "$AZURE_RESOURCE_GROUP" \
+            --server "${{ vars.AZURE_SQL_SERVER }}" \
+            --name "github-run-${GITHUB_RUN_ID}" \
+            --start-ip-address "$runner_ip" --end-ip-address "$runner_ip" \
+            --output none
+
+      # Runs before the new image is deployed: if a migration fails, the old version keeps serving.
+      # Signs in with the same Azure login as above (no database password).
+      - name: Apply database migrations
+        run: |
+          chmod +x ./efbundle
+          ./efbundle --connection "Server=tcp:${{ vars.AZURE_SQL_SERVER }}.database.windows.net,1433;Database=${AZURE_SQL_DATABASE};Authentication=Active Directory Default;Encrypt=True;Connect Timeout=60"
+
+      - name: Close SQL firewall
+        if: always()
+        run: |
+          az sql server firewall-rule delete \
+            --resource-group "$AZURE_RESOURCE_GROUP" \
+            --server "${{ vars.AZURE_SQL_SERVER }}" \
+            --name "github-run-${GITHUB_RUN_ID}" \
+            --output none || true
+
       # Deploy the image built from this exact commit, not "latest", so every revision maps to a commit.
       - name: Update Container App image
         run: |
@@ -152,12 +204,15 @@ jobs:
             --query properties.configuration.ingress.fqdn --output tsv)
           echo "url=https://$fqdn" >> "$GITHUB_OUTPUT"
 
-      # The app may be starting from zero replicas, so allow time for a cold start.
-      - name: Smoke test /health
+      # The app may be starting from zero replicas and the database may be resuming, so allow time for both.
+      - name: Smoke test /health and /health/ready
         run: |
-          curl --fail --silent --show-error \
-            --retry 10 --retry-delay 6 --retry-all-errors --max-time 30 \
-            "${{ steps.app.outputs.url }}/health"
+          for path in /health /health/ready; do
+            curl --fail --silent --show-error \
+              --retry 10 --retry-delay 6 --retry-all-errors --max-time 30 \
+              "${{ steps.app.outputs.url }}${path}"
+            echo " ← ${path}"
+          done
 
   # ---------------- Frontend ----------------
 
