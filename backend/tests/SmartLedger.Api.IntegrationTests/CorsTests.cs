@@ -1,9 +1,7 @@
-using Microsoft.AspNetCore.Mvc.Testing;
-
 namespace SmartLedger.Api.IntegrationTests;
 
-public class CorsTests(WebApplicationFactory<Program> factory)
-    : IClassFixture<WebApplicationFactory<Program>>
+public class CorsTests(SmartLedgerApiFactory factory)
+    : IClassFixture<SmartLedgerApiFactory>
 {
     [Fact]
     public async Task Preflight_FromAllowedOrigin_IsAllowed()

@@ -1,12 +1,11 @@
 using System.Net;
 using System.Net.Http.Json;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Testing;
 
 namespace SmartLedger.Api.IntegrationTests;
 
-public class ErrorResponseTests(WebApplicationFactory<Program> factory)
-    : IClassFixture<WebApplicationFactory<Program>>
+public class ErrorResponseTests(SmartLedgerApiFactory factory)
+    : IClassFixture<SmartLedgerApiFactory>
 {
     [Fact]
     public async Task UnknownRoute_ReturnsProblemDetails()

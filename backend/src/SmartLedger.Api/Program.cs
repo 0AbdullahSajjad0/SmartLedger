@@ -1,7 +1,9 @@
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Scalar.AspNetCore;
 using SmartLedger.Api.ExceptionHandling;
 using SmartLedger.Application;
 using SmartLedger.Infrastructure;
+using SmartLedger.Infrastructure.Persistence;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -29,6 +31,11 @@ builder.Services.AddCors(options => options.AddPolicy(FrontendCorsPolicy, policy
 
 var app = builder.Build();
 
+if (app.Environment.IsDevelopment() && app.Configuration.GetValue<bool>("Database:InitializeOnStartup"))
+{
+    await app.Services.InitializeDevelopmentDatabaseAsync();
+}
+
 app.UseExceptionHandler();
 app.UseStatusCodePages();
 
@@ -46,6 +53,10 @@ app.UseCors(FrontendCorsPolicy);
 app.UseAuthorization();
 
 app.MapControllers();
-app.MapHealthChecks("/health");
+// Liveness: the process is up. Never checks the database, so a paused database can't get a healthy container restarted.
+app.MapHealthChecks("/health", new HealthCheckOptions { Predicate = _ => false });
+
+// Readiness: dependencies such as the database are reachable.
+app.MapHealthChecks("/health/ready", new HealthCheckOptions { Predicate = check => check.Tags.Contains("ready") });
 
 app.Run();
