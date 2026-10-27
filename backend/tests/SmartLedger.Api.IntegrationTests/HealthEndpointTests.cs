@@ -2,8 +2,8 @@ using System.Net;
 
 namespace SmartLedger.Api.IntegrationTests;
 
+[Collection(ApiCollection.Name)]
 public class HealthEndpointTests(SmartLedgerApiFactory factory)
-    : IClassFixture<SmartLedgerApiFactory>
 {
     [Fact]
     public async Task Health_ReturnsHealthy()

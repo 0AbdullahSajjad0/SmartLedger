@@ -3,8 +3,50 @@
 ### Health check
 GET {{SmartLedger.Api_HostAddress}}/health
 
-### Unknown route (returns a ProblemDetails 404)
-GET {{SmartLedger.Api_HostAddress}}/does-not-exist
-Accept: application/json
+### Readiness (includes the database)
+GET {{SmartLedger.Api_HostAddress}}/health/ready
+
+### Register (change the email each time)
+# @name register
+POST {{SmartLedger.Api_HostAddress}}/api/auth/register
+Content-Type: application/json
+
+{
+  "email": "you@example.com",
+  "password": "correct horse battery staple",
+  "displayName": "Your Name",
+  "baseCurrency": "USD"
+}
+
+### Sign in
+# @name login
+POST {{SmartLedger.Api_HostAddress}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "you@example.com",
+  "password": "correct horse battery staple",
+  "rememberMe": true
+}
+
+### Who am I (uses the access token from "Sign in")
+GET {{SmartLedger.Api_HostAddress}}/api/auth/me
+Authorization: Bearer {{login.response.body.$.accessToken}}
+
+### Get new tokens (the refresh token can be used once)
+POST {{SmartLedger.Api_HostAddress}}/api/auth/refresh
+Content-Type: application/json
+
+{
+  "refreshToken": "{{login.response.body.$.refreshToken}}"
+}
+
+### Sign out
+POST {{SmartLedger.Api_HostAddress}}/api/auth/logout
+Content-Type: application/json
+
+{
+  "refreshToken": "{{login.response.body.$.refreshToken}}"
+}
 
 ###
