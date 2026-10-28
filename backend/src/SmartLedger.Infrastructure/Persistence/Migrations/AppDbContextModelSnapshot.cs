@@ -156,7 +156,6 @@ namespace SmartLedger.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("SmartLedger.Domain.Entities.Category", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Color")
@@ -198,7 +197,6 @@ namespace SmartLedger.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("SmartLedger.Domain.Entities.ExchangeRate", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTimeOffset>("CreatedAt")
@@ -237,7 +235,6 @@ namespace SmartLedger.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("SmartLedger.Domain.Entities.LineItem", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<decimal>("Amount")
@@ -280,7 +277,6 @@ namespace SmartLedger.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("SmartLedger.Domain.Entities.MonthlyInsight", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Body")
@@ -329,7 +325,6 @@ namespace SmartLedger.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("SmartLedger.Domain.Entities.Receipt", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTimeOffset?>("ApprovedAt")
@@ -369,6 +364,9 @@ namespace SmartLedger.Infrastructure.Persistence.Migrations
                     b.Property<decimal?>("ExchangeRate")
                         .HasPrecision(18, 8)
                         .HasColumnType("decimal(18,8)");
+
+                    b.Property<int>("ExtractionAttempts")
+                        .HasColumnType("int");
 
                     b.Property<string>("FailureReason")
                         .HasMaxLength(300)

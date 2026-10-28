@@ -1,4 +1,9 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <!-- Identifies this project's local secrets store (outside the repo): "dotnet user-secrets". Not a secret itself. -->
+    <UserSecretsId>b33e625c-8f6b-4ed5-a9de-2e72973ed3ce</UserSecretsId>
+  </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" />

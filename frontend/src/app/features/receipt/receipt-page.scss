@@ -138,6 +138,39 @@
   }
 }
 
+// Footnote marks for fields the AI wasn't sure about.
+.mark {
+  margin-left: 2px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--color-accent);
+}
+
+.fields__item--flagged {
+  border-bottom: 2px solid var(--color-accent);
+  background: #f6e9dd;
+}
+
+.suggested {
+  color: var(--color-accent);
+  letter-spacing: 0.06em;
+}
+
+.sheet__note--live {
+  color: var(--color-accent);
+}
+
+.footnotes {
+  margin: 0;
+  padding: 14px 0 0;
+  list-style: none;
+  border-top: var(--rule-faint);
+  font-size: 13px;
+  line-height: 1.6;
+  color: #3a352e;
+}
+
 .totals {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;

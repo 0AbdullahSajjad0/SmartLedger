@@ -61,6 +61,20 @@ internal sealed class ReceiptRepository(AppDbContext db) : IReceiptRepository
         return (items, totalCount);
     }
 
+    public Task<Receipt?> GetForUpdateAsync(Guid receiptId, CancellationToken cancellationToken) =>
+        db.Receipts
+            .Include(r => r.LineItems)
+            .SingleOrDefaultAsync(r => r.Id == receiptId, cancellationToken);
+
+    public async Task<IReadOnlyList<Guid>> ListIdsWithStatusAsync(ReceiptStatus status, CancellationToken cancellationToken) =>
+        await db.Receipts
+            .Where(r => r.Status == status)
+            .OrderBy(r => r.CreatedAt)
+            .Select(r => r.Id)
+            .ToListAsync(cancellationToken);
+
+    public Task SaveChangesAsync(CancellationToken cancellationToken) => db.SaveChangesAsync(cancellationToken);
+
     // 2601: duplicate key in a unique index; 2627: unique constraint violation.
     private static bool IsDuplicateKey(DbUpdateException ex) =>
         ex.InnerException is SqlException { Number: 2601 or 2627 };

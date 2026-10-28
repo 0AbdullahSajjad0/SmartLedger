@@ -1,5 +1,6 @@
 using SmartLedger.Application.Common;
 using SmartLedger.Application.Common.Storage;
+using SmartLedger.Application.Receipts.Extraction;
 using SmartLedger.Domain.Entities;
 
 namespace SmartLedger.Application.Receipts;
@@ -7,6 +8,7 @@ namespace SmartLedger.Application.Receipts;
 internal sealed class ReceiptService(
     IReceiptRepository repository,
     IFileStorage storage,
+    IReceiptExtractionQueue extractionQueue,
     ICurrentUser currentUser) : IReceiptService
 {
     private const int MaxPageSize = 50;
@@ -75,6 +77,12 @@ internal sealed class ReceiptService(
                 await storage.DeleteAsync(receipt.StorageKey, CancellationToken.None);
             }
             throw;
+        }
+
+        // Reading happens in the background, so the upload answers immediately.
+        foreach (var receipt in receipts)
+        {
+            extractionQueue.Enqueue(receipt.Id);
         }
 
         return receipts.Select(ToSummary).ToList();

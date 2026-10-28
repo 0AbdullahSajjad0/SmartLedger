@@ -26,6 +26,13 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, TimeProvider t
     {
         base.OnModelCreating(builder);
         builder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
+
+        // Ids are created in code (Guid v7) before saving. Telling EF it never generates them makes a new
+        // child added to a tracked parent (e.g. a line item added to a receipt) count as new, not "modified".
+        foreach (var entityType in builder.Model.GetEntityTypes().Where(t => typeof(Entity).IsAssignableFrom(t.ClrType)))
+        {
+            builder.Entity(entityType.ClrType).Property(nameof(Entity.Id)).ValueGeneratedNever();
+        }
     }
 
     public override int SaveChanges(bool acceptAllChangesOnSuccess)

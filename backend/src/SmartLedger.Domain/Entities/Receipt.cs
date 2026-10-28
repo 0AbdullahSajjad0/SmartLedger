@@ -47,6 +47,9 @@ public class Receipt : Entity
 
     public string? FailureReason { get; private set; }
 
+    /// <summary>Times the AI service was unavailable while reading this receipt; it's retried a few times, then marked failed.</summary>
+    public int ExtractionAttempts { get; set; }
+
     // ---- Original file (stored in object storage) ----
 
     public required string FileName { get; set; }

@@ -1,11 +1,15 @@
 import { HttpEventType } from '@angular/common/http';
 import { DestroyRef, Injectable, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { switchMap, take, takeWhile, timer } from 'rxjs';
 import { describeHttpError } from '../../core/http/describe-http-error';
 import { RECEIPT_UPLOAD_LIMITS, ReceiptSummary } from '../../core/receipts/receipt.models';
 import { ReceiptsApi } from '../../core/receipts/receipts-api';
 
 export type UploadState = 'queued' | 'uploading' | 'done' | 'failed';
+
+const READ_POLL_MS = 3_000;
+const READ_POLL_MAX = 60;
 
 export interface UploadItem {
   readonly key: number;
@@ -92,7 +96,11 @@ export class UploadQueue {
             if (event.type === HttpEventType.UploadProgress && event.total) {
               this.patch(item.key, { progress: event.loaded / event.total });
             } else if (event.type === HttpEventType.Response) {
-              this.patch(item.key, { state: 'done', progress: 1, receipt: event.body?.[0] });
+              const receipt = event.body?.[0];
+              this.patch(item.key, { state: 'done', progress: 1, receipt });
+              if (receipt) {
+                this.watchReading(item.key, receipt.id);
+              }
             }
           },
           error: (error: unknown) => {
@@ -103,6 +111,37 @@ export class UploadQueue {
           complete: () => resolve(),
         });
     });
+  }
+
+  /**
+   * AI reads receipts in the background, a few seconds each. Check every 3 seconds until it's done
+   * (for at most 3 minutes), so the intake log shows the vendor and total as soon as they're known.
+   */
+  private watchReading(key: number, receiptId: string): void {
+    timer(READ_POLL_MS, READ_POLL_MS)
+      .pipe(
+        take(READ_POLL_MAX),
+        switchMap(() => this.api.get(receiptId)),
+        takeWhile((receipt) => receipt.status === 'Processing', true),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: (receipt) => {
+          const current = this._items().find((item) => item.key === key)?.receipt;
+          if (current) {
+            this.patch(key, {
+              receipt: {
+                ...current,
+                status: receipt.status,
+                vendorName: receipt.vendorName,
+                total: receipt.total,
+                currency: receipt.currency,
+              },
+            });
+          }
+        },
+        error: () => undefined, // The ledger still shows the result; the log just stops updating.
+      });
   }
 
   private patch(key: number, changes: Partial<UploadItem>): void {

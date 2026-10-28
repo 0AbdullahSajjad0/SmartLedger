@@ -1,5 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
+using SmartLedger.Application.Categories;
 using SmartLedger.Application.Receipts;
+using SmartLedger.Application.Receipts.Extraction;
 
 namespace SmartLedger.Application;
 
@@ -11,6 +13,8 @@ public static class DependencyInjection
     public static IServiceCollection AddApplication(this IServiceCollection services)
     {
         services.AddScoped<IReceiptService, ReceiptService>();
+        services.AddScoped<IReceiptExtractionService, ReceiptExtractionService>();
+        services.AddScoped<ICategoryService, CategoryService>();
 
         return services;
     }

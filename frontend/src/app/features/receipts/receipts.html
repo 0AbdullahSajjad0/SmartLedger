@@ -37,7 +37,8 @@
       }
     </div>
   } @else {
-    <div class="ledger-scroll" [class.is-refreshing]="ledger.isLoading()">
+    <!-- Dim only when switching page or filter ("loading"), not during quiet background refreshes ("reloading"). -->
+    <div class="ledger-scroll" [class.is-refreshing]="ledger.status() === 'loading'">
       <table class="ledger">
         <thead>
           <tr>
