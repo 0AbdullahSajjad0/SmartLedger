@@ -13,10 +13,16 @@
     <PackageReference Include="Microsoft.IdentityModel.JsonWebTokens" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" />
     <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore" />
+    <PackageReference Include="Microsoft.Extensions.Http.Resilience" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\SmartLedger.Application\SmartLedger.Application.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Lets the tests exercise internal classes such as the Gemini client directly. -->
+    <InternalsVisibleTo Include="SmartLedger.Api.IntegrationTests" />
   </ItemGroup>
 
 </Project>

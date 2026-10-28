@@ -14,4 +14,12 @@ public interface IReceiptRepository
     /// <summary>Newest first.</summary>
     Task<(IReadOnlyList<Receipt> Items, int TotalCount)> ListAsync(
         Guid userId, ReceiptStatus? status, int page, int pageSize, CancellationToken cancellationToken);
+
+    /// <summary>For background processing: any user's receipt, tracked for changes, with its line items.</summary>
+    Task<Receipt?> GetForUpdateAsync(Guid receiptId, CancellationToken cancellationToken);
+
+    /// <summary>Oldest first, across all users.</summary>
+    Task<IReadOnlyList<Guid>> ListIdsWithStatusAsync(ReceiptStatus status, CancellationToken cancellationToken);
+
+    Task SaveChangesAsync(CancellationToken cancellationToken);
 }

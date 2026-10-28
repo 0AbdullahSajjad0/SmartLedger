@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using SmartLedger.Application.Receipts.Extraction;
 using SmartLedger.Infrastructure.Persistence;
 
 namespace SmartLedger.Api.IntegrationTests;
@@ -25,6 +27,10 @@ public class SmartLedgerApiFactory : WebApplicationFactory<Program>, IAsyncLifet
         builder.UseSetting("RateLimiting:UploadPermitLimit", "1000");
         builder.UseSetting("Storage:Provider", "Local");
         builder.UseSetting("Storage:LocalPath", StoragePath);
+        builder.UseSetting("Gemini:DelayBetweenRequests", "00:00:00");
+
+        // No real AI in tests: the fake "reads" every upload instantly.
+        builder.ConfigureTestServices(services => services.AddScoped<IReceiptExtractor, FakeReceiptExtractor>());
     }
 
     /// <summary>Uploaded files go to a fresh temporary folder per test run.</summary>

@@ -42,6 +42,12 @@
       <span>MAX 10 MB EACH</span>
       <span>UP TO {{ maxFiles }} AT ONCE</span>
     </div>
+
+    <p class="privacy" role="note">
+      <strong>Before you upload:</strong> receipts are read by Google's Gemini AI on its free tier, where Google may
+      use what it receives to improve its products and people may review it. Please don't upload receipts that show
+      sensitive personal or financial information.
+    </p>
   </section>
 
   <aside class="side">
@@ -70,10 +76,24 @@
               @case ('done') {
                 @if (item.receipt; as receipt) {
                   <div class="log__done">
-                    <span>Entry <span class="mono">{{ receipt.number | entryNumber }}</span> saved.</span>
+                    <a [routerLink]="['/receipts', receipt.id]">
+                      Entry <span class="mono">{{ receipt.number | entryNumber }}</span>
+                      @if (receipt.vendorName) {
+                        · {{ receipt.vendorName }}
+                      }
+                    </a>
                     <app-status-stamp [status]="receipt.status" />
                   </div>
-                  <span class="log__note">AI extraction is coming next; it will read this receipt automatically.</span>
+                  @switch (receipt.status) {
+                    @case ('Processing') {
+                      <span class="log__note log__note--accent mono">AI IS READING IT…</span>
+                    }
+                    @case ('NeedsReview') {
+                      @if (receipt.total !== null) {
+                        <span class="log__note mono">TOTAL {{ receipt.total | number: '1.2-2' }} {{ receipt.currency }}</span>
+                      }
+                    }
+                  }
                 }
               }
               @case ('failed') {

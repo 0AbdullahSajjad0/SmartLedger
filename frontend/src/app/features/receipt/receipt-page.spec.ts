@@ -56,6 +56,9 @@ describe('ReceiptPage', () => {
 
     const details = await vi.waitFor(() => http.expectOne(RECEIPT_URL));
     const file = http.expectOne(`${RECEIPT_URL}/file`);
+    http.expectOne(`${TEST_API}/api/categories`).flush([
+      { id: 'cat-office', name: 'Office Supplies', color: '#8C8270', monthlyBudget: null, isArchived: false },
+    ]);
 
     if (receipt) {
       details.flush(receipt);
@@ -75,8 +78,29 @@ describe('ReceiptPage', () => {
 
     expect(page.querySelector('img')?.getAttribute('src')).toBe('blob:test-receipt');
     expect(page.textContent).toContain('Entry 0001');
-    expect(page.textContent).toContain("AI hasn't read this receipt yet");
+    expect(page.textContent).toContain('AI is reading this receipt');
     expect(page.querySelector('a[download]')?.getAttribute('download')).toBe('receipt-0001.png');
+  });
+
+  it("shows what AI read, with numbered notes on the fields it wasn't sure about", async () => {
+    const page = await render(
+      detail({
+        status: 'NeedsReview',
+        vendorName: 'Paper & Co. Office Supply',
+        paymentMethod: 'VISA ····4242',
+        categoryId: 'cat-office',
+        categorySuggestedByAi: true,
+        total: 126.45,
+        currency: 'USD',
+        extractionFlags: [{ field: 'PaymentMethod', reason: 'One digit of the card number was faded.' }],
+      }),
+    );
+
+    expect(page.querySelector('h1')?.textContent).toContain('Paper & Co. Office Supply');
+    expect(page.textContent).toContain('Office Supplies');
+    expect(page.textContent).toContain('suggested');
+    expect(page.querySelector('.fields__item--flagged')?.textContent).toContain('Paid with');
+    expect(page.querySelector('.footnotes')?.textContent).toContain('One digit of the card number was faded.');
   });
 
   it('offers a download instead of a preview for PDFs', async () => {

@@ -1,3 +1,4 @@
+import { DecimalPipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { RECEIPT_UPLOAD_LIMITS } from '../../core/receipts/receipt.models';
@@ -9,7 +10,7 @@ import { UploadQueue } from './upload-queue';
 /** The scanner bed: drop, choose or photograph receipts, and watch them arrive in the intake log. */
 @Component({
   selector: 'app-scan',
-  imports: [RouterLink, EntryNumberPipe, FileSizePipe, StatusStamp],
+  imports: [RouterLink, DecimalPipe, EntryNumberPipe, FileSizePipe, StatusStamp],
   templateUrl: './scan.html',
   styleUrl: './scan.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

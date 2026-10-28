@@ -55,6 +55,14 @@ export interface ReceiptDetail {
   createdAt: string;
 }
 
+export interface Category {
+  id: string;
+  name: string;
+  color: string;
+  monthlyBudget: number | null;
+  isArchived: boolean;
+}
+
 export interface PagedResult<T> {
   items: T[];
   page: number;

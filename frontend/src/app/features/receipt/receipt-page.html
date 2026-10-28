@@ -61,7 +61,15 @@
 
       @switch (r.status) {
         @case ('Processing') {
-          <p class="sheet__note">AI hasn't read this receipt yet. Its vendor, date, totals and line items will appear here.</p>
+          <p class="sheet__note sheet__note--live" aria-live="polite">
+            AI is reading this receipt. Its vendor, date, totals and line items will appear here in a few seconds.
+          </p>
+        }
+        @case ('NeedsReview') {
+          <p class="sheet__note">
+            Read by AI. Check the details{{ footnotes().length > 0 ? ', especially the numbered fields' : '' }}.
+            Approving is coming in the next update.
+          </p>
         }
         @case ('Failed') {
           <p class="sheet__note sheet__note--error">{{ r.failureReason ?? "This receipt couldn't be read." }}</p>
@@ -69,20 +77,36 @@
       }
 
       <dl class="fields">
-        <div class="fields__item">
-          <dt class="label">Vendor</dt>
+        <ng-template #mark let-field>
+          @if (footnoteFor(field); as n) {
+            <sup class="mark" [attr.aria-label]="'see note ' + n">{{ n }}</sup>
+          }
+        </ng-template>
+
+        <div class="fields__item" [class.fields__item--flagged]="footnoteFor('VendorName')">
+          <dt class="label">Vendor <ng-container *ngTemplateOutlet="mark; context: { $implicit: 'VendorName' }" /></dt>
           <dd>{{ r.vendorName ?? '—' }}</dd>
         </div>
-        <div class="fields__item">
-          <dt class="label">Receipt date</dt>
+        <div class="fields__item" [class.fields__item--flagged]="footnoteFor('ReceiptDate')">
+          <dt class="label">Receipt date <ng-container *ngTemplateOutlet="mark; context: { $implicit: 'ReceiptDate' }" /></dt>
           <dd class="mono">{{ r.receiptDate ? (r.receiptDate | date: 'dd MMM y') : '—' }}</dd>
         </div>
-        <div class="fields__item">
-          <dt class="label">Paid with</dt>
+        <div class="fields__item" [class.fields__item--flagged]="footnoteFor('Category')">
+          <dt class="label">
+            Category
+            @if (r.categorySuggestedByAi) {
+              <span class="suggested">· suggested</span>
+            }
+            <ng-container *ngTemplateOutlet="mark; context: { $implicit: 'Category' }" />
+          </dt>
+          <dd>{{ categoryName() ?? '—' }}</dd>
+        </div>
+        <div class="fields__item" [class.fields__item--flagged]="footnoteFor('PaymentMethod')">
+          <dt class="label">Paid with <ng-container *ngTemplateOutlet="mark; context: { $implicit: 'PaymentMethod' }" /></dt>
           <dd class="mono">{{ r.paymentMethod ?? '—' }}</dd>
         </div>
-        <div class="fields__item">
-          <dt class="label">Currency</dt>
+        <div class="fields__item" [class.fields__item--flagged]="footnoteFor('Currency')">
+          <dt class="label">Currency <ng-container *ngTemplateOutlet="mark; context: { $implicit: 'Currency' }" /></dt>
           <dd class="mono">{{ r.currency ?? '—' }}</dd>
         </div>
       </dl>
@@ -115,12 +139,12 @@
       }
 
       <div class="totals">
-        <span class="label">Subtotal</span>
+        <span class="label">Subtotal <ng-container *ngTemplateOutlet="mark; context: { $implicit: 'Subtotal' }" /></span>
         <span class="num">{{ r.subtotal !== null ? (r.subtotal | number: '1.2-2') : '—' }}</span>
-        <span class="label">Tax</span>
+        <span class="label">Tax <ng-container *ngTemplateOutlet="mark; context: { $implicit: 'Tax' }" /></span>
         <span class="num">{{ r.tax !== null ? (r.tax | number: '1.2-2') : '—' }}</span>
         <span class="totals__rule"></span>
-        <span class="totals__label">Total</span>
+        <span class="totals__label">Total <ng-container *ngTemplateOutlet="mark; context: { $implicit: 'Total' }" /></span>
         <span class="num totals__value">
           {{ r.total !== null ? (r.total | number: '1.2-2') : '—' }}
           @if (r.currency) {
@@ -128,6 +152,14 @@
           }
         </span>
       </div>
+
+      @if (footnotes().length > 0) {
+        <ol class="footnotes" aria-label="Please confirm">
+          @for (note of footnotes(); track note.number) {
+            <li><sup class="mark">{{ note.number }}</sup> {{ note.reason }}</li>
+          }
+        </ol>
+      }
     </article>
   </div>
 } @else {

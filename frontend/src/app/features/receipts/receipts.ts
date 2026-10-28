@@ -1,6 +1,6 @@
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { httpResource } from '@angular/common/http';
-import { ChangeDetectionStrategy, Component, computed, inject, input, numberAttribute } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, input, numberAttribute } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { PagedResult, ReceiptStatus, ReceiptSummary } from '../../core/receipts/receipt.models';
 import { ReceiptsApi } from '../../core/receipts/receipts-api';
@@ -9,6 +9,7 @@ import { EntryNumberPipe } from '../../shared/formatting/entry-number.pipe';
 import { StatusStamp } from '../../shared/ui/status-stamp/status-stamp';
 
 const PAGE_SIZE = 25;
+const REFRESH_WHILE_READING_MS = 4_000;
 
 interface StatusTab {
   label: string;
@@ -75,4 +76,20 @@ export class Receipts {
   });
 
   protected readonly errorMessage = computed(() => (this.ledger.error() ? describeHttpError(this.ledger.error()) : null));
+
+  /** True while AI is still reading something on this page. */
+  private readonly anyBeingRead = computed(
+    () => this.ledger.hasValue() && this.ledger.value().items.some((receipt) => receipt.status === 'Processing'),
+  );
+
+  constructor() {
+    // Refresh quietly every few seconds while a receipt is being read; stop as soon as none is.
+    effect((onCleanup) => {
+      if (!this.anyBeingRead()) {
+        return;
+      }
+      const timer = setInterval(() => this.ledger.reload(), REFRESH_WHILE_READING_MS);
+      onCleanup(() => clearInterval(timer));
+    });
+  }
 }

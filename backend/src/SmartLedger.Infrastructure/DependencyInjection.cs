@@ -9,8 +9,12 @@ using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
 using SmartLedger.Application.Auth;
+using SmartLedger.Application.Categories;
+using SmartLedger.Application.Common;
 using SmartLedger.Application.Common.Storage;
 using SmartLedger.Application.Receipts;
+using SmartLedger.Application.Receipts.Extraction;
+using SmartLedger.Infrastructure.Extraction;
 using SmartLedger.Infrastructure.Identity;
 using SmartLedger.Infrastructure.Persistence;
 using SmartLedger.Infrastructure.Repositories;
@@ -38,11 +42,39 @@ public static class DependencyInjection
 
         services.AddScoped<DevelopmentDataSeeder>();
         services.AddScoped<IReceiptRepository, ReceiptRepository>();
+        services.AddScoped<ICategoryRepository, CategoryRepository>();
+        services.AddScoped<IUserDirectory, UserDirectory>();
 
         AddAuth(services, configuration);
         AddStorage(services, configuration);
+        AddExtraction(services, configuration);
 
         return services;
+    }
+
+    private static void AddExtraction(IServiceCollection services, IConfiguration configuration)
+    {
+        services.AddOptions<GeminiOptions>()
+            .Bind(configuration.GetSection(GeminiOptions.SectionName))
+            .ValidateOnStart();
+        services.AddSingleton<IValidateOptions<GeminiOptions>, GeminiOptionsValidation>();
+
+        services.AddHttpClient<IReceiptExtractor, GeminiReceiptExtractor>((provider, client) =>
+            {
+                client.BaseAddress = provider.GetRequiredService<IOptions<GeminiOptions>>().Value.BaseUrl;
+                client.Timeout = Timeout.InfiniteTimeSpan; // The resilience handler below owns timeouts.
+            })
+            // Retries rate limits (429), outages (5xx) and timeouts with backoff, honouring Retry-After.
+            .AddStandardResilienceHandler(resilience =>
+            {
+                resilience.AttemptTimeout.Timeout = TimeSpan.FromSeconds(60);
+                resilience.CircuitBreaker.SamplingDuration = TimeSpan.FromMinutes(2);
+                resilience.TotalRequestTimeout.Timeout = TimeSpan.FromMinutes(4);
+            });
+
+        services.AddSingleton<ReceiptExtractionQueue>();
+        services.AddSingleton<IReceiptExtractionQueue>(provider => provider.GetRequiredService<ReceiptExtractionQueue>());
+        services.AddHostedService<ReceiptExtractionWorker>();
     }
 
     private static void AddStorage(IServiceCollection services, IConfiguration configuration)
