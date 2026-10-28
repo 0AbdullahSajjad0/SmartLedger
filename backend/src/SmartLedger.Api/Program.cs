@@ -13,6 +13,15 @@ using SmartLedger.Application;
 using SmartLedger.Application.Common;
 using SmartLedger.Infrastructure;
 using SmartLedger.Infrastructure.Persistence;
+using SmartLedger.Infrastructure.Previews;
+
+// CI runs the built Docker image with this flag before deploying it, to prove the native image libraries work
+// inside the minimal production container. It needs no configuration and exits straight after.
+if (args is [ReceiptPreviewSelfCheck.CommandLineFlag])
+{
+    Environment.ExitCode = await ReceiptPreviewSelfCheck.RunAsync(Console.Out) ? 0 : 1;
+    return;
+}
 
 var builder = WebApplication.CreateBuilder(args);
 

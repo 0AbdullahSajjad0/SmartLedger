@@ -4,6 +4,7 @@ using Microsoft.Net.Http.Headers;
 using SmartLedger.Api.Auth;
 using SmartLedger.Api.Common;
 using SmartLedger.Api.Security;
+using SmartLedger.Application.Common;
 using SmartLedger.Application.Receipts;
 using SmartLedger.Domain.Enums;
 
@@ -76,13 +77,22 @@ public sealed class ReceiptsController(IReceiptService receiptService) : Control
     public async Task<IActionResult> Get(Guid id, CancellationToken cancellationToken) =>
         (await receiptService.GetAsync(id, cancellationToken)).ToActionResult(this);
 
-    /// <summary>The original uploaded image or PDF.</summary>
+    /// <summary>The original upload, exactly as received (photos keep their metadata, including any GPS location).</summary>
     [HttpGet("{id:guid}/file")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> GetFile(Guid id, CancellationToken cancellationToken)
+    public async Task<IActionResult> GetFile(Guid id, CancellationToken cancellationToken) =>
+        ServeFile(await receiptService.OpenFileAsync(id, cancellationToken));
+
+    /// <summary>The cleaned JPEG: upright, size-limited, no metadata. 404 until it's ready (see <c>hasPreview</c>).</summary>
+    [HttpGet("{id:guid}/preview")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetPreview(Guid id, CancellationToken cancellationToken) =>
+        ServeFile(await receiptService.OpenPreviewAsync(id, cancellationToken));
+
+    private IActionResult ServeFile(Result<ReceiptFile> result)
     {
-        var result = await receiptService.OpenFileAsync(id, cancellationToken);
         if (!result.IsSuccess)
         {
             return result.ToActionResult(this);
@@ -94,10 +104,10 @@ public sealed class ReceiptsController(IReceiptService receiptService) : Control
         Response.Headers.CacheControl = "private, max-age=300";
         Response.Headers.ContentSecurityPolicy = SecurityHeaders.UploadedFileContentSecurityPolicy;
 
-        // Inline so images display; named by entry number, never by the uploader's original file name.
+        // Inline so images display.
         Response.Headers.ContentDisposition = new ContentDispositionHeaderValue("inline")
         {
-            FileName = $"receipt-{file.ReceiptNumber:0000}{file.Extension}",
+            FileName = file.DownloadName,
         }.ToString();
 
         return File(file.Content, file.ContentType);

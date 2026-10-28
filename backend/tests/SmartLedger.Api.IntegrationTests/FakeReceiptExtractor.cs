@@ -1,24 +1,35 @@
+using ImageMagick;
 using SmartLedger.Application.Receipts.Extraction;
 
 namespace SmartLedger.Api.IntegrationTests;
 
 /// <summary>
-/// Stands in for Gemini in integration tests: decides what it "read" from a marker in the uploaded bytes,
-/// so tests are fast, free and deterministic.
+/// Stands in for Gemini in integration tests, so they're fast, free and deterministic. Photos arrive as the cleaned
+/// JPEG, so what it "read" is decided by the photo's width (<see cref="TestFiles.NotAReceiptWidth"/>).
 /// </summary>
 internal sealed class FakeReceiptExtractor : IReceiptExtractor
 {
-    public const string NotAReceiptMarker = "NOT-A-RECEIPT";
-
     public async Task<ExtractedReceipt> ExtractAsync(ExtractionRequest request, CancellationToken cancellationToken)
     {
-        using var reader = new StreamReader(request.Content);
-        var content = await reader.ReadToEndAsync(cancellationToken);
+        using var content = new MemoryStream();
+        await request.Content.CopyToAsync(content, cancellationToken);
 
-        if (content.Contains(NotAReceiptMarker, StringComparison.Ordinal))
+        switch (request.ContentType)
         {
-            return new ExtractedReceipt(false, "This is a photo of a cat, not a receipt.",
-                null, null, null, null, null, null, null, null, [], [], "{}");
+            case "image/jpeg":
+                // Must be a real JPEG: the preview, never the original upload.
+                var photo = new MagickImageInfo(content.ToArray());
+                if (photo.Width == TestFiles.NotAReceiptWidth)
+                {
+                    return new ExtractedReceipt(false, "This is a photo of a cat, not a receipt.",
+                        null, null, null, null, null, null, null, null, [], [], "{}");
+                }
+                break;
+            case "application/pdf":
+                break;
+            default:
+                // The worker logs this and the receipt stays "Processing", so the test waiting for it fails.
+                throw new InvalidOperationException($"AI was sent {request.ContentType}; photos must go as the cleaned JPEG.");
         }
 
         return new ExtractedReceipt(

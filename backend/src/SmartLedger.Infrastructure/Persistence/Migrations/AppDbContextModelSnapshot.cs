@@ -388,6 +388,11 @@ namespace SmartLedger.Infrastructure.Persistence.Migrations
                         .HasMaxLength(60)
                         .HasColumnType("nvarchar(60)");
 
+                    b.Property<string>("PreviewStorageKey")
+                        .HasMaxLength(500)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(500)");
+
                     b.Property<string>("RawExtraction")
                         .HasColumnType("nvarchar(max)");
 

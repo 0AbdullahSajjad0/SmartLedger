@@ -12,6 +12,9 @@ public interface IReceiptService
 
     Task<Result<ReceiptDetailDto>> GetAsync(Guid receiptId, CancellationToken cancellationToken);
 
-    /// <summary>The original uploaded file.</summary>
+    /// <summary>The original uploaded file, exactly as received (photos include any location data).</summary>
     Task<Result<ReceiptFile>> OpenFileAsync(Guid receiptId, CancellationToken cancellationToken);
+
+    /// <summary>The cleaned JPEG preview. Not found while it's still being made, or for receipts from before previews.</summary>
+    Task<Result<ReceiptFile>> OpenPreviewAsync(Guid receiptId, CancellationToken cancellationToken);
 }

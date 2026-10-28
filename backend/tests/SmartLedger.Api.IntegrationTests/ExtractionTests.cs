@@ -1,14 +1,16 @@
+using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using ImageMagick;
 using SmartLedger.Application.Categories;
 using SmartLedger.Application.Receipts;
 using SmartLedger.Domain.Enums;
 
 namespace SmartLedger.Api.IntegrationTests;
 
-/// <summary>Upload → background worker → AI (faked) → sanitizer → the receipt the user sees.</summary>
+/// <summary>Upload → background worker → preview → AI (faked) → sanitizer → the receipt the user sees.</summary>
 [Collection(ApiCollection.Name)]
 public class ExtractionTests(SmartLedgerApiFactory factory)
 {
@@ -22,7 +24,7 @@ public class ExtractionTests(SmartLedgerApiFactory factory)
     {
         var client = await SignedInClientAsync();
 
-        var uploaded = await UploadAsync(client, [0xFF, 0xD8, 0xFF, 0xE0, .. "a receipt"u8]);
+        var uploaded = await UploadAsync(client, "receipt.jpg", TestFiles.Jpeg());
         var receipt = await WaitUntilReadAsync(client, uploaded.Id);
 
         Assert.Equal(ReceiptStatus.NeedsReview, receipt.Status);
@@ -45,11 +47,69 @@ public class ExtractionTests(SmartLedgerApiFactory factory)
     {
         var client = await SignedInClientAsync();
 
-        var uploaded = await UploadAsync(client, [0xFF, 0xD8, 0xFF, 0xE0, .. "NOT-A-RECEIPT"u8]);
+        var uploaded = await UploadAsync(client, "cat.jpg", TestFiles.NotAReceiptJpeg());
         var receipt = await WaitUntilReadAsync(client, uploaded.Id);
 
         Assert.Equal(ReceiptStatus.Failed, receipt.Status);
         Assert.Equal("This is a photo of a cat, not a receipt.", receipt.FailureReason);
+    }
+
+    [Fact]
+    public async Task APhonePhoto_GetsACleanUprightPreview_AndKeepsItsOriginalUntouched()
+    {
+        var client = await SignedInClientAsync();
+        var heic = TestFiles.RotatedHeicWithGps();
+
+        var uploaded = await UploadAsync(client, "IMG_0042.HEIC", heic);
+        var receipt = await WaitUntilReadAsync(client, uploaded.Id);
+        var preview = await client.GetAsync($"/api/receipts/{receipt.Id}/preview");
+        var original = await client.GetAsync($"/api/receipts/{receipt.Id}/file");
+
+        // AI (faked) only accepts the cleaned JPEG for photos, so reaching review proves that's what it was sent.
+        Assert.Equal(ReceiptStatus.NeedsReview, receipt.Status);
+        Assert.True(receipt.HasPreview);
+
+        Assert.Equal(HttpStatusCode.OK, preview.StatusCode);
+        Assert.Equal("image/jpeg", preview.Content.Headers.ContentType?.MediaType);
+        Assert.Equal("receipt-0001-preview.jpg", preview.Content.Headers.ContentDisposition?.FileName);
+        Assert.Contains("sandbox", preview.Headers.GetValues("Content-Security-Policy").Single());
+        using (var image = new MagickImage(await preview.Content.ReadAsByteArrayAsync()))
+        {
+            Assert.Equal((200u, 400u), (image.Width, image.Height));
+            Assert.Empty(image.ProfileNames); // no EXIF, so no GPS location
+        }
+
+        Assert.Equal("image/heic", original.Content.Headers.ContentType?.MediaType);
+        Assert.Equal(heic, await original.Content.ReadAsByteArrayAsync());
+    }
+
+    [Fact]
+    public async Task APdf_GetsAPreviewOfItsFirstPage()
+    {
+        var client = await SignedInClientAsync();
+
+        var uploaded = await UploadAsync(client, "invoice.pdf", TestFiles.Pdf());
+        var receipt = await WaitUntilReadAsync(client, uploaded.Id);
+        var preview = await client.GetByteArrayAsync($"/api/receipts/{receipt.Id}/preview");
+
+        Assert.Equal(ReceiptStatus.NeedsReview, receipt.Status);
+        Assert.Equal(MagickFormat.Jpeg, new MagickImageInfo(preview).Format);
+    }
+
+    [Fact]
+    public async Task ADamagedPhoto_IsMarkedUnreadable_WithoutAPreview()
+    {
+        var client = await SignedInClientAsync();
+
+        // Starts like a JPEG, so the upload accepts it, but there's no picture inside.
+        var uploaded = await UploadAsync(client, "broken.jpg", [0xFF, 0xD8, 0xFF, 0xE0, .. new byte[64]]);
+        var receipt = await WaitUntilReadAsync(client, uploaded.Id);
+        var preview = await client.GetAsync($"/api/receipts/{receipt.Id}/preview");
+
+        Assert.Equal(ReceiptStatus.Failed, receipt.Status);
+        Assert.Contains("couldn't be opened", receipt.FailureReason);
+        Assert.False(receipt.HasPreview);
+        Assert.Equal(HttpStatusCode.NotFound, preview.StatusCode);
     }
 
     [Fact]
@@ -69,12 +129,12 @@ public class ExtractionTests(SmartLedgerApiFactory factory)
         return client.Authorize(auth.AccessToken);
     }
 
-    private static async Task<ReceiptSummaryDto> UploadAsync(HttpClient client, byte[] bytes)
+    private static async Task<ReceiptSummaryDto> UploadAsync(HttpClient client, string fileName, byte[] bytes)
     {
         var form = new MultipartFormDataContent();
         var content = new ByteArrayContent(bytes);
-        content.Headers.ContentType = new MediaTypeHeaderValue("image/jpeg");
-        form.Add(content, "files", "receipt.jpg");
+        content.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
+        form.Add(content, "files", fileName);
 
         var response = await client.PostAsync("/api/receipts", form);
         response.EnsureSuccessStatusCode();

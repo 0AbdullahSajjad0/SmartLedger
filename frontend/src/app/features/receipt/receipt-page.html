@@ -24,17 +24,17 @@
         <span class="frame__corner frame__corner--bl" aria-hidden="true"></span>
         <span class="frame__corner frame__corner--br" aria-hidden="true"></span>
 
-        @if (fileUrl() && canPreview()) {
-          <img class="frame__image" [src]="fileUrl()" [alt]="'Original receipt: ' + r.fileName" />
-        } @else if (file.isLoading()) {
-          <p class="frame__message mono">LOADING THE ORIGINAL…</p>
-        } @else if (file.error()) {
-          <p class="frame__message mono">THE ORIGINAL COULDN'T BE LOADED</p>
+        @if (imageUrl(); as url) {
+          <img class="frame__image" [src]="url"
+            [alt]="(r.contentType === 'application/pdf' ? 'First page of ' : 'Receipt: ') + r.fileName" />
+        } @else if (image.isLoading()) {
+          <p class="frame__message mono">LOADING THE RECEIPT…</p>
+        } @else if (image.error()) {
+          <p class="frame__message mono">THE IMAGE COULDN'T BE LOADED</p>
+        } @else if (r.status === 'Processing') {
+          <p class="frame__message mono" aria-live="polite">PREPARING THE PREVIEW…</p>
         } @else {
-          <p class="frame__message">
-            {{ r.contentType === 'application/pdf' ? 'PDF receipts' : 'HEIC photos' }} can't be previewed here yet.
-            Download the original to see it.
-          </p>
+          <p class="frame__message">There's no preview of this file. Download the original to see it.</p>
         }
       </div>
 
@@ -47,10 +47,22 @@
         <dd>{{ r.sizeBytes | fileSize }}</dd>
       </dl>
 
-      @if (fileUrl(); as url) {
+      <div class="download">
         <!-- A download rather than a new tab: PDFs and HEIC photos don't open reliably from a blob: address. -->
-        <a class="link-button" [href]="url" [attr.download]="downloadName()">Download original</a>
-      }
+        <button type="button" class="link-button" [disabled]="downloading()" (click)="downloadOriginal()">
+          {{ downloading() ? 'Downloading…' : 'Download original' }}
+        </button>
+        <p class="download__note">
+          @if (originalIsPhoto()) {
+            Exactly as uploaded, including any location your camera saved in it. The preview above has that removed.
+          } @else {
+            Exactly as uploaded.
+          }
+        </p>
+        @if (downloadError(); as message) {
+          <p class="download__error" role="alert">{{ message }}</p>
+        }
+      </div>
     </section>
 
     <article class="sheet" aria-label="Record">

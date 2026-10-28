@@ -11,9 +11,8 @@ namespace SmartLedger.Api.IntegrationTests;
 [Collection(ApiCollection.Name)]
 public class ReceiptTests(SmartLedgerApiFactory factory)
 {
-    // Smallest byte sequences each format starts with, padded so they look like real files.
-    private static readonly byte[] Jpeg = [0xFF, 0xD8, 0xFF, 0xE0, .. new byte[64]];
-    private static readonly byte[] Pdf = [.. "%PDF-1.7\n"u8, .. new byte[64]];
+    private static readonly byte[] Jpeg = TestFiles.Jpeg();
+    private static readonly byte[] Pdf = TestFiles.Pdf();
 
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web)
     {
@@ -118,11 +117,15 @@ public class ReceiptTests(SmartLedgerApiFactory factory)
         var stranger = await SignedInClientAsync();
         var receipt = (await (await UploadAsync(owner, ("a.jpg", Jpeg))).Content.ReadFromJsonAsync<List<ReceiptSummaryDto>>(Json))!.Single();
 
+        await TestReceipts.WaitUntilReadAsync(owner, receipt.Id); // so the preview exists, and must still be hidden
+
         var details = await stranger.GetAsync($"/api/receipts/{receipt.Id}");
         var file = await stranger.GetAsync($"/api/receipts/{receipt.Id}/file");
+        var preview = await stranger.GetAsync($"/api/receipts/{receipt.Id}/preview");
 
         Assert.Equal(HttpStatusCode.NotFound, details.StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, file.StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, preview.StatusCode);
     }
 
     [Fact]

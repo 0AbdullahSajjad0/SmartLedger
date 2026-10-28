@@ -141,15 +141,32 @@ jobs:
             type=sha,format=long
             type=raw,value=latest,enable={{is_default_branch}}
 
-      - name: Build and push
+      # Built into the runner's Docker first, so the image is tested before anything is published.
+      - name: Build
         uses: docker/build-push-action@v7
         with:
           context: backend
-          push: ${{ github.event_name != 'pull_request' }}
+          load: true
+          tags: smartledger-api:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # The production image is minimal (no shell, few system libraries). Prove the native image libraries
+      # (ImageMagick, PDFium) load inside it and convert a HEIC photo and a PDF, instead of finding out on the
+      # first real upload.
+      - name: Check image processing in the container
+        run: docker run --rm smartledger-api:ci --check-image-processing
+
+      # Same build again: every layer comes from the cache above, so this only uploads.
+      - name: Push
+        if: github.event_name != 'pull_request'
+        uses: docker/build-push-action@v7
+        with:
+          context: backend
+          push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
-          cache-to: type=gha,mode=max
 
   backend-deploy:
     name: Backend deploy to Azure

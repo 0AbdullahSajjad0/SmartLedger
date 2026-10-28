@@ -25,6 +25,7 @@ public sealed record LineItemDto(int LineNumber, string Description, decimal Qua
 public sealed record ExtractionFlagDto(string Field, string Reason);
 
 /// <summary>Everything the review screen shows.</summary>
+/// <param name="HasPreview">A cleaned JPEG is available at <c>/preview</c>; the original stays at <c>/file</c>.</param>
 public sealed record ReceiptDetailDto(
     Guid Id,
     int Number,
@@ -43,6 +44,7 @@ public sealed record ReceiptDetailDto(
     string FileName,
     string ContentType,
     long SizeBytes,
+    bool HasPreview,
     IReadOnlyList<LineItemDto> LineItems,
     IReadOnlyList<ExtractionFlagDto> ExtractionFlags,
     string? BaseCurrency,
@@ -50,11 +52,11 @@ public sealed record ReceiptDetailDto(
     DateTimeOffset? ApprovedAt,
     DateTimeOffset CreatedAt);
 
-/// <summary>An original uploaded file, ready to stream back to its owner.</summary>
+/// <summary>A receipt's original upload or its preview, ready to stream back to its owner.</summary>
 /// <param name="Content">The caller disposes it.</param>
-/// <param name="ContentType">The type detected at upload, not whatever the storage reports.</param>
-/// <param name="Extension">E.g. ".jpg", for naming the download.</param>
-public sealed record ReceiptFile(Stream Content, string ContentType, int ReceiptNumber, string Extension);
+/// <param name="ContentType">The type detected at upload (or JPEG for a preview), not whatever the storage reports.</param>
+/// <param name="DownloadName">E.g. "receipt-0042.heic": by entry number, never by the uploader's file name.</param>
+public sealed record ReceiptFile(Stream Content, string ContentType, string DownloadName);
 
 /// <param name="Status">Null for every status.</param>
 /// <param name="Page">Starts at 1.</param>

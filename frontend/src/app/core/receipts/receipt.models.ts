@@ -47,6 +47,8 @@ export interface ReceiptDetail {
   fileName: string;
   contentType: string;
   sizeBytes: number;
+  /** A cleaned JPEG is ready at /preview. False while it's being made, and for receipts from before previews. */
+  hasPreview: boolean;
   lineItems: LineItem[];
   extractionFlags: ExtractionFlag[];
   baseCurrency: string | null;
