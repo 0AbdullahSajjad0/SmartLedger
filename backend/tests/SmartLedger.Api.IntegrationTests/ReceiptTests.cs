@@ -84,12 +84,16 @@ public class ReceiptTests(SmartLedgerApiFactory factory)
     public async Task List_FiltersByStatus()
     {
         var client = await SignedInClientAsync();
-        await UploadAsync(client, ("a.jpg", Jpeg));
+        var uploaded = (await (await UploadAsync(client, ("a.jpg", Jpeg))).Content
+            .ReadFromJsonAsync<List<ReceiptSummaryDto>>(Json))!.Single();
 
-        var processing = await client.GetFromJsonAsync<PagedResult<ReceiptSummaryDto>>("/api/receipts?status=Processing", Json);
+        // Wait for the background worker, or the status would still be changing while we filter by it.
+        await TestReceipts.WaitUntilReadAsync(client, uploaded.Id);
+
+        var needsReview = await client.GetFromJsonAsync<PagedResult<ReceiptSummaryDto>>("/api/receipts?status=NeedsReview", Json);
         var approved = await client.GetFromJsonAsync<PagedResult<ReceiptSummaryDto>>("/api/receipts?status=Approved", Json);
 
-        Assert.Equal(1, processing!.TotalCount);
+        Assert.Equal(1, needsReview!.TotalCount);
         Assert.Equal(0, approved!.TotalCount);
     }
 

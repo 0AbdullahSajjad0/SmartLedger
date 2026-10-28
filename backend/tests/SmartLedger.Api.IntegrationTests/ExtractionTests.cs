@@ -81,18 +81,6 @@ public class ExtractionTests(SmartLedgerApiFactory factory)
         return (await response.Content.ReadFromJsonAsync<List<ReceiptSummaryDto>>(Json))!.Single();
     }
 
-    /// <summary>The worker runs in the background: poll until the receipt has left Processing.</summary>
-    private static async Task<ReceiptDetailDto> WaitUntilReadAsync(HttpClient client, Guid id)
-    {
-        var deadline = DateTime.UtcNow.AddSeconds(15);
-        while (true)
-        {
-            var receipt = (await client.GetFromJsonAsync<ReceiptDetailDto>($"/api/receipts/{id}", Json))!;
-            if (receipt.Status != ReceiptStatus.Processing || DateTime.UtcNow > deadline)
-            {
-                return receipt;
-            }
-            await Task.Delay(100);
-        }
-    }
+    private static Task<ReceiptDetailDto> WaitUntilReadAsync(HttpClient client, Guid id) =>
+        TestReceipts.WaitUntilReadAsync(client, id);
 }
