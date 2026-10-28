@@ -1,5 +1,9 @@
 <header class="masthead">
-  <a class="masthead__brand" routerLink="/overview">SmartLedger</a>
+  <a class="masthead__brand" routerLink="/overview">
+    <!-- Decorative: the name next to it already says what the link is. -->
+    <img class="masthead__mark" src="icon.svg" alt="" width="28" height="28" />
+    SmartLedger
+  </a>
 
   <nav class="masthead__nav" aria-label="Main">
     @for (item of nav; track item.path) {
