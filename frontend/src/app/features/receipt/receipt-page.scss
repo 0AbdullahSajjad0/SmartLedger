@@ -1,3 +1,5 @@
+@use 'record';
+
 .crumb {
   color: inherit;
 }
@@ -158,69 +160,42 @@
   }
 }
 
-// Footnote marks for fields the AI wasn't sure about.
-.mark {
-  margin-left: 2px;
-  font-family: var(--font-mono);
-  font-size: 10px;
-  font-weight: 700;
-  color: var(--color-accent);
-}
-
 .fields__item--flagged {
   border-bottom: 2px solid var(--color-accent);
-  background: #f6e9dd;
-}
-
-.suggested {
-  color: var(--color-accent);
-  letter-spacing: 0.06em;
+  background: var(--color-flagged);
 }
 
 .sheet__note--live {
   color: var(--color-accent);
 }
 
-.footnotes {
-  margin: 0;
-  padding: 14px 0 0;
-  list-style: none;
-  border-top: var(--rule-faint);
-  font-size: 13px;
-  line-height: 1.6;
-  color: #3a352e;
-}
+// How an approved receipt went into the ledger: the frozen amount and what it's based on.
+.posted {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px 32px;
+  padding: 20px 0 0;
+  border-top: var(--rule-strong);
 
-.totals {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 8px 24px;
-  width: min(100%, 340px);
-  margin-left: auto;
-
-  &__rule {
-    grid-column: 1 / 3;
-    height: 1px;
-    background: var(--color-ink);
-  }
-
-  &__label {
+  &__amount {
     font-family: var(--font-display);
-    font-size: 22px;
-    font-weight: 700;
-  }
-
-  &__value {
-    padding-bottom: 2px;
-    border-bottom: 3px double var(--color-ink);
-    font-size: 20px;
+    font-size: 30px;
     font-weight: 700;
   }
 
   &__currency {
-    font-size: 12px;
+    margin-right: 6px;
+    font-family: var(--font-mono);
+    font-size: 13px;
     font-weight: 400;
+    color: var(--color-muted);
+  }
+
+  &__basis {
+    margin-top: 6px;
+    font-size: 12px;
     color: var(--color-muted);
   }
 }

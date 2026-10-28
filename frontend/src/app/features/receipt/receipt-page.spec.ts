@@ -3,38 +3,9 @@ import { TestBed } from '@angular/core/testing';
 import { TEST_API, provideAuthTesting } from '../../core/auth/testing';
 import { ReceiptDetail } from '../../core/receipts/receipt.models';
 import { ReceiptPage } from './receipt-page';
+import { receiptDetail } from './receipt-testing';
 
 const RECEIPT_URL = `${TEST_API}/api/receipts/r-1`;
-
-function detail(changes: Partial<ReceiptDetail> = {}): ReceiptDetail {
-  return {
-    id: 'r-1',
-    number: 1,
-    status: 'NeedsReview',
-    vendorName: null,
-    receiptDate: null,
-    currency: null,
-    subtotal: null,
-    tax: null,
-    total: null,
-    paymentMethod: null,
-    categoryId: null,
-    categorySuggestedByAi: false,
-    notes: null,
-    failureReason: null,
-    fileName: 'IMG_2041.HEIC',
-    contentType: 'image/heic',
-    sizeBytes: 26_303,
-    hasPreview: true,
-    lineItems: [],
-    extractionFlags: [],
-    baseCurrency: null,
-    baseCurrencyTotal: null,
-    approvedAt: null,
-    createdAt: '2026-10-27T09:00:00Z',
-    ...changes,
-  };
-}
 
 describe('ReceiptPage', () => {
   let http: HttpTestingController;
@@ -79,7 +50,7 @@ describe('ReceiptPage', () => {
   }
 
   it('shows the cleaned preview next to the record', async () => {
-    const { page } = await render(detail(), 'preview');
+    const { page } = await render(receiptDetail(), 'preview');
 
     expect(page.querySelector('img')?.getAttribute('src')).toBe('blob:test-receipt');
     expect(page.textContent).toContain('Entry 0001');
@@ -87,16 +58,17 @@ describe('ReceiptPage', () => {
   });
 
   it("says the preview is being made while it isn't ready yet", async () => {
-    const { page } = await render(detail({ status: 'Processing', hasPreview: false }));
+    const { page } = await render(receiptDetail({ status: 'Processing', hasPreview: false }));
 
     expect(page.querySelector('img')).toBeNull();
     expect(page.textContent).toContain('PREPARING THE PREVIEW');
     expect(page.textContent).toContain('AI is reading this receipt');
+    expect(page.querySelector('app-receipt-review-form')).toBeNull();
   });
 
-  it("shows what AI read, with numbered notes on the fields it wasn't sure about", async () => {
+  it("puts what AI read into the review form, marking the fields it wasn't sure about", async () => {
     const { page } = await render(
-      detail({
+      receiptDetail({
         vendorName: 'Paper & Co. Office Supply',
         paymentMethod: 'VISA ····4242',
         categoryId: 'cat-office',
@@ -109,20 +81,59 @@ describe('ReceiptPage', () => {
     );
 
     expect(page.querySelector('h1')?.textContent).toContain('Paper & Co. Office Supply');
-    expect(page.textContent).toContain('Office Supplies');
+    expect(page.querySelector<HTMLInputElement>('#vendorName')?.value).toBe('Paper & Co. Office Supply');
+    expect(page.querySelector<HTMLSelectElement>('#categoryId')?.selectedOptions[0].textContent).toContain('Office Supplies');
     expect(page.textContent).toContain('suggested');
-    expect(page.querySelector('.fields__item--flagged')?.textContent).toContain('Paid with');
+    expect(page.querySelector('.field--flagged')?.textContent).toContain('Paid with');
     expect(page.querySelector('.footnotes')?.textContent).toContain('One digit of the card number was faded.');
   });
 
+  it("offers to fill in a receipt AI couldn't read", async () => {
+    const { page } = await render(receiptDetail({ status: 'Failed', failureReason: 'Too blurry to read.' }), 'preview');
+
+    expect(page.textContent).toContain('Too blurry to read. You can fill in the details yourself, or reject it.');
+    expect(page.querySelector('app-receipt-review-form')).not.toBeNull();
+  });
+
+  it('shows an approved receipt as posted, with the rate it was converted at, and can reopen it', async () => {
+    const approved = receiptDetail({
+      status: 'Approved',
+      vendorName: 'Lahore Chai House',
+      currency: 'PKR',
+      total: 2800,
+      baseCurrency: 'EUR',
+      exchangeRate: 0.0032142857,
+      exchangeRateDate: '2026-10-15',
+      baseCurrencyTotal: 9,
+      approvedAt: '2026-10-28T10:00:00Z',
+    });
+    const { fixture, page } = await render(approved, 'preview');
+
+    expect(page.querySelector('app-receipt-review-form')).toBeNull();
+    expect(page.querySelector('.posted__amount')?.textContent).toContain('EUR9.00');
+    expect(page.querySelector('.posted__basis')?.textContent).toContain('1 PKR = 0.0032142857 EUR');
+    expect(page.querySelector('.posted__basis')?.textContent).toContain('15 Oct 2026');
+
+    page.querySelector<HTMLButtonElement>('.posted button')!.click();
+    const reopen = await vi.waitFor(() => http.expectOne({ method: 'POST', url: `${RECEIPT_URL}/reopen` }));
+    reopen.flush({ ...approved, status: 'NeedsReview', baseCurrencyTotal: null, approvedAt: null });
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(page.querySelector('app-receipt-review-form')).not.toBeNull();
+  });
+
   it('shows the original for receipts uploaded before previews existed, if the browser can display it', async () => {
-    const { page } = await render(detail({ hasPreview: false, fileName: 'old.png', contentType: 'image/png' }), 'file');
+    const { page } = await render(
+      receiptDetail({ status: 'Approved', hasPreview: false, fileName: 'old.png', contentType: 'image/png' }),
+      'file',
+    );
 
     expect(page.querySelector('img')?.getAttribute('src')).toBe('blob:test-receipt');
   });
 
   it('offers only the download for old files the browser cannot display', async () => {
-    const { page } = await render(detail({ hasPreview: false }));
+    const { page } = await render(receiptDetail({ status: 'Approved', hasPreview: false }));
 
     expect(page.querySelector('img')).toBeNull();
     expect(page.textContent).toContain("There's no preview of this file");
@@ -130,7 +141,7 @@ describe('ReceiptPage', () => {
 
   it('downloads the original only when asked, named by entry number', async () => {
     const { fixture, page } = await render(
-      detail({ number: 3, fileName: 'invoice.PDF', contentType: 'application/pdf' }),
+      receiptDetail({ number: 3, fileName: 'invoice.PDF', contentType: 'application/pdf' }),
       'preview',
     );
     let savedAs: string | null = null;

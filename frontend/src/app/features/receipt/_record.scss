@@ -1,0 +1,60 @@
+// Pieces of the receipt record shared by the read-only sheet (receipt page) and the review form.
+
+// Footnote marks for fields the AI wasn't sure about.
+.mark {
+  margin-left: 2px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--color-accent);
+}
+
+.suggested {
+  color: var(--color-accent);
+  letter-spacing: 0.06em;
+}
+
+.footnotes {
+  margin: 0;
+  padding: 14px 0 0;
+  list-style: none;
+  border-top: var(--rule-faint);
+  font-size: 13px;
+  line-height: 1.6;
+  color: #3a352e;
+}
+
+// Subtotal, tax and a double-ruled total, right-aligned like the foot of an invoice.
+.totals {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px 24px;
+  width: min(100%, 340px);
+  margin-left: auto;
+
+  &__rule {
+    grid-column: 1 / 3;
+    height: 1px;
+    background: var(--color-ink);
+  }
+
+  &__label {
+    font-family: var(--font-display);
+    font-size: 22px;
+    font-weight: 700;
+  }
+
+  &__value {
+    padding-bottom: 2px;
+    border-bottom: 3px double var(--color-ink);
+    font-size: 20px;
+    font-weight: 700;
+  }
+
+  &__currency {
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--color-muted);
+  }
+}

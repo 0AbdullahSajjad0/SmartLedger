@@ -1,0 +1,174 @@
+@use '../record';
+
+:host {
+  display: block;
+}
+
+.review {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+
+  &__fields {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 22px 32px;
+  }
+
+  &__notes {
+    grid-column: 1 / -1;
+  }
+}
+
+// Text reads better in the UI face; codes, dates and numbers stay in mono like the rest of the ledger.
+.field__input--text {
+  font-family: var(--font-ui);
+}
+
+.field__input--code {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.field--flagged {
+  padding: 6px 8px 8px;
+  margin: -6px -8px -8px;
+  background: var(--color-flagged);
+
+  .field__input {
+    border-bottom: 2px solid var(--color-accent);
+  }
+}
+
+// ---- Line items: the ledger table with underlined inputs in its cells ----
+
+.lines {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+
+  .ledger-scroll {
+    width: 100%;
+  }
+
+  &__table td {
+    padding: 6px 8px;
+  }
+
+  &__empty {
+    color: var(--color-muted);
+  }
+
+  &--flagged .ledger th {
+    border-top-color: var(--color-accent);
+  }
+}
+
+.cell-input {
+  width: 100%;
+  min-width: 70px;
+  height: 36px;
+  padding: 0 2px;
+  border: 0;
+  border-bottom: var(--rule-faint);
+  border-radius: 0;
+  background: transparent;
+  color: var(--color-ink);
+  font-family: var(--font-ui);
+  font-size: 14px;
+
+  &:focus {
+    outline: none;
+    border-bottom: 2px solid var(--color-accent);
+  }
+
+  &[aria-invalid='true'] {
+    border-bottom: 2px solid var(--color-negative);
+  }
+
+  &--num {
+    text-align: right;
+    font-family: var(--font-mono);
+  }
+
+  &--total {
+    width: 140px;
+    font-size: 20px;
+    font-weight: 700;
+    border-bottom: 0;
+  }
+}
+
+.lines__table td:nth-child(2) .cell-input {
+  min-width: 180px;
+}
+
+.totals .cell-input--num:not(.cell-input--total) {
+  width: 140px;
+}
+
+// Arithmetic that doesn't add up: a caution, not an error.
+.checks {
+  margin: 0;
+  padding: 12px 0 0 14px;
+  list-style: none;
+  border-top: 2px solid var(--color-caution);
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--color-caution);
+}
+
+// ---- Posting: what the receipt becomes in the base currency, and the decision ----
+
+.post {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 20px 40px;
+  padding-top: 22px;
+  border-top: var(--rule-strong);
+
+  &__amount {
+    margin-top: 6px;
+    font-family: var(--font-display);
+    font-size: 34px;
+    font-weight: 700;
+  }
+
+  &__currency {
+    margin-right: 6px;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    font-weight: 400;
+    color: var(--color-muted);
+  }
+
+  &__basis {
+    margin-top: 6px;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--color-muted);
+  }
+
+  &__alert,
+  &__saved,
+  &__actions {
+    grid-column: 1 / -1;
+  }
+
+  &__saved {
+    font-size: 12px;
+    color: var(--color-muted);
+  }
+
+  &__actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+  }
+
+  &__reject {
+    margin-left: auto;
+  }
+}

@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text.RegularExpressions;
+using SmartLedger.Application.Common;
 using SmartLedger.Domain.Entities;
 
 namespace SmartLedger.Application.Receipts.Extraction;
@@ -19,17 +20,8 @@ public static partial class ExtractionSanitizer
         "VendorName", "ReceiptDate", "Currency", "Subtotal", "Tax", "Total", "PaymentMethod", "Category", "LineItems",
     };
 
-    private static readonly DateOnly EarliestPlausibleDate = new(2000, 1, 1);
-
-    private static readonly Lazy<HashSet<string>> IsoCurrencies = new(() =>
-        CultureInfo.GetCultures(CultureTypes.SpecificCultures)
-            .Select(culture =>
-            {
-                try { return new RegionInfo(culture.Name).ISOCurrencySymbol; }
-                catch (ArgumentException) { return null; }
-            })
-            .OfType<string>()
-            .ToHashSet(StringComparer.Ordinal));
+    /// <summary>Earlier dates are almost certainly misread. Shared with manual editing.</summary>
+    public static readonly DateOnly EarliestPlausibleDate = new(2000, 1, 1);
 
     public static void Apply(Receipt receipt, ExtractedReceipt result, IReadOnlyList<Category> categories, DateOnly today)
     {
@@ -72,7 +64,7 @@ public static partial class ExtractionSanitizer
         }
 
         var currency = result.Currency?.Trim().ToUpperInvariant();
-        if (currency is not null && IsoCurrencies.Value.Contains(currency))
+        if (Currencies.IsKnown(currency))
         {
             receipt.Currency = currency;
         }

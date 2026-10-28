@@ -89,7 +89,7 @@ public sealed class DevelopmentDataSeeder(AppDbContext db, UserManager<Applicati
         Receipt Approved(Receipt receipt)
         {
             receipt.MarkExtracted();
-            receipt.Approve("USD", 1m, now);
+            receipt.Approve("USD", 1m, receipt.ReceiptDate!.Value, amountCharged: null, now);
             return receipt;
         }
 

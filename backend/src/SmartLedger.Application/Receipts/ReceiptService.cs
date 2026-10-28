@@ -1,7 +1,10 @@
+using SmartLedger.Application.Categories;
 using SmartLedger.Application.Common;
 using SmartLedger.Application.Common.Storage;
+using SmartLedger.Application.ExchangeRates;
 using SmartLedger.Application.Receipts.Extraction;
 using SmartLedger.Domain.Entities;
+using SmartLedger.Domain.Enums;
 
 namespace SmartLedger.Application.Receipts;
 
@@ -9,11 +12,24 @@ internal sealed class ReceiptService(
     IReceiptRepository repository,
     IFileStorage storage,
     IReceiptExtractionQueue extractionQueue,
+    ICategoryRepository categories,
+    IUserDirectory users,
+    IExchangeRateService exchangeRates,
+    TimeProvider timeProvider,
     ICurrentUser currentUser) : IReceiptService
 {
     private const int MaxPageSize = 50;
 
     private static readonly Error NotFound = Error.NotFound("receipts.not_found", "Receipt not found.");
+
+    /// <summary>Why a receipt in this status can't be edited, approved or rejected.</summary>
+    private static Error NotWaitingForReview(ReceiptStatus status) => status switch
+    {
+        ReceiptStatus.Processing => Error.Conflict("receipts.processing", "AI is still reading this receipt. Try again in a few seconds."),
+        ReceiptStatus.Approved => Error.Conflict("receipts.approved", "This receipt is approved. Reopen it to make changes."),
+        ReceiptStatus.Rejected => Error.Conflict("receipts.rejected", "This receipt is rejected. Reopen it to make changes."),
+        _ => Error.Conflict("receipts.not_ready", "Fill in this receipt's details first."),
+    };
 
     // Every endpoint behind this service requires sign-in, so a missing user is a bug, not a user error.
     private Guid UserId => currentUser.UserId ?? throw new InvalidOperationException("No signed-in user.");
@@ -140,6 +156,209 @@ internal sealed class ReceiptService(
             $"receipt-{receipt.Number:0000}-preview{ReceiptFileTypes.Jpeg.Extension}");
     }
 
+    public async Task<Result<ReceiptDetailDto>> UpdateAsync(
+        Guid receiptId, UpdateReceiptRequest request, CancellationToken cancellationToken)
+    {
+        var receipt = await repository.GetForUpdateAsync(UserId, receiptId, cancellationToken);
+        if (receipt is null)
+        {
+            return NotFound;
+        }
+        if (!receipt.IsEditable)
+        {
+            return NotWaitingForReview(receipt.Status);
+        }
+
+        // Checks the request's attributes can't express.
+        var currency = Clean(request.Currency)?.ToUpperInvariant();
+        if (currency is not null && !Currencies.IsKnown(currency))
+        {
+            return Error.Validation("receipts.unknown_currency", $"\"{currency}\" isn't a currency code we know.");
+        }
+
+        var today = DateOnly.FromDateTime(timeProvider.GetUtcNow().UtcDateTime);
+        if (request.ReceiptDate is { } date && (date > today.AddDays(1) || date < ExtractionSanitizer.EarliestPlausibleDate))
+        {
+            return Error.Validation("receipts.implausible_date", "The receipt date must be between 2000 and today.");
+        }
+
+        // An archived category may stay on a receipt that already has it, but can't be newly chosen.
+        if (request.CategoryId is { } categoryId && categoryId != receipt.CategoryId)
+        {
+            var userCategories = await categories.ListAsync(UserId, cancellationToken);
+            if (!userCategories.Any(c => c.Id == categoryId && !c.IsArchived))
+            {
+                return Error.Validation("receipts.unknown_category", "Choose one of your categories.");
+            }
+        }
+
+        var lineItems = request.LineItems
+            .Select((line, index) => new LineItem
+            {
+                ReceiptId = receipt.Id,
+                LineNumber = index + 1,
+                Description = line.Description.Trim(),
+                Quantity = Math.Round(line.Quantity, 3, MidpointRounding.AwayFromZero),
+                UnitPrice = Money(line.UnitPrice),
+                Amount = Money(line.Amount),
+            })
+            .ToList();
+        if (lineItems.Any(line => line.Description.Length == 0))
+        {
+            return Error.Validation("receipts.empty_line", "Every line item needs a description.");
+        }
+
+        // Apply each field, remembering which changed: changing a field answers AI's "please check" note on it.
+        var changed = new HashSet<string>(StringComparer.Ordinal);
+        void Apply<T>(string field, T current, T updated, Action<T> assign)
+        {
+            if (!EqualityComparer<T>.Default.Equals(current, updated))
+            {
+                changed.Add(field);
+                assign(updated);
+            }
+        }
+
+        Apply("VendorName", receipt.VendorName, Clean(request.VendorName), value => receipt.VendorName = value);
+        Apply("ReceiptDate", receipt.ReceiptDate, request.ReceiptDate, value => receipt.ReceiptDate = value);
+        Apply("Currency", receipt.Currency, currency, value => receipt.Currency = value);
+        Apply("Subtotal", receipt.Subtotal, Money(request.Subtotal), value => receipt.Subtotal = value);
+        Apply("Tax", receipt.Tax, Money(request.Tax), value => receipt.Tax = value);
+        Apply("Total", receipt.Total, Money(request.Total), value => receipt.Total = value);
+        // Whatever is typed, a card number keeps only its last four digits.
+        Apply("PaymentMethod", receipt.PaymentMethod, ExtractionSanitizer.MaskCardNumbers(Clean(request.PaymentMethod)),
+            value => receipt.PaymentMethod = value);
+        Apply("Category", receipt.CategoryId, request.CategoryId, value =>
+        {
+            receipt.CategoryId = value;
+            receipt.CategorySuggestedByAi = false; // the user's choice now
+        });
+        receipt.Notes = Clean(request.Notes);
+
+        if (!SameLines(receipt.LineItems, lineItems))
+        {
+            changed.Add("LineItems");
+            receipt.LineItems.Clear(); // removed lines are deleted when saved
+            receipt.LineItems.AddRange(lineItems);
+        }
+
+        receipt.ExtractionFlags = receipt.ExtractionFlags.Where(flag => !changed.Contains(flag.Field)).ToList();
+        receipt.MarkEdited();
+
+        await repository.SaveChangesAsync(cancellationToken);
+        return ToDetail(receipt);
+    }
+
+    public async Task<Result<ReceiptDetailDto>> ApproveAsync(
+        Guid receiptId, ApproveReceiptRequest request, CancellationToken cancellationToken)
+    {
+        var receipt = await repository.GetForUpdateAsync(UserId, receiptId, cancellationToken);
+        if (receipt is null)
+        {
+            return NotFound;
+        }
+        if (receipt.Status != ReceiptStatus.NeedsReview)
+        {
+            return NotWaitingForReview(receipt.Status);
+        }
+        if (!receipt.IsReadyToApprove)
+        {
+            return Error.Validation("receipts.incomplete", $"Add the {MissingForApproval(receipt)} before approving.");
+        }
+
+        var baseCurrency = await users.GetBaseCurrencyAsync(UserId, cancellationToken) ?? "USD";
+        var total = receipt.Total!.Value;
+        var receiptDate = receipt.ReceiptDate!.Value;
+
+        decimal rate;
+        DateOnly rateDate;
+        decimal? amountCharged = null;
+        if (request.AmountCharged is { } charged)
+        {
+            // The user's statement says what it really cost; the rate on record is the one that implies.
+            amountCharged = Money(charged);
+            rate = total > 0
+                ? Math.Round(amountCharged.Value / total, ExchangeRateService.RateDecimals, MidpointRounding.AwayFromZero)
+                : 1m;
+            rateDate = receiptDate;
+        }
+        else
+        {
+            var quote = await exchangeRates.GetRateAsync(receipt.Currency!, baseCurrency, receiptDate, cancellationToken);
+            if (!quote.IsSuccess)
+            {
+                return quote.Error!;
+            }
+            rate = quote.Value.Rate;
+            rateDate = quote.Value.RateDate;
+        }
+
+        receipt.Approve(baseCurrency, rate, rateDate, amountCharged, timeProvider.GetUtcNow());
+        await repository.SaveChangesAsync(cancellationToken);
+        return ToDetail(receipt);
+    }
+
+    public async Task<Result<ReceiptDetailDto>> RejectAsync(Guid receiptId, CancellationToken cancellationToken)
+    {
+        var receipt = await repository.GetForUpdateAsync(UserId, receiptId, cancellationToken);
+        if (receipt is null)
+        {
+            return NotFound;
+        }
+        if (!receipt.IsEditable)
+        {
+            return NotWaitingForReview(receipt.Status);
+        }
+
+        receipt.Reject();
+        await repository.SaveChangesAsync(cancellationToken);
+        return ToDetail(receipt);
+    }
+
+    public async Task<Result<ReceiptDetailDto>> ReopenAsync(Guid receiptId, CancellationToken cancellationToken)
+    {
+        var receipt = await repository.GetForUpdateAsync(UserId, receiptId, cancellationToken);
+        if (receipt is null)
+        {
+            return NotFound;
+        }
+        if (receipt.Status is not (ReceiptStatus.Approved or ReceiptStatus.Rejected))
+        {
+            return Error.Conflict("receipts.not_decided", "Only approved or rejected receipts can be reopened.");
+        }
+
+        receipt.Reopen();
+        await repository.SaveChangesAsync(cancellationToken);
+        return ToDetail(receipt);
+    }
+
+    /// <summary>E.g. "date and category", for "Add the date and category before approving."</summary>
+    private static string MissingForApproval(Receipt receipt)
+    {
+        var missing = new List<string>();
+        if (receipt.VendorName is null) missing.Add("vendor");
+        if (receipt.ReceiptDate is null) missing.Add("date");
+        if (receipt.Currency is null) missing.Add("currency");
+        if (receipt.Total is null) missing.Add("total");
+        if (receipt.CategoryId is null) missing.Add("category");
+
+        return missing.Count == 1 ? missing[0] : $"{string.Join(", ", missing[..^1])} and {missing[^1]}";
+    }
+
+    private static bool SameLines(IReadOnlyList<LineItem> current, IReadOnlyList<LineItem> updated) =>
+        current.Count == updated.Count
+        && current.OrderBy(l => l.LineNumber).Zip(updated).All(pair =>
+            pair.First.Description == pair.Second.Description
+            && pair.First.Quantity == pair.Second.Quantity
+            && pair.First.UnitPrice == pair.Second.UnitPrice
+            && pair.First.Amount == pair.Second.Amount);
+
+    private static string? Clean(string? text) => string.IsNullOrWhiteSpace(text) ? null : text.Trim();
+
+    private static decimal Money(decimal value) => Math.Round(value, 2, MidpointRounding.AwayFromZero);
+
+    private static decimal? Money(decimal? value) => value is null ? null : Money(value.Value);
+
     private static async Task<Result<ReceiptFileType>> IdentifyAsync(UploadedFile file, CancellationToken cancellationToken)
     {
         var name = Path.GetFileName(file.FileName);
@@ -175,5 +394,5 @@ internal sealed class ReceiptService(
             .Select(l => new LineItemDto(l.LineNumber, l.Description, l.Quantity, l.UnitPrice, l.Amount))
             .ToList(),
         r.ExtractionFlags.Select(f => new ExtractionFlagDto(f.Field, f.Reason)).ToList(),
-        r.BaseCurrency, r.BaseCurrencyTotal, r.ApprovedAt, r.CreatedAt);
+        r.BaseCurrency, r.ExchangeRate, r.ExchangeRateDate, r.AmountCharged, r.BaseCurrencyTotal, r.ApprovedAt, r.CreatedAt);
 }

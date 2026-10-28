@@ -29,7 +29,9 @@ internal sealed class ReceiptConfiguration : IEntityTypeConfiguration<Receipt>
         builder.Property(r => r.PreviewStorageKey).HasMaxLength(500).IsUnicode(false);
 
         builder.Property(r => r.BaseCurrency).HasMaxLength(3).IsFixedLength().IsUnicode(false);
-        builder.Property(r => r.ExchangeRate).HasPrecision(18, 8);
+        // 10 decimal places so weak currencies keep their precision (1 IRR ≈ 0.0000238 USD).
+        builder.Property(r => r.ExchangeRate).HasPrecision(20, 10);
+        builder.Property(r => r.AmountCharged).HasPrecision(18, 2);
         builder.Property(r => r.BaseCurrencyTotal).HasPrecision(18, 2);
 
         builder.OwnsMany(r => r.ExtractionFlags, flags => flags.ToJson());

@@ -79,98 +79,137 @@
         }
         @case ('NeedsReview') {
           <p class="sheet__note">
-            Read by AI. Check the details{{ footnotes().length > 0 ? ', especially the numbered fields' : '' }}.
-            Approving is coming in the next update.
+            Read by AI. Check the details{{ footnotes().length > 0 ? ', especially the numbered fields' : '' }}, correct
+            anything that's wrong, then approve it to post it to your ledger.
           </p>
         }
         @case ('Failed') {
-          <p class="sheet__note sheet__note--error">{{ r.failureReason ?? "This receipt couldn't be read." }}</p>
+          <p class="sheet__note sheet__note--error">
+            {{ r.failureReason ?? "This receipt couldn't be read." }} You can fill in the details yourself, or reject it.
+          </p>
+        }
+        @case ('Approved') {
+          <p class="sheet__note">Approved on {{ r.approvedAt | date: 'dd MMM y' }}. It counts in your reports.</p>
+        }
+        @case ('Rejected') {
+          <p class="sheet__note">Rejected. It stays out of your reports.</p>
         }
       }
 
-      <dl class="fields">
-        <ng-template #mark let-field>
-          @if (footnoteFor(field); as n) {
-            <sup class="mark" [attr.aria-label]="'see note ' + n">{{ n }}</sup>
-          }
-        </ng-template>
-
-        <div class="fields__item" [class.fields__item--flagged]="footnoteFor('VendorName')">
-          <dt class="label">Vendor <ng-container *ngTemplateOutlet="mark; context: { $implicit: 'VendorName' }" /></dt>
-          <dd>{{ r.vendorName ?? '—' }}</dd>
-        </div>
-        <div class="fields__item" [class.fields__item--flagged]="footnoteFor('ReceiptDate')">
-          <dt class="label">Receipt date <ng-container *ngTemplateOutlet="mark; context: { $implicit: 'ReceiptDate' }" /></dt>
-          <dd class="mono">{{ r.receiptDate ? (r.receiptDate | date: 'dd MMM y') : '—' }}</dd>
-        </div>
-        <div class="fields__item" [class.fields__item--flagged]="footnoteFor('Category')">
-          <dt class="label">
-            Category
-            @if (r.categorySuggestedByAi) {
-              <span class="suggested">· suggested</span>
+      @if (editable()) {
+        <app-receipt-review-form [receipt]="r" [categories]="categories.value()" [baseCurrency]="baseCurrency()"
+          (changed)="onChanged($event)" />
+      } @else {
+        <dl class="fields">
+          <ng-template #mark let-field>
+            @if (footnoteFor(field); as n) {
+              <sup class="mark" [attr.aria-label]="'see note ' + n">{{ n }}</sup>
             }
-            <ng-container *ngTemplateOutlet="mark; context: { $implicit: 'Category' }" />
-          </dt>
-          <dd>{{ categoryName() ?? '—' }}</dd>
-        </div>
-        <div class="fields__item" [class.fields__item--flagged]="footnoteFor('PaymentMethod')">
-          <dt class="label">Paid with <ng-container *ngTemplateOutlet="mark; context: { $implicit: 'PaymentMethod' }" /></dt>
-          <dd class="mono">{{ r.paymentMethod ?? '—' }}</dd>
-        </div>
-        <div class="fields__item" [class.fields__item--flagged]="footnoteFor('Currency')">
-          <dt class="label">Currency <ng-container *ngTemplateOutlet="mark; context: { $implicit: 'Currency' }" /></dt>
-          <dd class="mono">{{ r.currency ?? '—' }}</dd>
-        </div>
-      </dl>
+          </ng-template>
 
-      @if (r.lineItems.length > 0) {
-        <div class="ledger-scroll">
-          <table class="ledger">
-            <thead>
-              <tr>
-                <th scope="col">No.</th>
-                <th scope="col">Description</th>
-                <th scope="col" class="num">Qty</th>
-                <th scope="col" class="num">Unit price</th>
-                <th scope="col" class="num">Amount</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (line of r.lineItems; track line.lineNumber) {
-                <tr>
-                  <td class="mono">{{ line.lineNumber.toString().padStart(2, '0') }}</td>
-                  <td>{{ line.description }}</td>
-                  <td class="num">{{ line.quantity }}</td>
-                  <td class="num">{{ line.unitPrice | number: '1.2-2' }}</td>
-                  <td class="num">{{ line.amount | number: '1.2-2' }}</td>
-                </tr>
+          <div class="fields__item" [class.fields__item--flagged]="footnoteFor('VendorName')">
+            <dt class="label">Vendor <ng-container *ngTemplateOutlet="mark; context: { $implicit: 'VendorName' }" /></dt>
+            <dd>{{ r.vendorName ?? '—' }}</dd>
+          </div>
+          <div class="fields__item" [class.fields__item--flagged]="footnoteFor('ReceiptDate')">
+            <dt class="label">Receipt date <ng-container *ngTemplateOutlet="mark; context: { $implicit: 'ReceiptDate' }" /></dt>
+            <dd class="mono">{{ r.receiptDate ? (r.receiptDate | date: 'dd MMM y') : '—' }}</dd>
+          </div>
+          <div class="fields__item" [class.fields__item--flagged]="footnoteFor('Category')">
+            <dt class="label">
+              Category
+              @if (r.categorySuggestedByAi) {
+                <span class="suggested">· suggested</span>
               }
-            </tbody>
-          </table>
+              <ng-container *ngTemplateOutlet="mark; context: { $implicit: 'Category' }" />
+            </dt>
+            <dd>{{ categoryName() ?? '—' }}</dd>
+          </div>
+          <div class="fields__item" [class.fields__item--flagged]="footnoteFor('PaymentMethod')">
+            <dt class="label">Paid with <ng-container *ngTemplateOutlet="mark; context: { $implicit: 'PaymentMethod' }" /></dt>
+            <dd class="mono">{{ r.paymentMethod ?? '—' }}</dd>
+          </div>
+          <div class="fields__item" [class.fields__item--flagged]="footnoteFor('Currency')">
+            <dt class="label">Currency <ng-container *ngTemplateOutlet="mark; context: { $implicit: 'Currency' }" /></dt>
+            <dd class="mono">{{ r.currency ?? '—' }}</dd>
+          </div>
+        </dl>
+
+        @if (r.lineItems.length > 0) {
+          <div class="ledger-scroll">
+            <table class="ledger">
+              <thead>
+                <tr>
+                  <th scope="col">No.</th>
+                  <th scope="col">Description</th>
+                  <th scope="col" class="num">Qty</th>
+                  <th scope="col" class="num">Unit price</th>
+                  <th scope="col" class="num">Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (line of r.lineItems; track line.lineNumber) {
+                  <tr>
+                    <td class="mono">{{ line.lineNumber.toString().padStart(2, '0') }}</td>
+                    <td>{{ line.description }}</td>
+                    <td class="num">{{ line.quantity }}</td>
+                    <td class="num">{{ line.unitPrice | number: '1.2-2' }}</td>
+                    <td class="num">{{ line.amount | number: '1.2-2' }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+
+        <div class="totals">
+          <span class="label">Subtotal <ng-container *ngTemplateOutlet="mark; context: { $implicit: 'Subtotal' }" /></span>
+          <span class="num">{{ r.subtotal !== null ? (r.subtotal | number: '1.2-2') : '—' }}</span>
+          <span class="label">Tax <ng-container *ngTemplateOutlet="mark; context: { $implicit: 'Tax' }" /></span>
+          <span class="num">{{ r.tax !== null ? (r.tax | number: '1.2-2') : '—' }}</span>
+          <span class="totals__rule"></span>
+          <span class="totals__label">Total <ng-container *ngTemplateOutlet="mark; context: { $implicit: 'Total' }" /></span>
+          <span class="num totals__value">
+            {{ r.total !== null ? (r.total | number: '1.2-2') : '—' }}
+            @if (r.currency) {
+              <span class="totals__currency">{{ r.currency }}</span>
+            }
+          </span>
         </div>
-      }
 
-      <div class="totals">
-        <span class="label">Subtotal <ng-container *ngTemplateOutlet="mark; context: { $implicit: 'Subtotal' }" /></span>
-        <span class="num">{{ r.subtotal !== null ? (r.subtotal | number: '1.2-2') : '—' }}</span>
-        <span class="label">Tax <ng-container *ngTemplateOutlet="mark; context: { $implicit: 'Tax' }" /></span>
-        <span class="num">{{ r.tax !== null ? (r.tax | number: '1.2-2') : '—' }}</span>
-        <span class="totals__rule"></span>
-        <span class="totals__label">Total <ng-container *ngTemplateOutlet="mark; context: { $implicit: 'Total' }" /></span>
-        <span class="num totals__value">
-          {{ r.total !== null ? (r.total | number: '1.2-2') : '—' }}
-          @if (r.currency) {
-            <span class="totals__currency">{{ r.currency }}</span>
-          }
-        </span>
-      </div>
-
-      @if (footnotes().length > 0) {
-        <ol class="footnotes" aria-label="Please confirm">
-          @for (note of footnotes(); track note.number) {
-            <li><sup class="mark">{{ note.number }}</sup> {{ note.reason }}</li>
-          }
-        </ol>
+        @if (r.status === 'Approved' || r.status === 'Rejected') {
+          <section class="posted" [attr.aria-label]="r.status === 'Approved' ? 'In your ledger' : 'Decision'">
+            @if (r.status === 'Approved') {
+              <div>
+                <span class="label">In your ledger</span>
+                <p class="posted__amount">
+                  <span class="posted__currency">{{ r.baseCurrency }}</span>{{ r.baseCurrencyTotal | number: '1.2-2' }}
+                </p>
+                <p class="posted__basis mono">
+                  @if (r.amountCharged !== null) {
+                    Amount charged, from your statement.
+                  } @else if (r.currency === r.baseCurrency) {
+                    Already in {{ r.baseCurrency }}, recorded as is.
+                  } @else {
+                    1 {{ r.currency }} = {{ r.exchangeRate | number: '1.2-10' }} {{ r.baseCurrency }} · rate of
+                    {{ r.exchangeRateDate | date: 'dd MMM y' }}
+                  }
+                </p>
+              </div>
+            }
+            <div class="download">
+              <button type="button" class="btn btn--ghost" [disabled]="reopening()" (click)="reopen()">
+                {{ reopening() ? 'Reopening…' : 'Reopen' }}
+              </button>
+              <p class="download__note">
+                {{ r.status === 'Approved' ? 'Takes it out of your reports until you approve it again.' : 'Puts it back up for review.' }}
+              </p>
+              @if (reopenError(); as message) {
+                <p class="download__error" role="alert">{{ message }}</p>
+              }
+            </div>
+          </section>
+        }
       }
     </article>
   </div>

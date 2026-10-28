@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations;
+using SmartLedger.Application.Receipts.Extraction;
 using SmartLedger.Domain.Enums;
 
 namespace SmartLedger.Application.Receipts;
@@ -48,9 +50,43 @@ public sealed record ReceiptDetailDto(
     IReadOnlyList<LineItemDto> LineItems,
     IReadOnlyList<ExtractionFlagDto> ExtractionFlags,
     string? BaseCurrency,
+    decimal? ExchangeRate,
+    DateOnly? ExchangeRateDate,
+    decimal? AmountCharged,
     decimal? BaseCurrencyTotal,
     DateTimeOffset? ApprovedAt,
     DateTimeOffset CreatedAt);
+
+/// <summary>
+/// The review form: the receipt's details as the user corrected them. Replaces what's stored, line items included,
+/// so a removed line is simply left out. Every field may be empty while editing; approving needs vendor, date,
+/// currency, total and category.
+/// </summary>
+public sealed record UpdateReceiptRequest(
+    [StringLength(200)] string? VendorName,
+    DateOnly? ReceiptDate,
+    [RegularExpression("^[A-Za-z]{3}$", ErrorMessage = "Use a three-letter currency code, e.g. PKR.")] string? Currency,
+    [Range(typeof(decimal), "0", "999999999999")] decimal? Subtotal,
+    [Range(typeof(decimal), "0", "999999999999")] decimal? Tax,
+    [Range(typeof(decimal), "0", "999999999999")] decimal? Total,
+    [StringLength(60)] string? PaymentMethod,
+    Guid? CategoryId,
+    [StringLength(500)] string? Notes,
+    [Required, MaxLength(ExtractionSanitizer.MaxLineItems)] IReadOnlyList<LineItemRequest> LineItems);
+
+/// <param name="Amount">May be negative, for discounts and refunds printed as lines.</param>
+public sealed record LineItemRequest(
+    [Required, StringLength(200, MinimumLength = 1)] string Description,
+    [Range(typeof(decimal), "0.001", "999999999")] decimal Quantity,
+    [Range(typeof(decimal), "-999999999999", "999999999999")] decimal UnitPrice,
+    [Range(typeof(decimal), "-999999999999", "999999999999")] decimal Amount);
+
+/// <param name="AmountCharged">
+/// What the bank actually charged, in the user's base currency, from their statement. When given, it's used as the
+/// receipt's value instead of converting with the day's rate (banks add their own margin and fees).
+/// </param>
+public sealed record ApproveReceiptRequest(
+    [Range(typeof(decimal), "0.01", "999999999999")] decimal? AmountCharged);
 
 /// <summary>A receipt's original upload or its preview, ready to stream back to its owner.</summary>
 /// <param name="Content">The caller disposes it.</param>
