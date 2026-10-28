@@ -55,11 +55,9 @@
               <td class="mono faint">{{ receipt.number | entryNumber }}</td>
               <td class="mono muted">{{ receipt.createdAt | date: 'dd MMM y' }}</td>
               <td>
-                @if (receipt.vendorName) {
-                  <span class="vendor">{{ receipt.vendorName }}</span>
-                } @else {
-                  <span class="vendor vendor--pending">{{ receipt.fileName }}</span>
-                }
+                <a class="vendor" [class.vendor--pending]="!receipt.vendorName" [routerLink]="['/receipts', receipt.id]">
+                  {{ receipt.vendorName ?? receipt.fileName }}
+                </a>
               </td>
               <td class="mono muted">{{ receipt.receiptDate ? (receipt.receiptDate | date: 'dd MMM y') : '—' }}</td>
               <td class="num">

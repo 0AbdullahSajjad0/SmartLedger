@@ -1,0 +1,135 @@
+@if (errorMessage(); as message) {
+  <div class="notice" role="alert">
+    <p>{{ message }}</p>
+    <a class="link-button" routerLink="/receipts">Back to the ledger</a>
+  </div>
+} @else if (receipt.hasValue()) {
+  @let r = receipt.value();
+
+  <header class="page-header">
+    <div class="page-header__titles">
+      <nav class="eyebrow" aria-label="Breadcrumb">
+        <a routerLink="/receipts" class="crumb">Ledger</a> / Entry {{ r.number | entryNumber }}
+      </nav>
+      <h1 class="page-header__title">{{ r.vendorName ?? 'Unread receipt' }}</h1>
+    </div>
+    <app-status-stamp [status]="r.status" />
+  </header>
+
+  <div class="layout">
+    <section class="original" aria-label="Original receipt">
+      <div class="frame">
+        <span class="frame__corner frame__corner--tl" aria-hidden="true"></span>
+        <span class="frame__corner frame__corner--tr" aria-hidden="true"></span>
+        <span class="frame__corner frame__corner--bl" aria-hidden="true"></span>
+        <span class="frame__corner frame__corner--br" aria-hidden="true"></span>
+
+        @if (fileUrl() && canPreview()) {
+          <img class="frame__image" [src]="fileUrl()" [alt]="'Original receipt: ' + r.fileName" />
+        } @else if (file.isLoading()) {
+          <p class="frame__message mono">LOADING THE ORIGINAL…</p>
+        } @else if (file.error()) {
+          <p class="frame__message mono">THE ORIGINAL COULDN'T BE LOADED</p>
+        } @else {
+          <p class="frame__message">
+            {{ r.contentType === 'application/pdf' ? 'PDF receipts' : 'HEIC photos' }} can't be previewed here yet.
+            Download the original to see it.
+          </p>
+        }
+      </div>
+
+      <dl class="facts mono">
+        <dt>Source</dt>
+        <dd>{{ r.fileName }}</dd>
+        <dt>Received</dt>
+        <dd>{{ r.createdAt | date: 'dd MMM y · HH:mm' }}</dd>
+        <dt>Size</dt>
+        <dd>{{ r.sizeBytes | fileSize }}</dd>
+      </dl>
+
+      @if (fileUrl(); as url) {
+        <!-- A download rather than a new tab: PDFs and HEIC photos don't open reliably from a blob: address. -->
+        <a class="link-button" [href]="url" [attr.download]="downloadName()">Download original</a>
+      }
+    </section>
+
+    <article class="sheet" aria-label="Record">
+      <div class="sheet__head">
+        <span class="label">Record</span>
+        <span class="mono sheet__number">SL-{{ r.number | entryNumber }}</span>
+      </div>
+
+      @switch (r.status) {
+        @case ('Processing') {
+          <p class="sheet__note">AI hasn't read this receipt yet. Its vendor, date, totals and line items will appear here.</p>
+        }
+        @case ('Failed') {
+          <p class="sheet__note sheet__note--error">{{ r.failureReason ?? "This receipt couldn't be read." }}</p>
+        }
+      }
+
+      <dl class="fields">
+        <div class="fields__item">
+          <dt class="label">Vendor</dt>
+          <dd>{{ r.vendorName ?? '—' }}</dd>
+        </div>
+        <div class="fields__item">
+          <dt class="label">Receipt date</dt>
+          <dd class="mono">{{ r.receiptDate ? (r.receiptDate | date: 'dd MMM y') : '—' }}</dd>
+        </div>
+        <div class="fields__item">
+          <dt class="label">Paid with</dt>
+          <dd class="mono">{{ r.paymentMethod ?? '—' }}</dd>
+        </div>
+        <div class="fields__item">
+          <dt class="label">Currency</dt>
+          <dd class="mono">{{ r.currency ?? '—' }}</dd>
+        </div>
+      </dl>
+
+      @if (r.lineItems.length > 0) {
+        <div class="ledger-scroll">
+          <table class="ledger">
+            <thead>
+              <tr>
+                <th scope="col">No.</th>
+                <th scope="col">Description</th>
+                <th scope="col" class="num">Qty</th>
+                <th scope="col" class="num">Unit price</th>
+                <th scope="col" class="num">Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (line of r.lineItems; track line.lineNumber) {
+                <tr>
+                  <td class="mono">{{ line.lineNumber.toString().padStart(2, '0') }}</td>
+                  <td>{{ line.description }}</td>
+                  <td class="num">{{ line.quantity }}</td>
+                  <td class="num">{{ line.unitPrice | number: '1.2-2' }}</td>
+                  <td class="num">{{ line.amount | number: '1.2-2' }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+
+      <div class="totals">
+        <span class="label">Subtotal</span>
+        <span class="num">{{ r.subtotal !== null ? (r.subtotal | number: '1.2-2') : '—' }}</span>
+        <span class="label">Tax</span>
+        <span class="num">{{ r.tax !== null ? (r.tax | number: '1.2-2') : '—' }}</span>
+        <span class="totals__rule"></span>
+        <span class="totals__label">Total</span>
+        <span class="num totals__value">
+          {{ r.total !== null ? (r.total | number: '1.2-2') : '—' }}
+          @if (r.currency) {
+            <span class="totals__currency">{{ r.currency }}</span>
+          }
+        </span>
+      </div>
+    </article>
+  </div>
+} @else {
+  <p class="notice mono" aria-live="polite">LOADING THE RECEIPT…</p>
+}
