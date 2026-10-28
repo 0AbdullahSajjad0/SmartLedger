@@ -1,0 +1,71 @@
+using System.Text;
+using ImageMagick;
+using SmartLedger.Application.Receipts;
+
+namespace SmartLedger.Infrastructure.Previews;
+
+/// <summary>
+/// Proves the native image libraries load and work where the API actually runs. CI starts the built Docker image
+/// with <c>--check-image-processing</c> before deploying it: the production image is a minimal one, and a missing
+/// system library would otherwise only show up when the first user uploads a photo.
+/// </summary>
+public static class ReceiptPreviewSelfCheck
+{
+    public const string CommandLineFlag = "--check-image-processing";
+
+    /// <summary>
+    /// A one-page PDF, 80 mm × 141 mm like a till receipt, with a black block in the top-left corner.
+    /// Written by hand rather than with ImageMagick, which isn't allowed to touch PDFs.
+    /// </summary>
+    internal static byte[] SamplePdf()
+    {
+        const string content = "0 0 0 rg 20 340 80 40 re f";
+        return Encoding.ASCII.GetBytes(
+            "%PDF-1.4\n" +
+            "1 0 obj <</Type /Catalog /Pages 2 0 R>> endobj\n" +
+            "2 0 obj <</Type /Pages /Kids [3 0 R] /Count 1>> endobj\n" +
+            "3 0 obj <</Type /Page /Parent 2 0 R /MediaBox [0 0 226 400] /Contents 4 0 R>> endobj\n" +
+            $"4 0 obj <</Length {content.Length}>> stream\n{content}\nendstream endobj\n" +
+            "trailer <</Root 1 0 R>>\n%%EOF\n");
+    }
+
+    /// <summary>Returns true when every format converts; reports each result on <paramref name="output"/>.</summary>
+    public static async Task<bool> RunAsync(TextWriter output)
+    {
+        var renderer = new ReceiptPreviewRenderer();
+        var ok = true;
+
+        await using (var heic = typeof(ReceiptPreviewSelfCheck).Assembly
+            .GetManifestResourceStream("SmartLedger.Infrastructure.Previews.self-check.heic")!)
+        {
+            ok &= await CheckAsync("HEIC", () => renderer.RenderAsync(heic, ReceiptFileTypes.Heic.ContentType, CancellationToken.None),
+                expectedWidth: 200, expectedHeight: 400);
+        }
+
+        using (var pdf = new MemoryStream(SamplePdf()))
+        {
+            ok &= await CheckAsync("PDF", () => renderer.RenderAsync(pdf, ReceiptFileTypes.Pdf.ContentType, CancellationToken.None),
+                expectedWidth: 627, expectedHeight: 1111); // 226 × 400 points at 200 dpi
+        }
+
+        output.WriteLine(ok ? "Image processing works." : "Image processing is broken.");
+        return ok;
+
+        async Task<bool> CheckAsync(string name, Func<Task<byte[]>> render, uint expectedWidth, uint expectedHeight)
+        {
+            try
+            {
+                var jpeg = await render();
+                var info = new MagickImageInfo(jpeg);
+                var passed = info.Format == MagickFormat.Jpeg && info.Width == expectedWidth && info.Height == expectedHeight;
+                output.WriteLine($"{name}: {(passed ? "ok" : "unexpected result")}, {info.Format} {info.Width}x{info.Height}, {jpeg.Length} bytes");
+                return passed;
+            }
+            catch (Exception ex)
+            {
+                output.WriteLine($"{name}: failed. {ex}");
+                return false;
+            }
+        }
+    }
+}

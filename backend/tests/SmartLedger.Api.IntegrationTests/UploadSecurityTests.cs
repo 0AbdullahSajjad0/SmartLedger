@@ -12,7 +12,7 @@ namespace SmartLedger.Api.IntegrationTests;
 [Collection(ApiCollection.Name)]
 public class UploadSecurityTests(SmartLedgerApiFactory factory)
 {
-    private static readonly byte[] Jpeg = [0xFF, 0xD8, 0xFF, 0xE0, .. new byte[64]];
+    private static readonly byte[] Jpeg = TestFiles.Jpeg();
 
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web)
     {

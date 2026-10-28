@@ -26,6 +26,7 @@ internal sealed class ReceiptConfiguration : IEntityTypeConfiguration<Receipt>
         builder.Property(r => r.FileName).HasMaxLength(255);
         builder.Property(r => r.ContentType).HasMaxLength(100).IsUnicode(false);
         builder.Property(r => r.StorageKey).HasMaxLength(500).IsUnicode(false);
+        builder.Property(r => r.PreviewStorageKey).HasMaxLength(500).IsUnicode(false);
 
         builder.Property(r => r.BaseCurrency).HasMaxLength(3).IsFixedLength().IsUnicode(false);
         builder.Property(r => r.ExchangeRate).HasPrecision(18, 8);

@@ -10,7 +10,7 @@ function detail(changes: Partial<ReceiptDetail> = {}): ReceiptDetail {
   return {
     id: 'r-1',
     number: 1,
-    status: 'Processing',
+    status: 'NeedsReview',
     vendorName: null,
     receiptDate: null,
     currency: null,
@@ -22,9 +22,10 @@ function detail(changes: Partial<ReceiptDetail> = {}): ReceiptDetail {
     categorySuggestedByAi: false,
     notes: null,
     failureReason: null,
-    fileName: 'IMG_2041.png',
-    contentType: 'image/png',
+    fileName: 'IMG_2041.HEIC',
+    contentType: 'image/heic',
     sizeBytes: 26_303,
+    hasPreview: true,
     lineItems: [],
     extractionFlags: [],
     baseCurrency: null,
@@ -49,43 +50,53 @@ describe('ReceiptPage', () => {
 
   afterEach(() => http.verify());
 
-  async function render(receipt: ReceiptDetail | null) {
+  /** Renders the page; `image` is which picture it's expected to fetch once the details arrive. */
+  async function render(receipt: ReceiptDetail | null, image: 'preview' | 'file' | null = null) {
     const fixture = TestBed.createComponent(ReceiptPage);
     fixture.componentRef.setInput('id', 'r-1');
     fixture.detectChanges();
 
     const details = await vi.waitFor(() => http.expectOne(RECEIPT_URL));
-    const file = http.expectOne(`${RECEIPT_URL}/file`);
     http.expectOne(`${TEST_API}/api/categories`).flush([
       { id: 'cat-office', name: 'Office Supplies', color: '#8C8270', monthlyBudget: null, isArchived: false },
     ]);
 
     if (receipt) {
       details.flush(receipt);
-      file.flush(new Blob(['png'], { type: receipt.contentType }));
     } else {
       details.flush({ title: 'Receipt not found.' }, { status: 404, statusText: 'Not Found' });
-      file.flush(null, { status: 404, statusText: 'Not Found' });
+    }
+
+    // Answered before whenStable(), which would otherwise wait for this request forever.
+    if (image) {
+      const request = await vi.waitFor(() => http.expectOne(`${RECEIPT_URL}/${image}`));
+      request.flush(new Blob(['jpeg'], { type: 'image/jpeg' }));
     }
 
     await fixture.whenStable();
     fixture.detectChanges();
-    return fixture.nativeElement as HTMLElement;
+    return { fixture, page: fixture.nativeElement as HTMLElement };
   }
 
-  it('shows the original image next to the record', async () => {
-    const page = await render(detail());
+  it('shows the cleaned preview next to the record', async () => {
+    const { page } = await render(detail(), 'preview');
 
     expect(page.querySelector('img')?.getAttribute('src')).toBe('blob:test-receipt');
     expect(page.textContent).toContain('Entry 0001');
+    expect(page.textContent).toContain('including any location your camera saved in it');
+  });
+
+  it("says the preview is being made while it isn't ready yet", async () => {
+    const { page } = await render(detail({ status: 'Processing', hasPreview: false }));
+
+    expect(page.querySelector('img')).toBeNull();
+    expect(page.textContent).toContain('PREPARING THE PREVIEW');
     expect(page.textContent).toContain('AI is reading this receipt');
-    expect(page.querySelector('a[download]')?.getAttribute('download')).toBe('receipt-0001.png');
   });
 
   it("shows what AI read, with numbered notes on the fields it wasn't sure about", async () => {
-    const page = await render(
+    const { page } = await render(
       detail({
-        status: 'NeedsReview',
         vendorName: 'Paper & Co. Office Supply',
         paymentMethod: 'VISA ····4242',
         categoryId: 'cat-office',
@@ -94,6 +105,7 @@ describe('ReceiptPage', () => {
         currency: 'USD',
         extractionFlags: [{ field: 'PaymentMethod', reason: 'One digit of the card number was faded.' }],
       }),
+      'preview',
     );
 
     expect(page.querySelector('h1')?.textContent).toContain('Paper & Co. Office Supply');
@@ -103,16 +115,41 @@ describe('ReceiptPage', () => {
     expect(page.querySelector('.footnotes')?.textContent).toContain('One digit of the card number was faded.');
   });
 
-  it('offers a download instead of a preview for PDFs', async () => {
-    const page = await render(detail({ number: 3, fileName: 'invoice.pdf', contentType: 'application/pdf' }));
+  it('shows the original for receipts uploaded before previews existed, if the browser can display it', async () => {
+    const { page } = await render(detail({ hasPreview: false, fileName: 'old.png', contentType: 'image/png' }), 'file');
+
+    expect(page.querySelector('img')?.getAttribute('src')).toBe('blob:test-receipt');
+  });
+
+  it('offers only the download for old files the browser cannot display', async () => {
+    const { page } = await render(detail({ hasPreview: false }));
 
     expect(page.querySelector('img')).toBeNull();
-    expect(page.textContent).toContain("PDF receipts can't be previewed here yet");
-    expect(page.querySelector('a[download]')?.getAttribute('download')).toBe('receipt-0003.pdf');
+    expect(page.textContent).toContain("There's no preview of this file");
+  });
+
+  it('downloads the original only when asked, named by entry number', async () => {
+    const { fixture, page } = await render(
+      detail({ number: 3, fileName: 'invoice.PDF', contentType: 'application/pdf' }),
+      'preview',
+    );
+    let savedAs: string | null = null;
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (this: HTMLAnchorElement) {
+      savedAs = this.download;
+    });
+
+    expect(page.querySelector('.download__note')?.textContent?.trim()).toBe('Exactly as uploaded.');
+    page.querySelector<HTMLButtonElement>('.download button')!.click();
+    // The auth interceptor adds the token asynchronously, so the request appears a moment after the click.
+    const original = await vi.waitFor(() => http.expectOne(`${RECEIPT_URL}/file`));
+    original.flush(new Blob(['%PDF'], { type: 'application/pdf' }));
+    await fixture.whenStable();
+
+    expect(savedAs).toBe('receipt-0003.pdf');
   });
 
   it('says so when the receipt does not exist or is not yours', async () => {
-    const page = await render(null);
+    const { page } = await render(null);
 
     expect(page.querySelector('[role="alert"]')?.textContent).toContain('Receipt not found.');
   });

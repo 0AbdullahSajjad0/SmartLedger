@@ -12,11 +12,15 @@ COPY src/SmartLedger.Api/SmartLedger.Api.csproj src/SmartLedger.Api/
 COPY src/SmartLedger.Application/SmartLedger.Application.csproj src/SmartLedger.Application/
 COPY src/SmartLedger.Domain/SmartLedger.Domain.csproj src/SmartLedger.Domain/
 COPY src/SmartLedger.Infrastructure/SmartLedger.Infrastructure.csproj src/SmartLedger.Infrastructure/
-RUN dotnet restore src/SmartLedger.Api/SmartLedger.Api.csproj
+# For linux-x64 only (what Azure Container Apps runs): the image libraries ship native code for every platform,
+# and naming the runtime keeps just this one's.
+RUN dotnet restore src/SmartLedger.Api/SmartLedger.Api.csproj --runtime linux-x64
 
 COPY src/ src/
 RUN dotnet publish src/SmartLedger.Api/SmartLedger.Api.csproj \
     --configuration Release \
+    --runtime linux-x64 \
+    --self-contained false \
     --no-restore \
     --output /app/publish \
     -p:UseAppHost=false

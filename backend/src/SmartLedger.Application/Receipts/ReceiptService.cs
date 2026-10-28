@@ -118,7 +118,26 @@ internal sealed class ReceiptService(
             return NotFound;
         }
 
-        return new ReceiptFile(file.Content, receipt.ContentType, receipt.Number, Path.GetExtension(receipt.StorageKey));
+        return new ReceiptFile(file.Content, receipt.ContentType,
+            $"receipt-{receipt.Number:0000}{Path.GetExtension(receipt.StorageKey)}");
+    }
+
+    public async Task<Result<ReceiptFile>> OpenPreviewAsync(Guid receiptId, CancellationToken cancellationToken)
+    {
+        var receipt = await repository.GetAsync(UserId, receiptId, cancellationToken);
+        if (receipt?.PreviewStorageKey is null)
+        {
+            return NotFound;
+        }
+
+        var file = await storage.OpenReadAsync(receipt.PreviewStorageKey, cancellationToken);
+        if (file is null)
+        {
+            return NotFound;
+        }
+
+        return new ReceiptFile(file.Content, ReceiptFileTypes.Jpeg.ContentType,
+            $"receipt-{receipt.Number:0000}-preview{ReceiptFileTypes.Jpeg.Extension}");
     }
 
     private static async Task<Result<ReceiptFileType>> IdentifyAsync(UploadedFile file, CancellationToken cancellationToken)
@@ -151,7 +170,7 @@ internal sealed class ReceiptService(
     private static ReceiptDetailDto ToDetail(Receipt r) => new(
         r.Id, r.Number, r.Status, r.VendorName, r.ReceiptDate, r.Currency, r.Subtotal, r.Tax, r.Total,
         r.PaymentMethod, r.CategoryId, r.CategorySuggestedByAi, r.Notes, r.FailureReason,
-        r.FileName, r.ContentType, r.SizeBytes,
+        r.FileName, r.ContentType, r.SizeBytes, r.PreviewStorageKey is not null,
         r.LineItems.OrderBy(l => l.LineNumber)
             .Select(l => new LineItemDto(l.LineNumber, l.Description, l.Quantity, l.UnitPrice, l.Amount))
             .ToList(),

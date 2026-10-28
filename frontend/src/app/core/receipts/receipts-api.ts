@@ -24,4 +24,19 @@ export class ReceiptsApi {
   get(id: string): Observable<ReceiptDetail> {
     return this.http.get<ReceiptDetail>(`${this.baseUrl}/${id}`);
   }
+
+  /** The cleaned JPEG the page shows: upright, size-limited, no metadata. */
+  previewUrl(id: string): string {
+    return `${this.baseUrl}/${id}/preview`;
+  }
+
+  /** The original upload, exactly as received. */
+  fileUrl(id: string): string {
+    return `${this.baseUrl}/${id}/file`;
+  }
+
+  /** Fetched with the access token like any API call, since a plain link can't send one. */
+  downloadFile(id: string): Observable<Blob> {
+    return this.http.get(this.fileUrl(id), { responseType: 'blob' });
+  }
 }

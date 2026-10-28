@@ -14,9 +14,11 @@ using SmartLedger.Application.Common;
 using SmartLedger.Application.Common.Storage;
 using SmartLedger.Application.Receipts;
 using SmartLedger.Application.Receipts.Extraction;
+using SmartLedger.Application.Receipts.Previews;
 using SmartLedger.Infrastructure.Extraction;
 using SmartLedger.Infrastructure.Identity;
 using SmartLedger.Infrastructure.Persistence;
+using SmartLedger.Infrastructure.Previews;
 using SmartLedger.Infrastructure.Repositories;
 using SmartLedger.Infrastructure.Storage;
 
@@ -71,6 +73,8 @@ public static class DependencyInjection
                 resilience.CircuitBreaker.SamplingDuration = TimeSpan.FromMinutes(2);
                 resilience.TotalRequestTimeout.Timeout = TimeSpan.FromMinutes(4);
             });
+
+        services.AddSingleton<IReceiptPreviewRenderer, ReceiptPreviewRenderer>();
 
         services.AddSingleton<ReceiptExtractionQueue>();
         services.AddSingleton<IReceiptExtractionQueue>(provider => provider.GetRequiredService<ReceiptExtractionQueue>());

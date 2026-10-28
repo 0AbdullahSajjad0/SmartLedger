@@ -50,7 +50,7 @@ public class Receipt : Entity
     /// <summary>Times the AI service was unavailable while reading this receipt; it's retried a few times, then marked failed.</summary>
     public int ExtractionAttempts { get; set; }
 
-    // ---- Original file (stored in object storage) ----
+    // ---- Files (stored in object storage) ----
 
     public required string FileName { get; set; }
 
@@ -58,7 +58,14 @@ public class Receipt : Entity
 
     public long SizeBytes { get; set; }
 
+    /// <summary>The upload exactly as received. Only ever served to its owner.</summary>
     public required string StorageKey { get; set; }
+
+    /// <summary>
+    /// The cleaned JPEG shown in the app (upright, size-limited, no metadata such as GPS location). Photos are sent to
+    /// AI as this copy. Null until the background worker has made it, and for receipts uploaded before previews existed.
+    /// </summary>
+    public string? PreviewStorageKey { get; set; }
 
     // ---- Conversion, frozen at approval so past reports do not change when rates are updated ----
 
