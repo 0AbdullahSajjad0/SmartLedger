@@ -4,7 +4,7 @@
     "exclude": ["/*.{js,css,map,ico,png,jpg,jpeg,gif,svg,webp,woff,woff2,txt,json}"]
   },
   "globalHeaders": {
-    "Content-Security-Policy": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://ca-smartledger-api.kindfield-c023326b.centralindia.azurecontainerapps.io; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'",
+    "Content-Security-Policy": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://ca-smartledger-api.kindfield-c023326b.centralindia.azurecontainerapps.io; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'",
     "X-Content-Type-Options": "nosniff",
     "X-Frame-Options": "DENY",
     "Referrer-Policy": "strict-origin-when-cross-origin",

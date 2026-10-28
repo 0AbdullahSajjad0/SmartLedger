@@ -45,6 +45,13 @@
 
 .vendor {
   font-weight: 500;
+  color: var(--color-ink);
+  text-decoration: none;
+
+  &:hover {
+    color: var(--color-accent);
+    text-decoration: underline;
+  }
 
   &--pending {
     font-family: var(--font-mono);

@@ -16,6 +16,45 @@ export interface ReceiptSummary {
   createdAt: string;
 }
 
+export interface LineItem {
+  lineNumber: number;
+  description: string;
+  quantity: number;
+  unitPrice: number;
+  amount: number;
+}
+
+export interface ExtractionFlag {
+  field: string;
+  reason: string;
+}
+
+export interface ReceiptDetail {
+  id: string;
+  number: number;
+  status: ReceiptStatus;
+  vendorName: string | null;
+  receiptDate: string | null;
+  currency: string | null;
+  subtotal: number | null;
+  tax: number | null;
+  total: number | null;
+  paymentMethod: string | null;
+  categoryId: string | null;
+  categorySuggestedByAi: boolean;
+  notes: string | null;
+  failureReason: string | null;
+  fileName: string;
+  contentType: string;
+  sizeBytes: number;
+  lineItems: LineItem[];
+  extractionFlags: ExtractionFlag[];
+  baseCurrency: string | null;
+  baseCurrencyTotal: number | null;
+  approvedAt: string | null;
+  createdAt: string;
+}
+
 export interface PagedResult<T> {
   items: T[];
   page: number;

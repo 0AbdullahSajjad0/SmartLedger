@@ -44,6 +44,11 @@ export const routes: Routes = [
         loadComponent: () => import('./features/receipts/receipts').then((m) => m.Receipts),
       },
       {
+        path: 'receipts/:id',
+        title: 'Receipt · SmartLedger',
+        loadComponent: () => import('./features/receipt/receipt-page').then((m) => m.ReceiptPage),
+      },
+      {
         path: 'scan',
         title: 'Scan receipts · SmartLedger',
         loadComponent: () => import('./features/scan/scan').then((m) => m.Scan),
