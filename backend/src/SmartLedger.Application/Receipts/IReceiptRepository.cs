@@ -15,6 +15,9 @@ public interface IReceiptRepository
     Task<(IReadOnlyList<Receipt> Items, int TotalCount)> ListAsync(
         Guid userId, ReceiptStatus? status, int page, int pageSize, CancellationToken cancellationToken);
 
+    /// <summary>The user's receipt, tracked for changes, with its line items. Null when it isn't theirs.</summary>
+    Task<Receipt?> GetForUpdateAsync(Guid userId, Guid receiptId, CancellationToken cancellationToken);
+
     /// <summary>For background processing: any user's receipt, tracked for changes, with its line items.</summary>
     Task<Receipt?> GetForUpdateAsync(Guid receiptId, CancellationToken cancellationToken);
 

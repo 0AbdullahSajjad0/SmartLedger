@@ -12,9 +12,11 @@ using SmartLedger.Application.Auth;
 using SmartLedger.Application.Categories;
 using SmartLedger.Application.Common;
 using SmartLedger.Application.Common.Storage;
+using SmartLedger.Application.ExchangeRates;
 using SmartLedger.Application.Receipts;
 using SmartLedger.Application.Receipts.Extraction;
 using SmartLedger.Application.Receipts.Previews;
+using SmartLedger.Infrastructure.ExchangeRates;
 using SmartLedger.Infrastructure.Extraction;
 using SmartLedger.Infrastructure.Identity;
 using SmartLedger.Infrastructure.Persistence;
@@ -50,8 +52,23 @@ public static class DependencyInjection
         AddAuth(services, configuration);
         AddStorage(services, configuration);
         AddExtraction(services, configuration);
+        AddExchangeRates(services);
 
         return services;
+    }
+
+    private static void AddExchangeRates(IServiceCollection services)
+    {
+        services.AddScoped<IExchangeRateRepository, ExchangeRateRepository>();
+
+        services.AddHttpClient<IExchangeRateProvider, CurrencyApiExchangeRateProvider>(client =>
+                client.Timeout = Timeout.InfiniteTimeSpan) // The resilience handler below owns timeouts.
+            // Static files on a CDN: quick retries for blips, and an overall limit so approving never hangs.
+            .AddStandardResilienceHandler(resilience =>
+            {
+                resilience.AttemptTimeout.Timeout = TimeSpan.FromSeconds(10);
+                resilience.TotalRequestTimeout.Timeout = TimeSpan.FromSeconds(25);
+            });
     }
 
     private static void AddExtraction(IServiceCollection services, IConfiguration configuration)

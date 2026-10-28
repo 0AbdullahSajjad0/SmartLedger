@@ -6,6 +6,9 @@ public enum ErrorType
     Unauthorized,
     NotFound,
     Conflict,
+
+    /// <summary>A service we depend on is down; trying again later may work.</summary>
+    Unavailable,
 }
 
 /// <summary>An expected failure (wrong password, duplicate email…) returned instead of thrown.</summary>
@@ -18,6 +21,8 @@ public sealed record Error(string Code, string Message, ErrorType Type)
     public static Error NotFound(string code, string message) => new(code, message, ErrorType.NotFound);
 
     public static Error Conflict(string code, string message) => new(code, message, ErrorType.Conflict);
+
+    public static Error Unavailable(string code, string message) => new(code, message, ErrorType.Unavailable);
 }
 
 /// <summary>

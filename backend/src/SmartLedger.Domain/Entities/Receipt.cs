@@ -75,10 +75,26 @@ public class Receipt : Entity
     /// <summary>Multiplier from <see cref="Currency"/> to <see cref="BaseCurrency"/>.</summary>
     public decimal? ExchangeRate { get; private set; }
 
+    /// <summary>The day <see cref="ExchangeRate"/> is for: the receipt date, or the nearest earlier day with rates.</summary>
+    public DateOnly? ExchangeRateDate { get; private set; }
+
+    /// <summary>
+    /// What the bank actually charged, in <see cref="BaseCurrency"/>, when the user entered it from their statement.
+    /// Banks convert at their own rate plus fees, so this wins over the calculated amount.
+    /// </summary>
+    public decimal? AmountCharged { get; private set; }
+
     /// <summary><see cref="Total"/> converted to <see cref="BaseCurrency"/>. Reports sum this value.</summary>
     public decimal? BaseCurrencyTotal { get; private set; }
 
     public DateTimeOffset? ApprovedAt { get; private set; }
+
+    /// <summary>Details can be corrected while the receipt waits for review, or after AI couldn't read it.</summary>
+    public bool IsEditable => Status is ReceiptStatus.NeedsReview or ReceiptStatus.Failed;
+
+    /// <summary>Everything approval needs. Vendor, date, currency and total come from the receipt; the category from the user.</summary>
+    public bool IsReadyToApprove =>
+        VendorName is not null && ReceiptDate is not null && Currency is not null && Total is not null && CategoryId is not null;
 
     public void MarkExtracted()
     {
@@ -93,29 +109,78 @@ public class Receipt : Entity
         FailureReason = reason;
     }
 
+    /// <summary>
+    /// The user corrected the details. A receipt AI couldn't read becomes an ordinary one waiting for review, now
+    /// that a person has filled it in.
+    /// </summary>
+    public void MarkEdited()
+    {
+        if (!IsEditable)
+        {
+            throw new InvalidOperationException($"Receipt is {Status}; reopen it before changing it.");
+        }
+
+        Status = ReceiptStatus.NeedsReview;
+        FailureReason = null;
+    }
+
     /// <summary>Approves the receipt and freezes its value in the user's base currency.</summary>
-    public void Approve(string baseCurrency, decimal exchangeRate, DateTimeOffset approvedAt)
+    /// <param name="exchangeRate">Multiplier from the receipt's currency to <paramref name="baseCurrency"/>.</param>
+    /// <param name="rateDate">The day the rate is for.</param>
+    /// <param name="amountCharged">The amount on the user's statement, if they entered one; it replaces the calculated amount.</param>
+    public void Approve(string baseCurrency, decimal exchangeRate, DateOnly rateDate, decimal? amountCharged, DateTimeOffset approvedAt)
     {
         EnsureStatus(ReceiptStatus.NeedsReview);
 
-        if (VendorName is null || ReceiptDate is null || Currency is null || Total is null)
+        if (!IsReadyToApprove)
         {
-            throw new InvalidOperationException("Vendor, date, currency and total are required before approving.");
+            throw new InvalidOperationException("Vendor, date, currency, total and category are required before approving.");
         }
 
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(exchangeRate);
+        if (amountCharged is < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(amountCharged), "The amount charged can't be negative.");
+        }
 
         Status = ReceiptStatus.Approved;
         BaseCurrency = baseCurrency;
         ExchangeRate = exchangeRate;
-        BaseCurrencyTotal = Math.Round(Total.Value * exchangeRate, 2, MidpointRounding.AwayFromZero);
+        ExchangeRateDate = rateDate;
+        AmountCharged = amountCharged;
+        BaseCurrencyTotal = amountCharged ?? Math.Round(Total!.Value * exchangeRate, 2, MidpointRounding.AwayFromZero);
         ApprovedAt = approvedAt;
     }
 
+    /// <summary>Not an expense to keep: a duplicate, a personal purchase, or something that isn't a receipt.</summary>
     public void Reject()
     {
-        EnsureStatus(ReceiptStatus.NeedsReview);
+        if (!IsEditable)
+        {
+            throw new InvalidOperationException($"Receipt is {Status}; only receipts waiting for review can be rejected.");
+        }
+
         Status = ReceiptStatus.Rejected;
+    }
+
+    /// <summary>
+    /// Takes back an approval or rejection. The frozen conversion is cleared, so approving again uses a fresh rate
+    /// and the receipt leaves reports until then.
+    /// </summary>
+    public void Reopen()
+    {
+        if (Status is not (ReceiptStatus.Approved or ReceiptStatus.Rejected))
+        {
+            throw new InvalidOperationException($"Receipt is {Status}; only approved or rejected receipts can be reopened.");
+        }
+
+        Status = ReceiptStatus.NeedsReview;
+        BaseCurrency = null;
+        ExchangeRate = null;
+        ExchangeRateDate = null;
+        AmountCharged = null;
+        BaseCurrencyTotal = null;
+        ApprovedAt = null;
     }
 
     private void EnsureStatus(ReceiptStatus expected)

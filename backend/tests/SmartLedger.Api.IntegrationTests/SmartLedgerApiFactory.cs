@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using SmartLedger.Application.ExchangeRates;
 using SmartLedger.Application.Receipts.Extraction;
 using SmartLedger.Infrastructure.Persistence;
 
@@ -29,8 +30,12 @@ public class SmartLedgerApiFactory : WebApplicationFactory<Program>, IAsyncLifet
         builder.UseSetting("Storage:LocalPath", StoragePath);
         builder.UseSetting("Gemini:DelayBetweenRequests", "00:00:00");
 
-        // No real AI in tests: the fake "reads" every upload instantly.
-        builder.ConfigureTestServices(services => services.AddScoped<IReceiptExtractor, FakeReceiptExtractor>());
+        // No real AI or rate source in tests: the fakes answer instantly and the same way every time.
+        builder.ConfigureTestServices(services =>
+        {
+            services.AddScoped<IReceiptExtractor, FakeReceiptExtractor>();
+            services.AddSingleton<IExchangeRateProvider, FakeExchangeRateProvider>();
+        });
     }
 
     /// <summary>Uploaded files go to a fresh temporary folder per test run.</summary>

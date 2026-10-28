@@ -77,6 +77,43 @@ public sealed class ReceiptsController(IReceiptService receiptService) : Control
     public async Task<IActionResult> Get(Guid id, CancellationToken cancellationToken) =>
         (await receiptService.GetAsync(id, cancellationToken)).ToActionResult(this);
 
+    /// <summary>Saves the reviewed details, line items included (lines left out are removed).</summary>
+    [HttpPut("{id:guid}")]
+    [ProducesResponseType<ReceiptDetailDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> Update(Guid id, UpdateReceiptRequest request, CancellationToken cancellationToken) =>
+        (await receiptService.UpdateAsync(id, request, cancellationToken)).ToActionResult(this);
+
+    /// <summary>
+    /// Approves the receipt: its total is converted to your base currency at the receipt date's rate (or set to the
+    /// amount charged, if given) and frozen.
+    /// </summary>
+    [HttpPost("{id:guid}/approve")]
+    [ProducesResponseType<ReceiptDetailDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status503ServiceUnavailable)]
+    public async Task<IActionResult> Approve(Guid id, ApproveReceiptRequest request, CancellationToken cancellationToken) =>
+        (await receiptService.ApproveAsync(id, request, cancellationToken)).ToActionResult(this);
+
+    [HttpPost("{id:guid}/reject")]
+    [ProducesResponseType<ReceiptDetailDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> Reject(Guid id, CancellationToken cancellationToken) =>
+        (await receiptService.RejectAsync(id, cancellationToken)).ToActionResult(this);
+
+    /// <summary>Takes back an approval or rejection; an approved receipt loses its frozen conversion.</summary>
+    [HttpPost("{id:guid}/reopen")]
+    [ProducesResponseType<ReceiptDetailDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> Reopen(Guid id, CancellationToken cancellationToken) =>
+        (await receiptService.ReopenAsync(id, cancellationToken)).ToActionResult(this);
+
     /// <summary>The original upload, exactly as received (photos keep their metadata, including any GPS location).</summary>
     [HttpGet("{id:guid}/file")]
     [ProducesResponseType(StatusCodes.Status200OK)]

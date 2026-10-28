@@ -61,6 +61,11 @@ internal sealed class ReceiptRepository(AppDbContext db) : IReceiptRepository
         return (items, totalCount);
     }
 
+    public Task<Receipt?> GetForUpdateAsync(Guid userId, Guid receiptId, CancellationToken cancellationToken) =>
+        db.Receipts
+            .Include(r => r.LineItems)
+            .SingleOrDefaultAsync(r => r.Id == receiptId && r.UserId == userId, cancellationToken);
+
     public Task<Receipt?> GetForUpdateAsync(Guid receiptId, CancellationToken cancellationToken) =>
         db.Receipts
             .Include(r => r.LineItems)

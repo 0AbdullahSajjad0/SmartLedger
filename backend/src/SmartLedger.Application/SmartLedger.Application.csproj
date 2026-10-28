@@ -9,4 +9,9 @@
     <ProjectReference Include="..\SmartLedger.Domain\SmartLedger.Domain.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Lets the unit tests exercise internal services such as ExchangeRateService directly. -->
+    <InternalsVisibleTo Include="SmartLedger.UnitTests" />
+  </ItemGroup>
+
 </Project>

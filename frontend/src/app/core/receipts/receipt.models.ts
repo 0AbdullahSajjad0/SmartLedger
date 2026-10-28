@@ -52,6 +52,12 @@ export interface ReceiptDetail {
   lineItems: LineItem[];
   extractionFlags: ExtractionFlag[];
   baseCurrency: string | null;
+  /** Multiplier from the receipt's currency to the base currency, frozen at approval. */
+  exchangeRate: number | null;
+  /** The day that rate is for (yyyy-MM-dd). */
+  exchangeRateDate: string | null;
+  /** What the bank charged, from the user's statement, when they entered it. Wins over the calculated amount. */
+  amountCharged: number | null;
   baseCurrencyTotal: number | null;
   approvedAt: string | null;
   createdAt: string;
@@ -63,6 +69,35 @@ export interface Category {
   color: string;
   monthlyBudget: number | null;
   isArchived: boolean;
+}
+
+/** The review form as sent to the API. Replaces the stored details; line items left out are removed. */
+export interface UpdateReceiptRequest {
+  vendorName: string | null;
+  receiptDate: string | null;
+  currency: string | null;
+  subtotal: number | null;
+  tax: number | null;
+  total: number | null;
+  paymentMethod: string | null;
+  categoryId: string | null;
+  notes: string | null;
+  lineItems: LineItemRequest[];
+}
+
+export interface LineItemRequest {
+  description: string;
+  quantity: number;
+  unitPrice: number;
+  amount: number;
+}
+
+/** How to convert one currency into another on a day; `rateDate` may be earlier than the day asked for. */
+export interface ExchangeRateQuote {
+  from: string;
+  to: string;
+  rate: number;
+  rateDate: string;
 }
 
 export interface PagedResult<T> {

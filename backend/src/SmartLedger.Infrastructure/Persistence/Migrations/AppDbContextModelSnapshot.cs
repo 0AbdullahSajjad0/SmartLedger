@@ -212,14 +212,14 @@ namespace SmartLedger.Infrastructure.Persistence.Migrations
                     b.Property<DateOnly>("EffectiveDate")
                         .HasColumnType("date");
 
-                    b.Property<decimal>("RateToUsd")
-                        .HasPrecision(18, 8)
-                        .HasColumnType("decimal(18,8)");
-
                     b.Property<string>("Source")
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
+
+                    b.Property<decimal>("UnitsPerUsd")
+                        .HasPrecision(18, 6)
+                        .HasColumnType("decimal(18,6)");
 
                     b.Property<DateTimeOffset>("UpdatedAt")
                         .HasColumnType("datetimeoffset");
@@ -327,6 +327,10 @@ namespace SmartLedger.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<decimal?>("AmountCharged")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<DateTimeOffset?>("ApprovedAt")
                         .HasColumnType("datetimeoffset");
 
@@ -362,8 +366,11 @@ namespace SmartLedger.Infrastructure.Persistence.Migrations
                         .IsFixedLength();
 
                     b.Property<decimal?>("ExchangeRate")
-                        .HasPrecision(18, 8)
-                        .HasColumnType("decimal(18,8)");
+                        .HasPrecision(20, 10)
+                        .HasColumnType("decimal(20,10)");
+
+                    b.Property<DateOnly?>("ExchangeRateDate")
+                        .HasColumnType("date");
 
                     b.Property<int>("ExtractionAttempts")
                         .HasColumnType("int");
