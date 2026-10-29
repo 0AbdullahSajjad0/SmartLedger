@@ -16,11 +16,14 @@ using SmartLedger.Application.ExchangeRates;
 using SmartLedger.Application.Receipts;
 using SmartLedger.Application.Receipts.Extraction;
 using SmartLedger.Application.Receipts.Previews;
+using SmartLedger.Application.Reports;
 using SmartLedger.Infrastructure.ExchangeRates;
 using SmartLedger.Infrastructure.Extraction;
+using SmartLedger.Infrastructure.Gemini;
 using SmartLedger.Infrastructure.Identity;
 using SmartLedger.Infrastructure.Persistence;
 using SmartLedger.Infrastructure.Previews;
+using SmartLedger.Infrastructure.Reports;
 using SmartLedger.Infrastructure.Repositories;
 using SmartLedger.Infrastructure.Storage;
 
@@ -47,6 +50,7 @@ public static class DependencyInjection
         services.AddScoped<DevelopmentDataSeeder>();
         services.AddScoped<IReceiptRepository, ReceiptRepository>();
         services.AddScoped<ICategoryRepository, CategoryRepository>();
+        services.AddScoped<IReportRepository, ReportRepository>();
         services.AddScoped<IUserDirectory, UserDirectory>();
 
         AddAuth(services, configuration);
@@ -78,7 +82,8 @@ public static class DependencyInjection
             .ValidateOnStart();
         services.AddSingleton<IValidateOptions<GeminiOptions>, GeminiOptionsValidation>();
 
-        services.AddHttpClient<IReceiptExtractor, GeminiReceiptExtractor>((provider, client) =>
+        // One Gemini client, shared by the receipt reader and the monthly report writer.
+        services.AddHttpClient<GeminiApi>((provider, client) =>
             {
                 client.BaseAddress = provider.GetRequiredService<IOptions<GeminiOptions>>().Value.BaseUrl;
                 client.Timeout = Timeout.InfiniteTimeSpan; // The resilience handler below owns timeouts.
@@ -90,6 +95,8 @@ public static class DependencyInjection
                 resilience.CircuitBreaker.SamplingDuration = TimeSpan.FromMinutes(2);
                 resilience.TotalRequestTimeout.Timeout = TimeSpan.FromMinutes(4);
             });
+        services.AddScoped<IReceiptExtractor, GeminiReceiptExtractor>();
+        services.AddScoped<IInsightWriter, GeminiInsightWriter>();
 
         services.AddSingleton<IReceiptPreviewRenderer, ReceiptPreviewRenderer>();
 

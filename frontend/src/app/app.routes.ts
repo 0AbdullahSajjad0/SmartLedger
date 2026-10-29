@@ -54,6 +54,11 @@ export const routes: Routes = [
         loadComponent: () => import('./features/scan/scan').then((m) => m.Scan),
       },
       {
+        path: 'reports',
+        title: 'Reports · SmartLedger',
+        loadComponent: () => import('./features/reports/reports-page').then((m) => m.ReportsPage),
+      },
+      {
         path: 'categories',
         title: 'Categories & budgets · SmartLedger',
         loadComponent: () => import('./features/categories/categories-page').then((m) => m.CategoriesPage),

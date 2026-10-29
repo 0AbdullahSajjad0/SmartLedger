@@ -259,6 +259,12 @@
     color: #3a352e;
   }
 
+  &__link {
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
   // The first sentence leads, set in the display face like a report's standfirst.
   p.summary__lede {
     font-family: var(--font-display);

@@ -1,6 +1,7 @@
 using SmartLedger.Application.Categories;
 using SmartLedger.Application.Common;
 using SmartLedger.Application.Receipts;
+using SmartLedger.Application.Reports;
 using SmartLedger.Domain.Enums;
 
 namespace SmartLedger.Application.Overview;
@@ -19,6 +20,7 @@ namespace SmartLedger.Application.Overview;
 /// <param name="TotalReceipts">Every receipt the user has, in any status: zero means a brand-new account.</param>
 /// <param name="Categories">Categories with spending in the month, biggest first, with their budgets.</param>
 /// <param name="Recent">The newest entries in the ledger, in any status.</param>
+/// <param name="InsightHeadline">AI's headline for the month, once its analysis has been written on the Reports page.</param>
 public sealed record OverviewDto(
     string Month,
     string BaseCurrency,
@@ -30,7 +32,8 @@ public sealed record OverviewDto(
     int Unreadable,
     int TotalReceipts,
     IReadOnlyList<CategorySpendingDto> Categories,
-    IReadOnlyList<ReceiptSummaryDto> Recent);
+    IReadOnlyList<ReceiptSummaryDto> Recent,
+    string? InsightHeadline);
 
 public interface IOverviewService
 {
@@ -41,6 +44,7 @@ public interface IOverviewService
 internal sealed class OverviewService(
     ICategoryRepository categories,
     IReceiptRepository receipts,
+    IReportRepository reports,
     IUserDirectory users,
     TimeProvider timeProvider,
     ICurrentUser currentUser) : IOverviewService
@@ -67,6 +71,7 @@ internal sealed class OverviewService(
         var counts = await receipts.CountByStatusAsync(userId, cancellationToken);
         var (recent, _) = await receipts.ListAsync(userId, status: null, page: 1, pageSize: RecentCount, cancellationToken);
         var baseCurrency = await users.GetBaseCurrencyAsync(userId, cancellationToken) ?? "USD";
+        var insight = await reports.GetInsightAsync(userId, start.Year, start.Month, cancellationToken);
 
         var spentByCategory = thisMonth.Where(s => s.CategoryId is not null).ToDictionary(s => s.CategoryId!.Value);
         var categoryRows = userCategories
@@ -91,6 +96,7 @@ internal sealed class OverviewService(
             counts.GetValueOrDefault(ReceiptStatus.Failed),
             counts.Values.Sum(),
             categoryRows,
-            recent.Select(ReceiptService.ToSummary).ToList());
+            recent.Select(ReceiptService.ToSummary).ToList(),
+            insight?.Headline);
     }
 }

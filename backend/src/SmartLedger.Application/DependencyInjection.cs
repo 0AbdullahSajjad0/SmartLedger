@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using SmartLedger.Application.Categories;
 using SmartLedger.Application.ExchangeRates;
 using SmartLedger.Application.Overview;
+using SmartLedger.Application.Reports;
 using SmartLedger.Application.Receipts;
 using SmartLedger.Application.Receipts.Extraction;
 
@@ -19,6 +20,7 @@ public static class DependencyInjection
         services.AddScoped<ICategoryService, CategoryService>();
         services.AddScoped<IExchangeRateService, ExchangeRateService>();
         services.AddScoped<IOverviewService, OverviewService>();
+        services.AddScoped<IReportService, ReportService>();
 
         return services;
     }

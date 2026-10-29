@@ -1,0 +1,28 @@
+<div class="chart" role="img" [attr.aria-label]="summary()">
+  @for (bar of bars(); track bar.month) {
+    <div class="chart__column" [class.chart__column--selected]="bar.month === selected()" aria-hidden="true">
+      <span class="chart__value mono">{{ bar.short }}</span>
+      <div class="chart__track">
+        <div class="chart__bar" [style.height.%]="bar.height"></div>
+      </div>
+      <span class="chart__tip mono">{{ label(bar.month) }} · {{ bar.spent | currency: currency() : 'symbol-narrow' }}</span>
+    </div>
+  }
+</div>
+<div class="axis mono" aria-hidden="true">
+  @for (bar of bars(); track bar.month) {
+    <span [class.axis__selected]="bar.month === selected()">{{ label(bar.month, 'short') }}</span>
+  }
+</div>
+
+<table class="visually-hidden">
+  <caption>Monthly spending</caption>
+  <thead>
+    <tr><th scope="col">Month</th><th scope="col">Spent</th></tr>
+  </thead>
+  <tbody>
+    @for (bar of bars(); track bar.month) {
+      <tr><th scope="row">{{ label(bar.month) }}</th><td>{{ bar.spent | currency: currency() : 'symbol-narrow' }}</td></tr>
+    }
+  </tbody>
+</table>

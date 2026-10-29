@@ -1,0 +1,97 @@
+:host {
+  display: block;
+}
+
+// Bars stand on a single ink baseline, like figures in a printed annual report.
+.chart {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 0 10px;
+  height: 180px;
+  border-bottom: var(--rule);
+
+  &__column {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+    min-height: 0;
+  }
+
+  &__value {
+    font-size: 11px;
+    text-align: center;
+    color: var(--color-muted);
+  }
+
+  &__track {
+    flex: 1;
+    display: flex;
+    align-items: flex-end;
+    min-height: 0;
+  }
+
+  &__bar {
+    width: 100%;
+    background: var(--color-faint);
+    transition: background-color 120ms ease;
+  }
+
+  &__column--selected {
+    .chart__value {
+      color: var(--color-ink);
+      font-weight: 600;
+    }
+
+    .chart__bar {
+      background: var(--color-ink);
+    }
+  }
+
+  &__column:hover .chart__bar {
+    background: var(--color-muted);
+  }
+
+  &__column--selected:hover .chart__bar {
+    background: var(--color-ink);
+  }
+
+  // Exact amount on hover, above the bar.
+  &__tip {
+    position: absolute;
+    bottom: calc(100% + 4px);
+    left: 50%;
+    z-index: 1;
+    padding: 4px 8px;
+    transform: translateX(-50%);
+    background: var(--color-ink);
+    color: var(--color-on-dark);
+    font-size: 11px;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 120ms ease;
+  }
+
+  &__column:hover &__tip {
+    opacity: 1;
+  }
+}
+
+.axis {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 0 10px;
+  padding-top: 8px;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-align: center;
+  text-transform: uppercase;
+  color: var(--color-muted);
+
+  &__selected {
+    color: var(--color-ink);
+    font-weight: 600;
+  }
+}
