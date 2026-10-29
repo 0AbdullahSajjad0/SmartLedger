@@ -4,6 +4,8 @@ namespace SmartLedger.Domain.Entities;
 
 public class Category : Entity
 {
+    public const int MaxNameLength = 60;
+
     public Guid UserId { get; set; }
 
     public required string Name { get; set; }

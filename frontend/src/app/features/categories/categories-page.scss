@@ -1,0 +1,189 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  gap: 36px;
+}
+
+.intro {
+  max-width: 560px;
+  font-size: 15px;
+  line-height: 1.6;
+  color: #3a352e;
+}
+
+// ---- Month: previous · this · next ----
+
+.months {
+  display: flex;
+  align-items: baseline;
+  gap: 24px;
+  margin-top: -16px;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+
+  a {
+    color: var(--color-muted);
+  }
+
+  &__current {
+    color: var(--color-ink);
+    font-weight: 600;
+  }
+}
+
+// ---- Three big figures, divided by ledger rules ----
+
+.figures {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px 0;
+
+  &__item {
+    flex: 1 1 220px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 0 28px;
+    border-left: var(--rule);
+
+    &:first-child {
+      padding-left: 0;
+      border-left: 0;
+    }
+  }
+
+  &__value {
+    font-family: var(--font-display);
+    font-size: clamp(34px, 4vw, 48px);
+    line-height: 1;
+
+    &--under {
+      color: var(--color-positive);
+    }
+
+    &--over {
+      color: var(--color-negative);
+    }
+
+    &--muted {
+      font-size: 24px;
+      color: var(--color-muted);
+    }
+  }
+}
+
+// ---- The table ----
+
+.categories {
+  min-width: 760px;
+  transition: opacity 120ms ease;
+
+  &--loading {
+    opacity: 0.6;
+  }
+
+  &__used {
+    width: 30%;
+  }
+}
+
+.name {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 15px;
+  font-weight: 500;
+
+  &__chip {
+    flex: none;
+    width: 10px;
+    height: 10px;
+  }
+}
+
+.muted {
+  color: var(--color-muted);
+}
+
+.strong {
+  font-weight: 600;
+}
+
+.actions {
+  text-align: right;
+}
+
+// A 2px rule filled to the share used, coloured by how close to the budget it is.
+.usage {
+  --tone: var(--color-ink);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+
+  &[data-tone='near'] {
+    --tone: var(--color-caution);
+  }
+
+  &[data-tone='over'] {
+    --tone: var(--color-negative);
+  }
+
+  &__track {
+    flex: 1;
+    height: 2px;
+    background: var(--color-hairline);
+  }
+
+  &__bar {
+    height: 2px;
+    background: var(--tone);
+  }
+
+  &__value {
+    width: 48px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--tone);
+  }
+}
+
+// ---- Archived ----
+
+.archived {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 18px;
+  border-top: var(--rule-faint);
+
+  &__note {
+    font-size: 13px;
+    color: var(--color-muted);
+  }
+
+  &__list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+
+    li {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px 24px;
+      padding: 10px 0;
+      border-bottom: var(--rule-faint);
+
+      .name {
+        flex: 1 1 200px;
+        color: var(--color-muted);
+      }
+    }
+  }
+}
+
+.loading {
+  padding: 32px 0;
+  color: var(--color-muted);
+}
