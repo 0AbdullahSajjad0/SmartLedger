@@ -1,4 +1,3 @@
-using System.Globalization;
 using SmartLedger.Application.Common;
 using SmartLedger.Domain.Entities;
 
@@ -15,8 +14,6 @@ internal sealed class CategoryService(
 
     private static readonly Error NotFound = Error.NotFound("categories.not_found", "Category not found.");
 
-    private static readonly DateOnly EarliestMonth = new(2000, 1, 1);
-
     // Every endpoint behind this service requires sign-in, so a missing user is a bug, not a user error.
     private Guid UserId => currentUser.UserId ?? throw new InvalidOperationException("No signed-in user.");
 
@@ -28,16 +25,12 @@ internal sealed class CategoryService(
 
     public async Task<Result<CategoryMonthDto>> GetMonthAsync(string? month, CancellationToken cancellationToken)
     {
-        var today = DateOnly.FromDateTime(timeProvider.GetUtcNow().UtcDateTime);
-        var thisMonth = new DateOnly(today.Year, today.Month, 1);
-
-        var start = thisMonth;
-        if (month is not null
-            && (!DateOnly.TryParseExact($"{month}-01", "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out start)
-                || start < EarliestMonth || start > thisMonth.AddMonths(1)))
+        var parsed = Months.Parse(month, DateOnly.FromDateTime(timeProvider.GetUtcNow().UtcDateTime));
+        if (!parsed.IsSuccess)
         {
-            return Error.Validation("categories.invalid_month", "Choose a month like 2026-10, from 2000 up to next month.");
+            return parsed.Error!;
         }
+        var start = parsed.Value;
 
         var categories = await repository.ListAsync(UserId, cancellationToken);
         // Spending counts by receipt date, not approval date: a September dinner approved in October is September's.
@@ -58,7 +51,7 @@ internal sealed class CategoryService(
             .ToList();
 
         return new CategoryMonthDto(
-            start.ToString("yyyy-MM", CultureInfo.InvariantCulture),
+            Months.Format(start),
             await users.GetBaseCurrencyAsync(UserId, cancellationToken) ?? "USD",
             categories.Where(c => !c.IsArchived).Sum(c => c.MonthlyBudget ?? 0m),
             spending.Sum(s => s.Spent),

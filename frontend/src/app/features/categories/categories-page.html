@@ -8,10 +8,10 @@
 </header>
 
 <nav class="months mono" aria-label="Month">
-  <a [routerLink]="[]" [queryParams]="{ month: previousMonth() }">← {{ label(previousMonth(), true) }}</a>
+  <a [routerLink]="[]" [queryParams]="{ month: previousMonth() }">← {{ label(previousMonth(), 'short') }}</a>
   <span class="months__current" aria-current="page">{{ monthName() }}</span>
   @if (canGoForward()) {
-    <a [routerLink]="[]" [queryParams]="{ month: nextMonth() }">{{ label(nextMonth(), true) }} →</a>
+    <a [routerLink]="[]" [queryParams]="{ month: nextMonth() }">{{ label(nextMonth(), 'short') }} →</a>
   }
 </nav>
 
@@ -26,7 +26,7 @@
       <span class="figures__value">{{ m.totalBudget | currency: m.baseCurrency : 'symbol-narrow' }}</span>
     </div>
     <div class="figures__item">
-      <span class="label">Spent in {{ label(m.month, true) }}</span>
+      <span class="label">Spent in {{ label(m.month, 'short') }}</span>
       <span class="figures__value">{{ m.totalSpent | currency: m.baseCurrency : 'symbol-narrow' }}</span>
     </div>
     <div class="figures__item">
@@ -114,7 +114,7 @@
               {{ category.name }}
             </span>
             @if (category.receiptCount > 0) {
-              <span class="num muted">{{ category.spent | number: '1.2-2' }} in {{ label(m.month, true) }}</span>
+              <span class="num muted">{{ category.spent | number: '1.2-2' }} in {{ label(m.month, 'short') }}</span>
             }
             <button type="button" class="link-button" [disabled]="unarchiving() === category.id"
               [attr.aria-label]="'Unarchive ' + category.name" (click)="unarchive(category)">

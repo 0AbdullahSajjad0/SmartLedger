@@ -1,10 +1,8 @@
 using System.Net;
-using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Microsoft.AspNetCore.Mvc;
 using SmartLedger.Application.Categories;
 using SmartLedger.Application.Receipts;
-using SmartLedger.Domain.Enums;
 
 namespace SmartLedger.Api.IntegrationTests;
 
@@ -23,7 +21,7 @@ public class CategoriesTests(SmartLedgerApiFactory factory)
         var client = await SignedInClientAsync();
         var october = await ApprovedReceiptAsync(client, amountCharged: 100m);
         await ApprovedReceiptAsync(client, amountCharged: 50m, receiptDate: new DateOnly(2026, 9, 5));
-        await ReadReceiptAsync(client); // waiting for review: not spent yet
+        await TestReceipts.UploadAndReadAsync(client); // waiting for review: not spent yet
         var office = await CategoryAsync(client, "Office Supplies");
         await PutAsync(client, office.Id, new UpdateCategoryRequest(office.Name, office.Color, 500m, false));
 
@@ -184,37 +182,8 @@ public class CategoriesTests(SmartLedgerApiFactory factory)
         return (await response.Content.ReadFromJsonAsync<CategoryDto>(Json))!;
     }
 
-    /// <summary>Uploads a photo and waits for the (fake) AI: an Office Supplies receipt dated 19 Oct 2026.</summary>
-    private static async Task<ReceiptDetailDto> ReadReceiptAsync(HttpClient client)
-    {
-        var form = new MultipartFormDataContent();
-        var content = new ByteArrayContent(TestFiles.Jpeg());
-        content.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
-        form.Add(content, "files", "receipt.jpg");
-
-        var response = await client.PostAsync("/api/receipts", form);
-        response.EnsureSuccessStatusCode();
-        var uploaded = (await response.Content.ReadFromJsonAsync<List<ReceiptSummaryDto>>(Json))!.Single();
-        var receipt = await TestReceipts.WaitUntilReadAsync(client, uploaded.Id);
-        Assert.Equal(ReceiptStatus.NeedsReview, receipt.Status);
-        return receipt;
-    }
-
-    private static async Task<ReceiptDetailDto> ApprovedReceiptAsync(HttpClient client, decimal amountCharged, DateOnly? receiptDate = null)
-    {
-        var receipt = await ReadReceiptAsync(client);
-        if (receiptDate is not null)
-        {
-            var edit = new UpdateReceiptRequest(receipt.VendorName, receiptDate, receipt.Currency, receipt.Subtotal, receipt.Tax,
-                receipt.Total, receipt.PaymentMethod, receipt.CategoryId, receipt.Notes,
-                receipt.LineItems.Select(l => new LineItemRequest(l.Description, l.Quantity, l.UnitPrice, l.Amount)).ToList());
-            (await client.PutAsJsonAsync($"/api/receipts/{receipt.Id}", edit, Json)).EnsureSuccessStatusCode();
-        }
-
-        var approved = await client.PostAsJsonAsync($"/api/receipts/{receipt.Id}/approve", new ApproveReceiptRequest(amountCharged), Json);
-        approved.EnsureSuccessStatusCode();
-        return (await approved.Content.ReadFromJsonAsync<ReceiptDetailDto>(Json))!;
-    }
+    private static Task<ReceiptDetailDto> ApprovedReceiptAsync(HttpClient client, decimal amountCharged, DateOnly? receiptDate = null) =>
+        TestReceipts.ApprovedAsync(client, amountCharged, receiptDate);
 
     private async Task<HttpClient> SignedInClientAsync()
     {

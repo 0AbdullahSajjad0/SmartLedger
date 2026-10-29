@@ -42,6 +42,13 @@ internal sealed class ReceiptRepository(AppDbContext db) : IReceiptRepository
             .Include(r => r.LineItems)
             .SingleOrDefaultAsync(r => r.Id == receiptId && r.UserId == userId, cancellationToken);
 
+    public async Task<IReadOnlyDictionary<ReceiptStatus, int>> CountByStatusAsync(Guid userId, CancellationToken cancellationToken) =>
+        await db.Receipts
+            .Where(r => r.UserId == userId)
+            .GroupBy(r => r.Status)
+            .Select(g => new { Status = g.Key, Count = g.Count() })
+            .ToDictionaryAsync(g => g.Status, g => g.Count, cancellationToken);
+
     public async Task<(IReadOnlyList<Receipt> Items, int TotalCount)> ListAsync(
         Guid userId, ReceiptStatus? status, int page, int pageSize, CancellationToken cancellationToken)
     {
