@@ -382,7 +382,8 @@ internal sealed class ReceiptService(
             : Error.Validation("receipts.unsupported_type", $"\"{name}\" isn't a JPG, PNG, WebP, HEIC or PDF file.");
     }
 
-    private static ReceiptSummaryDto ToSummary(Receipt r) => new(
+    /// <summary>A ledger row. Shared with the overview's recent entries.</summary>
+    internal static ReceiptSummaryDto ToSummary(Receipt r) => new(
         r.Id, r.Number, r.Status, r.VendorName, r.ReceiptDate, r.Currency, r.Total, r.BaseCurrencyTotal,
         r.CategoryId, r.FileName, r.CreatedAt);
 

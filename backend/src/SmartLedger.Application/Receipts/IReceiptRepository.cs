@@ -11,6 +11,9 @@ public interface IReceiptRepository
     /// <summary>Null when the receipt doesn't exist or belongs to another user.</summary>
     Task<Receipt?> GetAsync(Guid userId, Guid receiptId, CancellationToken cancellationToken);
 
+    /// <summary>How many of the user's receipts are in each status; statuses with none are left out.</summary>
+    Task<IReadOnlyDictionary<ReceiptStatus, int>> CountByStatusAsync(Guid userId, CancellationToken cancellationToken);
+
     /// <summary>Newest first.</summary>
     Task<(IReadOnlyList<Receipt> Items, int TotalCount)> ListAsync(
         Guid userId, ReceiptStatus? status, int page, int pageSize, CancellationToken cancellationToken);

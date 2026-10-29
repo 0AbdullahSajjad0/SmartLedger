@@ -1,22 +1,183 @@
-<section class="statement">
-  <span class="eyebrow">Monthly statement · {{ today | date: 'MMMM y' }}</span>
-  <h1 class="statement__title">Welcome, <em>{{ firstName() }}</em></h1>
-</section>
+@if (data.hasValue() && data.value().totalReceipts === 0) {
+  <section class="statement">
+    <span class="eyebrow">Monthly statement · {{ label(currentMonth) }}</span>
+    <h1 class="statement__title">Welcome, <em>{{ firstName() }}</em></h1>
+  </section>
 
-<section class="empty" aria-labelledby="empty-title">
-  <h2 id="empty-title" class="empty__title">Your statement starts with a scan</h2>
-  <p class="empty__text">
-    Scan or upload your receipts. Once AI extraction lands, this page becomes your monthly statement:
-    what you spent, what's waiting for review and how each category is tracking against its budget.
-  </p>
-  <div class="empty__actions">
-    <a class="btn" routerLink="/scan">Scan a receipt</a>
-    <a class="btn btn--ghost" routerLink="/receipts">Open the ledger</a>
-  </div>
-  <dl class="empty__facts mono">
-    <dt>Reporting currency</dt>
-    <dd>{{ user()?.baseCurrency }}</dd>
-    <dt>Signed in as</dt>
-    <dd>{{ user()?.email }}</dd>
-  </dl>
-</section>
+  <section class="empty" aria-labelledby="empty-title">
+    <h2 id="empty-title" class="empty__title">Your statement starts with a scan</h2>
+    <p class="empty__text">
+      Scan or upload a receipt. AI reads it in seconds; once you approve it, this page becomes your monthly
+      statement: what you spent, what's waiting for review and how each category is tracking against its budget.
+    </p>
+    <div class="empty__actions">
+      <a class="btn" routerLink="/scan">Scan a receipt</a>
+      <a class="btn btn--ghost" routerLink="/categories">Set budgets</a>
+    </div>
+    <dl class="empty__facts mono">
+      <dt>Reporting currency</dt>
+      <dd>{{ user()?.baseCurrency }}</dd>
+      <dt>Signed in as</dt>
+      <dd>{{ user()?.email }}</dd>
+    </dl>
+  </section>
+} @else {
+  <header class="page-header">
+    <div class="page-header__titles">
+      <span class="eyebrow">Monthly statement · {{ firstName() }}</span>
+      <h1 class="page-header__title">{{ label(month(), 'name') }} <em>{{ month().slice(0, 4) }}</em></h1>
+    </div>
+    <div class="header-actions">
+      <div class="field">
+        <label class="label" for="statement-month">Statement</label>
+        <select id="statement-month" class="field__input statement-picker" [value]="month()"
+          (change)="openMonth($any($event.target).value)">
+          @for (option of monthsOffered; track option) {
+            <option [value]="option">{{ label(option) }}</option>
+          }
+        </select>
+      </div>
+      <a class="btn" routerLink="/scan">Scan a receipt</a>
+    </div>
+  </header>
+
+  @if (errorMessage(); as message) {
+    <p class="form-alert" role="alert">{{ message }}</p>
+  } @else if (data.hasValue()) {
+    @let s = data.value();
+
+    <section class="figures" aria-label="Key figures" [class.figures--loading]="data.isLoading()">
+      <div class="figure figure--lead">
+        <span class="label">{{ isCurrentMonth() ? 'Spent this month' : 'Spent in ' + label(s.month, 'name') }}</span>
+        <span class="figure__value figure__value--lead">{{ s.spent | currency: s.baseCurrency : 'symbol-narrow' }}</span>
+        @if (change(); as c) {
+          <span class="figure__note mono" [class.figure__note--up]="c > 0" [class.figure__note--down]="c < 0">
+            {{ c > 0 ? '▲' : '▼' }} {{ (c < 0 ? -c : c) | number: '1.1-1' }}% on {{ label(previousMonth(), 'name') }}
+            ({{ s.previousMonthSpent | currency: s.baseCurrency : 'symbol-narrow' }})
+          </span>
+        } @else if (change() === 0) {
+          <span class="figure__note mono">Same as {{ label(previousMonth(), 'name') }}</span>
+        } @else {
+          <span class="figure__note mono">Nothing approved in {{ label(previousMonth(), 'name') }}</span>
+        }
+      </div>
+
+      <a class="figure figure--link" routerLink="/receipts" [queryParams]="{ status: 'NeedsReview' }">
+        <span class="label">Awaiting review</span>
+        <span class="figure__value">{{ s.awaitingReview }}</span>
+        <span class="figure__note figure__note--action mono">{{ s.awaitingReview > 0 ? 'Review entries →' : 'All caught up' }}</span>
+        @if (s.unreadable > 0) {
+          <span class="figure__note mono">+ {{ s.unreadable }} unreadable</span>
+        }
+      </a>
+
+      <div class="figure">
+        <span class="label">Average receipt</span>
+        <span class="figure__value">{{ average() !== null ? (average() | currency: s.baseCurrency : 'symbol-narrow') : '—' }}</span>
+        <span class="figure__note mono">{{ s.approvedCount }} {{ s.approvedCount === 1 ? 'receipt' : 'receipts' }}</span>
+      </div>
+
+      <div class="figure">
+        <span class="label">Over budget</span>
+        @if (!hasBudgets()) {
+          <span class="figure__value figure__value--muted">—</span>
+          <a class="figure__note figure__note--action mono" routerLink="/categories">Set budgets →</a>
+        } @else {
+          <span class="figure__value" [class.figure__value--over]="overBudget().length > 0"
+            [class.figure__value--under]="overBudget().length === 0">{{ overBudget().length }}</span>
+          @if (overBudget()[0]; as worst) {
+            <span class="figure__note figure__note--over mono">
+              {{ worst.name }}, +{{ worst.over | currency: s.baseCurrency : 'symbol-narrow' }}
+              @if (overBudget().length > 1) {
+                and {{ overBudget().length - 1 }} more
+              }
+            </span>
+          } @else {
+            <span class="figure__note mono">All within budget</span>
+          }
+        }
+      </div>
+    </section>
+
+    <div class="columns">
+      <section class="by-category" aria-labelledby="by-category-title">
+        <div class="section-head">
+          <h2 id="by-category-title" class="section-head__title">Spending by category</h2>
+          <a class="mono section-head__link" routerLink="/categories" [queryParams]="isCurrentMonth() ? {} : { month: s.month }">
+            Budgets →
+          </a>
+        </div>
+        @for (category of s.categories; track category.id) {
+          <div class="bar-row">
+            <span class="bar-row__chip" [style.background]="category.color" aria-hidden="true"></span>
+            <span class="bar-row__name">{{ category.name }}</span>
+            <span class="num bar-row__amount">{{ category.spent | number: '1.2-2' }}</span>
+            <span class="num bar-row__share">{{ share(category) | number: '1.1-1' }}%</span>
+            <div class="bar-row__track" aria-hidden="true">
+              <div class="bar-row__bar" [style.width.%]="barWidth(category)"></div>
+            </div>
+          </div>
+        } @empty {
+          <p class="by-category__empty">
+            Nothing approved in {{ label(s.month, 'name') }} yet.
+            @if (s.awaitingReview > 0) {
+              <a routerLink="/receipts" [queryParams]="{ status: 'NeedsReview' }">Review what's waiting</a> to see it here.
+            }
+          </p>
+        }
+      </section>
+
+      <aside class="summary" aria-labelledby="summary-title">
+        <h2 id="summary-title" class="label">Summary · {{ s.approvedCount }} approved {{ s.approvedCount === 1 ? 'receipt' : 'receipts' }}</h2>
+        @for (line of summary(); track line; let first = $first) {
+          <p [class.summary__lede]="first">{{ line }}</p>
+        } @empty {
+          <p class="summary__lede">Approve receipts to see how {{ label(s.month, 'name') }} is going.</p>
+        }
+      </aside>
+    </div>
+
+    <section class="recent" aria-labelledby="recent-title">
+      <div class="section-head">
+        <h2 id="recent-title" class="section-head__title">Recent entries</h2>
+        <a class="mono section-head__link" routerLink="/receipts">Full ledger →</a>
+      </div>
+      <div class="ledger-scroll">
+        <table class="ledger recent__table">
+          <thead>
+            <tr>
+              <th scope="col">Entry</th>
+              <th scope="col">Date</th>
+              <th scope="col">Vendor</th>
+              <th scope="col">Category</th>
+              <th scope="col" class="num">Amount</th>
+              <th scope="col">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (receipt of s.recent; track receipt.id) {
+              <tr>
+                <td class="mono"><a [routerLink]="['/receipts', receipt.id]">{{ receipt.number | entryNumber }}</a></td>
+                <td class="mono">{{ receipt.receiptDate ? (receipt.receiptDate | date: 'dd MMM y' | uppercase) : '—' }}</td>
+                <td>{{ receipt.vendorName ?? receipt.fileName }}</td>
+                <td class="muted">{{ categoryName(receipt.categoryId) ?? '—' }}</td>
+                <td class="num">
+                  @if (receipt.total !== null) {
+                    {{ receipt.total | number: '1.2-2' }} <span class="currency">{{ receipt.currency }}</span>
+                  } @else {
+                    —
+                  }
+                </td>
+                <td><app-status-stamp [status]="receipt.status" /></td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+  }
+}
+
+@if (!data.hasValue() && !errorMessage()) {
+  <p class="loading mono" aria-live="polite">PREPARING YOUR STATEMENT…</p>
+}
