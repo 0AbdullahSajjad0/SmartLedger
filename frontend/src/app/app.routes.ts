@@ -63,6 +63,11 @@ export const routes: Routes = [
         title: 'Categories & budgets · SmartLedger',
         loadComponent: () => import('./features/categories/categories-page').then((m) => m.CategoriesPage),
       },
+      {
+        path: 'account',
+        title: 'Account · SmartLedger',
+        loadComponent: () => import('./features/account/account-page').then((m) => m.AccountPage),
+      },
     ],
   },
   { path: '**', redirectTo: '' },

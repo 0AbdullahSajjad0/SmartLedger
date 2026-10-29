@@ -135,9 +135,7 @@ internal sealed class ReportService(
                 r.Notes);
         }
 
-        // UTF-8 with a byte-order mark, so Excel shows "Café" and "····4242" correctly instead of guessing the encoding.
-        var bytes = Encoding.UTF8.GetPreamble().Concat(Encoding.UTF8.GetBytes(csv.ToString())).ToArray();
-        return new ReportFile(bytes, "text/csv", $"smartledger-{Months.Format(start)}.csv");
+        return new ReportFile(Csv.ToBytes(csv), "text/csv", $"smartledger-{Months.Format(start)}.csv");
     }
 
     /// <summary>What a month's report and its analysis are built from.</summary>
@@ -260,36 +258,4 @@ internal sealed class ReportService(
         IsOutOfDate: insight.ReceiptCount != data.Approved.Count || insight.TotalSpent != data.Spent);
 
     private static string MonthName(DateOnly month) => month.ToString("MMMM yyyy", CultureInfo.InvariantCulture);
-}
-
-/// <summary>
-/// RFC 4180 CSV, safe to open in Excel. Text that starts like a formula (=, +, -, @) gets an apostrophe in front, so a
-/// vendor named <c>=HYPERLINK(…)</c> on a receipt can't run as a formula on the accountant's computer.
-/// </summary>
-internal static class Csv
-{
-    private static readonly char[] FormulaStarts = ['=', '+', '-', '@', '\t', '\r'];
-
-    public static void Row(StringBuilder csv, params string?[] cells)
-    {
-        csv.Append(string.Join(',', cells.Select(Cell))).Append("\r\n");
-    }
-
-    public static string? Number(decimal? value, string format = "0.00") =>
-        value?.ToString(format, CultureInfo.InvariantCulture);
-
-    private static string Cell(string? value)
-    {
-        if (string.IsNullOrEmpty(value))
-        {
-            return string.Empty;
-        }
-
-        var text = FormulaStarts.Contains(value[0]) && !IsNumber(value) ? "'" + value : value;
-        return text.IndexOfAny([',', '"', '\r', '\n']) >= 0 ? $"\"{text.Replace("\"", "\"\"")}\"" : text;
-    }
-
-    // Our own numbers (e.g. "-5.00" for a refund) are written as numbers; only text is guarded.
-    private static bool IsNumber(string value) =>
-        decimal.TryParse(value, NumberStyles.AllowLeadingSign | NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out _);
 }

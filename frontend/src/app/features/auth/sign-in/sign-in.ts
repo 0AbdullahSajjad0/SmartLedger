@@ -23,6 +23,9 @@ export class SignIn {
   /** Query parameter: set when the session ran out. */
   readonly expired = input(false, { transform: booleanAttribute });
 
+  /** Query parameter: set after the user deleted their account. */
+  readonly deleted = input(false, { transform: booleanAttribute });
+
   protected readonly form = inject(NonNullableFormBuilder).group({
     email: ['', [Validators.required, Validators.email]],
     password: ['', Validators.required],

@@ -1,0 +1,213 @@
+<header class="page-header">
+  <div class="page-header__titles">
+    <span class="eyebrow">Settings</span>
+    <h1 class="page-header__title">Your account</h1>
+    <p class="intro">Signed in as <span class="mono">{{ auth.user()?.email }}</span></p>
+  </div>
+</header>
+
+<section class="setting" aria-labelledby="profile-title">
+  <div class="setting__about">
+    <h2 id="profile-title" class="setting__title">Profile</h2>
+    <p>The name shown in the masthead.</p>
+  </div>
+
+  <div class="setting__body">
+    <form class="setting__form" [formGroup]="profile" (ngSubmit)="submitProfile()" novalidate>
+      <div class="field">
+        <label class="label" for="displayName">Name</label>
+        <input
+          id="displayName"
+          class="field__input"
+          formControlName="displayName"
+          autocomplete="name"
+          maxlength="100"
+          [attr.aria-invalid]="showError(profile.controls.displayName, 'profile')"
+          [attr.aria-describedby]="showError(profile.controls.displayName, 'profile') ? 'displayName-error' : null"
+        />
+        @if (showError(profile.controls.displayName, 'profile')) {
+          <span id="displayName-error" class="field__error">Enter the name to show in the app.</span>
+        }
+      </div>
+      <div class="setting__actions">
+        <button type="submit" class="btn" [disabled]="saveProfile.busy()">
+          {{ saveProfile.busy() ? 'Saving…' : 'Save name' }}
+        </button>
+        @if (saveProfile.done() && profile.pristine) {
+          <span class="setting__done" role="status">Saved.</span>
+        }
+      </div>
+      @if (saveProfile.error(); as message) {
+        <p class="form-alert" role="alert">{{ message }}</p>
+      }
+    </form>
+
+    <dl class="facts">
+      <div class="facts__item">
+        <dt class="label">Email</dt>
+        <dd class="mono">{{ auth.user()?.email }}</dd>
+      </div>
+      <div class="facts__item">
+        <dt class="label">Base currency</dt>
+        <dd class="mono">{{ auth.user()?.baseCurrency }}</dd>
+      </div>
+    </dl>
+    <p class="setting__note">Every approved receipt is converted to your base currency for reports and budgets.</p>
+  </div>
+</section>
+
+<section class="setting" aria-labelledby="password-title">
+  <div class="setting__about">
+    <h2 id="password-title" class="setting__title">Password</h2>
+    <p>Changing it signs out every other device. You stay signed in here.</p>
+  </div>
+
+  <div class="setting__body">
+    <form class="setting__form" [formGroup]="password" (ngSubmit)="submitPassword()" novalidate>
+      <div class="field">
+        <label class="label" for="currentPassword">Current password</label>
+        <input
+          id="currentPassword"
+          class="field__input"
+          type="password"
+          formControlName="currentPassword"
+          autocomplete="current-password"
+          [attr.aria-invalid]="showError(password.controls.currentPassword, 'password')"
+          [attr.aria-describedby]="showError(password.controls.currentPassword, 'password') ? 'currentPassword-error' : null"
+        />
+        @if (showError(password.controls.currentPassword, 'password')) {
+          <span id="currentPassword-error" class="field__error">Enter your current password.</span>
+        }
+      </div>
+      <div class="field">
+        <label class="label" for="newPassword">New password</label>
+        <input
+          id="newPassword"
+          class="field__input"
+          type="password"
+          formControlName="newPassword"
+          autocomplete="new-password"
+          aria-describedby="newPassword-hint"
+          [attr.aria-invalid]="showError(password.controls.newPassword, 'password')"
+        />
+        @if (showError(password.controls.newPassword, 'password')) {
+          <span id="newPassword-hint" class="field__error">Use at least 10 characters.</span>
+        } @else {
+          <span id="newPassword-hint" class="field__hint">At least 10 characters. A few unrelated words are easy to remember.</span>
+        }
+      </div>
+      <div class="setting__actions">
+        <button type="submit" class="btn" [disabled]="changePassword.busy()">
+          {{ changePassword.busy() ? 'Changing…' : 'Change password' }}
+        </button>
+        @if (changePassword.done()) {
+          <span class="setting__done" role="status">Password changed. Other devices have been signed out.</span>
+        }
+      </div>
+      @if (changePassword.error(); as message) {
+        <p class="form-alert" role="alert">{{ message }}</p>
+      }
+    </form>
+  </div>
+</section>
+
+<section class="setting" aria-labelledby="devices-title">
+  <div class="setting__about">
+    <h2 id="devices-title" class="setting__title">Devices</h2>
+    <p>Signed in on a computer you no longer use, or lost a phone?</p>
+  </div>
+
+  <div class="setting__body">
+    <p class="setting__text">
+      This ends every session except this one. Other devices are signed out within 15 minutes, when their current
+      access runs out.
+    </p>
+    <div class="setting__actions">
+      <button type="button" class="btn btn--ghost" [disabled]="signOutOthers.busy()" (click)="signOutOtherDevices()">
+        {{ signOutOthers.busy() ? 'Signing out…' : 'Sign out other devices' }}
+      </button>
+      @if (signOutOthers.done()) {
+        <span class="setting__done" role="status">Done. Every other device has been signed out.</span>
+      }
+    </div>
+    @if (signOutOthers.error(); as message) {
+      <p class="form-alert" role="alert">{{ message }}</p>
+    }
+  </div>
+</section>
+
+<section class="setting" aria-labelledby="data-title">
+  <div class="setting__about">
+    <h2 id="data-title" class="setting__title">Your data</h2>
+    <p>A copy of everything you have stored, yours to keep.</p>
+  </div>
+
+  <div class="setting__body">
+    <ul class="contents">
+      <li><span class="mono">account.json</span> every receipt with its line items, your categories, budgets and monthly analyses</li>
+      <li><span class="mono">receipts.csv</span>, <span class="mono">line-items.csv</span> the same, for a spreadsheet</li>
+      <li><span class="mono">files/</span> each receipt exactly as you uploaded it</li>
+    </ul>
+    <p class="setting__note">Photos keep any location your camera saved in them. A large ledger can take a minute.</p>
+    <div class="setting__actions">
+      <button type="button" class="btn btn--ghost" [disabled]="download.busy()" (click)="downloadData()">
+        {{ download.busy() ? 'Preparing…' : 'Download my data (.zip)' }}
+      </button>
+    </div>
+    @if (download.error(); as message) {
+      <p class="form-alert" role="alert">{{ message }}</p>
+    }
+  </div>
+</section>
+
+<section class="setting setting--danger" aria-labelledby="delete-title">
+  <div class="setting__about">
+    <h2 id="delete-title" class="setting__title">Delete account</h2>
+    <p>Permanently, with everything in it.</p>
+  </div>
+
+  <div class="setting__body">
+    @if (!confirmingDelete()) {
+      <p class="setting__text">
+        Your receipts and their files, categories, budgets and reports are deleted straight away and can't be
+        recovered. You may want to download your data first.
+      </p>
+      <div class="setting__actions">
+        <button type="button" class="btn btn--danger" (click)="confirmingDelete.set(true)">Delete my account</button>
+      </div>
+    } @else {
+      <form class="setting__form confirm" [formGroup]="deletion" (ngSubmit)="submitDeletion()" novalidate
+        aria-labelledby="delete-question">
+        <p id="delete-question" class="confirm__question">
+          Delete <span class="mono">{{ auth.user()?.email }}</span> and everything in it? This can't be undone.
+          Enter your password to confirm.
+        </p>
+        <div class="field">
+          <label class="label" for="deletePassword">Password</label>
+          <input
+            id="deletePassword"
+            class="field__input"
+            type="password"
+            formControlName="password"
+            autocomplete="current-password"
+            [attr.aria-invalid]="showError(deletion.controls.password, 'deletion')"
+            [attr.aria-describedby]="showError(deletion.controls.password, 'deletion') ? 'deletePassword-error' : null"
+          />
+          @if (showError(deletion.controls.password, 'deletion')) {
+            <span id="deletePassword-error" class="field__error">Enter your password.</span>
+          }
+        </div>
+        <div class="setting__actions">
+          <button type="submit" class="btn btn--danger" [disabled]="deleteAccount.busy()">
+            {{ deleteAccount.busy() ? 'Deleting…' : 'Delete permanently' }}
+          </button>
+          <button type="button" class="link-button link-button--muted" [disabled]="deleteAccount.busy()"
+            (click)="cancelDelete()">Cancel</button>
+        </div>
+        @if (deleteAccount.error(); as message) {
+          <p class="form-alert" role="alert">{{ message }}</p>
+        }
+      </form>
+    }
+  </div>
+</section>

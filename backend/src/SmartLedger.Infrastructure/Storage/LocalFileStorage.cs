@@ -39,6 +39,16 @@ internal sealed class LocalFileStorage(IOptions<StorageOptions> options, IWebHos
         return Task.CompletedTask;
     }
 
+    public Task DeleteFolderAsync(string folder, CancellationToken cancellationToken)
+    {
+        var path = PathFor(folder);
+        if (Directory.Exists(path))
+        {
+            Directory.Delete(path, recursive: true);
+        }
+        return Task.CompletedTask;
+    }
+
     /// <summary>Resolves the key inside the root folder and refuses anything that would escape it ("../").</summary>
     private string PathFor(string key)
     {

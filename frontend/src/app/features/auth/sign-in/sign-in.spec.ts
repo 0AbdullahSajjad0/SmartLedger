@@ -84,4 +84,14 @@ describe('SignIn', () => {
       expect(fixture.nativeElement.querySelector('[role="alert"]')?.textContent).toContain('Email or password is incorrect.');
     });
   });
+
+  it('confirms a deleted account, instead of saying the session ended', () => {
+    const fixture = TestBed.createComponent(SignIn);
+    fixture.componentRef.setInput('deleted', true);
+    fixture.componentRef.setInput('expired', true);
+    fixture.detectChanges();
+
+    const notice = (fixture.nativeElement as HTMLElement).querySelector('[role="status"]');
+    expect(notice?.textContent).toContain('Your account and everything in it have been deleted.');
+  });
 });

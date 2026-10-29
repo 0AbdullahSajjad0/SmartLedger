@@ -1,0 +1,93 @@
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.Net.Http.Headers;
+using SmartLedger.Api.Auth;
+using SmartLedger.Api.Common;
+using SmartLedger.Application.Account;
+using SmartLedger.Application.Auth;
+using SmartLedger.Application.Common;
+
+namespace SmartLedger.Api.Controllers;
+
+[ApiController]
+[Route("api/account")]
+public sealed class AccountController(IAccountService account, IAccountExportService exports, ICurrentUser currentUser)
+    : ControllerBase
+{
+    private Guid UserId => currentUser.UserId!.Value;
+
+    /// <summary>Changes the name shown in the app.</summary>
+    [HttpPut]
+    [ProducesResponseType<UserDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> UpdateProfile(UpdateProfileRequest request, CancellationToken cancellationToken) =>
+        (await account.UpdateProfileAsync(UserId, request, cancellationToken)).ToActionResult(this);
+
+    /// <summary>
+    /// Changes the password after checking the current one. Every other device is signed out; the session of
+    /// <c>refreshToken</c> stays signed in. A wrong current password is a 400 and counts towards the sign-in lockout.
+    /// </summary>
+    [HttpPost("password")]
+    [EnableRateLimiting(RateLimitPolicies.Auth)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> ChangePassword(ChangePasswordRequest request, CancellationToken cancellationToken)
+    {
+        var result = await account.ChangePasswordAsync(UserId, request, cancellationToken);
+        return result.IsSuccess ? NoContent() : result.ToActionResult(this);
+    }
+
+    /// <summary>
+    /// Ends every session except this device's (the one <c>refreshToken</c> belongs to). Other devices can still use
+    /// the access token they hold until it expires, at most 15 minutes.
+    /// </summary>
+    [HttpPost("sign-out-others")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> SignOutOthers(SignOutOthersRequest request, CancellationToken cancellationToken)
+    {
+        await account.SignOutOtherDevicesAsync(UserId, request.RefreshToken, cancellationToken);
+        return NoContent();
+    }
+
+    /// <summary>
+    /// Everything stored for the account as a ZIP: account.json, receipts.csv, line-items.csv and the original files.
+    /// Streamed while it is built, so even a large archive needs little memory.
+    /// </summary>
+    [HttpGet("export")]
+    [EnableRateLimiting(RateLimitPolicies.Exports)]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(FileStreamResult))]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status429TooManyRequests)]
+    public async Task<IActionResult> Export(CancellationToken cancellationToken)
+    {
+        var result = await exports.PrepareAsync(cancellationToken);
+        if (!result.IsSuccess)
+        {
+            return result.ToActionResult(this);
+        }
+
+        Response.ContentType = "application/zip";
+        // Private: one user's receipts, never kept by a shared cache.
+        Response.Headers.CacheControl = "private, no-store";
+        Response.Headers.ContentDisposition = new ContentDispositionHeaderValue("attachment")
+        {
+            FileName = result.Value.FileName,
+        }.ToString();
+
+        await result.Value.WriteToAsync(Response.Body, cancellationToken);
+        return new EmptyResult();
+    }
+
+    /// <summary>
+    /// Deletes the account after checking the password: receipts, line items, categories, analyses, sessions and every
+    /// uploaded file. Can't be undone. A POST with a body, because a DELETE body is not reliably passed on by proxies.
+    /// </summary>
+    [HttpPost("delete")]
+    [EnableRateLimiting(RateLimitPolicies.Auth)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> Delete(DeleteAccountRequest request, CancellationToken cancellationToken)
+    {
+        var result = await account.DeleteAsync(UserId, request, cancellationToken);
+        return result.IsSuccess ? NoContent() : result.ToActionResult(this);
+    }
+}

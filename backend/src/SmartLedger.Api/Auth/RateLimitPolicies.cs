@@ -10,4 +10,7 @@ internal static class RateLimitPolicies
 
     /// <summary>Limits AI-written analyses per signed-in user: each is a Gemini call on the shared free-tier quota.</summary>
     public const string Insights = "insights";
+
+    /// <summary>Limits data exports per signed-in user: each one reads every file the user has uploaded.</summary>
+    public const string Exports = "exports";
 }
