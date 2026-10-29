@@ -1,0 +1,130 @@
+<header class="page-header">
+  <div class="page-header__titles">
+    <span class="eyebrow">Chart of accounts</span>
+    <h1 class="page-header__title">Categories <em>&amp;</em> budgets</h1>
+    <p class="intro">AI files every new receipt under one of these. Budgets apply to every month and reset on the first.</p>
+  </div>
+  <button type="button" class="btn" [disabled]="editing() === 'new'" (click)="editing.set('new')">New category</button>
+</header>
+
+<nav class="months mono" aria-label="Month">
+  <a [routerLink]="[]" [queryParams]="{ month: previousMonth() }">← {{ label(previousMonth(), true) }}</a>
+  <span class="months__current" aria-current="page">{{ monthName() }}</span>
+  @if (canGoForward()) {
+    <a [routerLink]="[]" [queryParams]="{ month: nextMonth() }">{{ label(nextMonth(), true) }} →</a>
+  }
+</nav>
+
+@if (errorMessage(); as message) {
+  <p class="form-alert" role="alert">{{ message }}</p>
+} @else if (data.hasValue()) {
+  @let m = data.value();
+
+  <section class="figures" aria-label="Budget totals">
+    <div class="figures__item">
+      <span class="label">Monthly budget</span>
+      <span class="figures__value">{{ m.totalBudget | currency: m.baseCurrency : 'symbol-narrow' }}</span>
+    </div>
+    <div class="figures__item">
+      <span class="label">Spent in {{ label(m.month, true) }}</span>
+      <span class="figures__value">{{ m.totalSpent | currency: m.baseCurrency : 'symbol-narrow' }}</span>
+    </div>
+    <div class="figures__item">
+      @if (m.totalBudget === 0) {
+        <span class="label">Remaining</span>
+        <span class="figures__value figures__value--muted">No budgets set</span>
+      } @else if (remaining() >= 0) {
+        <span class="label">Remaining</span>
+        <span class="figures__value figures__value--under">{{ remaining() | currency: m.baseCurrency : 'symbol-narrow' }}</span>
+      } @else {
+        <span class="label">Over budget by</span>
+        <span class="figures__value figures__value--over">{{ -remaining() | currency: m.baseCurrency : 'symbol-narrow' }}</span>
+      }
+    </div>
+  </section>
+
+  <section class="ledger-scroll" aria-label="Categories">
+    <table class="ledger categories" [class.categories--loading]="data.isLoading()">
+      <thead>
+        <tr>
+          <th scope="col">Category</th>
+          <th scope="col" class="num">Receipts</th>
+          <th scope="col" class="num">Spent</th>
+          <th scope="col" class="num">Budget</th>
+          <th scope="col" class="categories__used">Used</th>
+          <th scope="col"><span class="visually-hidden">Actions</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        @if (editing() === 'new') {
+          <tr app-category-editor [category]="null" [baseCurrency]="m.baseCurrency" (saved)="onSaved()"
+            (cancelled)="editing.set(null)"></tr>
+        }
+        @for (category of active(); track category.id) {
+          @if (editing() === category.id) {
+            <tr app-category-editor [category]="category" [baseCurrency]="m.baseCurrency" (saved)="onSaved()"
+              (cancelled)="editing.set(null)"></tr>
+          } @else {
+            @let share = used(category);
+            <tr>
+              <td>
+                <span class="name">
+                  <span class="name__chip" [style.background]="category.color" aria-hidden="true"></span>
+                  {{ category.name }}
+                </span>
+              </td>
+              <td class="num muted">{{ category.receiptCount }}</td>
+              <td class="num strong">{{ category.spent | number: '1.2-2' }}</td>
+              <td class="num muted">{{ category.monthlyBudget !== null ? (category.monthlyBudget | number: '1.2-2') : '—' }}</td>
+              <td>
+                @if (share !== null) {
+                  <div class="usage" [attr.data-tone]="tone(share)">
+                    <div class="usage__track" aria-hidden="true">
+                      <div class="usage__bar" [style.width.%]="share > 100 ? 100 : share"></div>
+                    </div>
+                    <span class="usage__value num">{{ share | number: '1.0-0' }}%</span>
+                  </div>
+                } @else {
+                  <span class="muted">No budget</span>
+                }
+              </td>
+              <td class="actions">
+                <button type="button" class="link-button" [disabled]="editing() !== null"
+                  [attr.aria-label]="'Edit ' + category.name" (click)="editing.set(category.id)">Edit</button>
+              </td>
+            </tr>
+          }
+        }
+      </tbody>
+    </table>
+  </section>
+
+  @if (archived().length > 0) {
+    <section class="archived" aria-labelledby="archived-title">
+      <h2 id="archived-title" class="label">Archived</h2>
+      <p class="archived__note">Hidden from pickers and AI's choices. Receipts already filed under them keep them.</p>
+      @if (unarchiveError(); as message) {
+        <p class="form-alert" role="alert">{{ message }}</p>
+      }
+      <ul class="archived__list">
+        @for (category of archived(); track category.id) {
+          <li>
+            <span class="name">
+              <span class="name__chip" [style.background]="category.color" aria-hidden="true"></span>
+              {{ category.name }}
+            </span>
+            @if (category.receiptCount > 0) {
+              <span class="num muted">{{ category.spent | number: '1.2-2' }} in {{ label(m.month, true) }}</span>
+            }
+            <button type="button" class="link-button" [disabled]="unarchiving() === category.id"
+              [attr.aria-label]="'Unarchive ' + category.name" (click)="unarchive(category)">
+              {{ unarchiving() === category.id ? 'Unarchiving…' : 'Unarchive' }}
+            </button>
+          </li>
+        }
+      </ul>
+    </section>
+  }
+} @else {
+  <p class="loading mono" aria-live="polite">LOADING THE CHART OF ACCOUNTS…</p>
+}

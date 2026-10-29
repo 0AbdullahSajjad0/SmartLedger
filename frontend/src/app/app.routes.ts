@@ -53,6 +53,11 @@ export const routes: Routes = [
         title: 'Scan receipts · SmartLedger',
         loadComponent: () => import('./features/scan/scan').then((m) => m.Scan),
       },
+      {
+        path: 'categories',
+        title: 'Categories & budgets · SmartLedger',
+        loadComponent: () => import('./features/categories/categories-page').then((m) => m.CategoriesPage),
+      },
     ],
   },
   { path: '**', redirectTo: '' },

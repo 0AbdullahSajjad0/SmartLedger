@@ -1,0 +1,74 @@
+:host td {
+  padding: 18px 12px 20px;
+  background: var(--color-sheet);
+  border-bottom: var(--rule);
+}
+
+.editor__form {
+  display: grid;
+  grid-template-columns: minmax(200px, 2fr) auto minmax(160px, 1fr);
+  align-items: end;
+  gap: 18px 28px;
+}
+
+.editor__text {
+  font-family: var(--font-ui);
+}
+
+.editor__colours {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+.swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+// Square chips; the chosen one gets an ink frame with a gap, like a ruled box.
+.swatch {
+  display: block;
+  cursor: pointer;
+
+  &__chip {
+    display: block;
+    width: 24px;
+    height: 24px;
+    outline: 1px solid transparent;
+    outline-offset: 2px;
+  }
+
+  input:checked + .swatch__chip {
+    outline: 2px solid var(--color-ink);
+  }
+
+  input:focus-visible + .swatch__chip {
+    outline: 2px solid var(--color-accent);
+  }
+}
+
+.editor__actions {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+}
+
+.editor__archive {
+  margin-left: auto;
+}
+
+.editor__alert {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 720px) {
+  .editor__form {
+    grid-template-columns: 1fr;
+  }
+}
