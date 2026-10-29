@@ -72,6 +72,13 @@ builder.Services.AddRateLimiter(options =>
             PermitLimit = context.RequestServices.GetRequiredService<IConfiguration>().GetValue("RateLimiting:InsightPermitLimit", 10),
             Window = TimeSpan.FromHours(1),
         }));
+    options.AddPolicy(RateLimitPolicies.Exports, context => RateLimitPartition.GetFixedWindowLimiter(
+        context.User.FindFirstValue(JwtRegisteredClaimNames.Sub) ?? context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = context.RequestServices.GetRequiredService<IConfiguration>().GetValue("RateLimiting:ExportPermitLimit", 5),
+            Window = TimeSpan.FromHours(1),
+        }));
 });
 
 // Azure Container Apps' ingress terminates HTTPS and forwards the request; trust its headers so the app

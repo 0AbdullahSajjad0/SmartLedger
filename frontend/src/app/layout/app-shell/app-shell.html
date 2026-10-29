@@ -18,7 +18,13 @@
   </nav>
 
   <div class="masthead__account">
-    <span class="masthead__user mono">{{ auth.user()?.displayName }}</span>
+    <a
+      class="masthead__user mono"
+      routerLink="/account"
+      routerLinkActive="masthead__user--active"
+      ariaCurrentWhenActive="page"
+      ><span class="visually-hidden">Account: </span>{{ auth.user()?.displayName }}</a
+    >
     <button type="button" class="masthead__link masthead__signout" (click)="signOut()">Sign out</button>
   </div>
 </header>

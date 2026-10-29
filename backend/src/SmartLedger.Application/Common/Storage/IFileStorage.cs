@@ -9,6 +9,9 @@ public interface IFileStorage
     Task<StoredFile?> OpenReadAsync(string key, CancellationToken cancellationToken);
 
     Task DeleteAsync(string key, CancellationToken cancellationToken);
+
+    /// <summary>Deletes every file whose key starts with "<paramref name="folder"/>/", e.g. all of one user's files.</summary>
+    Task DeleteFolderAsync(string folder, CancellationToken cancellationToken);
 }
 
 /// <param name="Content">The caller disposes it.</param>

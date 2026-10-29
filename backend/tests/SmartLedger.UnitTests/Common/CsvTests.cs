@@ -1,7 +1,7 @@
 using System.Text;
-using SmartLedger.Application.Reports;
+using SmartLedger.Application.Common;
 
-namespace SmartLedger.UnitTests.Reports;
+namespace SmartLedger.UnitTests.Common;
 
 public class CsvTests
 {

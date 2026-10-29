@@ -31,4 +31,14 @@ internal sealed class BlobFileStorage(BlobContainerClient container) : IFileStor
 
     public Task DeleteAsync(string key, CancellationToken cancellationToken) =>
         container.GetBlobClient(key).DeleteIfExistsAsync(cancellationToken: cancellationToken);
+
+    public async Task DeleteFolderAsync(string folder, CancellationToken cancellationToken)
+    {
+        // Blob storage has no real folders: list the blobs whose names start with the prefix and delete each.
+        var blobs = container.GetBlobsAsync(BlobTraits.None, BlobStates.None, prefix: $"{folder.TrimEnd('/')}/", cancellationToken);
+        await foreach (var blob in blobs)
+        {
+            await container.GetBlobClient(blob.Name).DeleteIfExistsAsync(cancellationToken: cancellationToken);
+        }
+    }
 }

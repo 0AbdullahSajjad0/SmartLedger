@@ -8,6 +8,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
+using SmartLedger.Application.Account;
 using SmartLedger.Application.Auth;
 using SmartLedger.Application.Categories;
 using SmartLedger.Application.Common;
@@ -52,6 +53,7 @@ public static class DependencyInjection
         services.AddScoped<ICategoryRepository, CategoryRepository>();
         services.AddScoped<IReportRepository, ReportRepository>();
         services.AddScoped<IUserDirectory, UserDirectory>();
+        services.AddScoped<IAccountDataReader, AccountDataReader>();
 
         AddAuth(services, configuration);
         AddStorage(services, configuration);
@@ -156,6 +158,7 @@ public static class DependencyInjection
 
         services.AddSingleton<TokenService>();
         services.AddScoped<IAuthService, AuthService>();
+        services.AddScoped<IAccountService, AccountService>();
 
         services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer();
         services.AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme)

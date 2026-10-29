@@ -4,7 +4,9 @@
     <h2 class="auth-form__title">Sign in</h2>
   </div>
 
-  @if (expired()) {
+  @if (deleted()) {
+    <p class="auth-form__notice" role="status">Your account and everything in it have been deleted.</p>
+  } @else if (expired()) {
     <p class="auth-form__notice" role="status">Your session ended. Please sign in again.</p>
   }
 

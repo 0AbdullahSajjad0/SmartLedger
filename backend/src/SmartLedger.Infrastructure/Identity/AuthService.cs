@@ -177,6 +177,6 @@ internal sealed class AuthService(
         return new AuthResponse(accessToken, accessExpiresAt, refreshToken, stored.ExpiresAt, ToDto(user));
     }
 
-    private static UserDto ToDto(ApplicationUser user) =>
+    internal static UserDto ToDto(ApplicationUser user) =>
         new(user.Id, user.Email!, user.DisplayName, user.BaseCurrency);
 }

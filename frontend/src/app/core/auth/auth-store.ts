@@ -72,6 +72,16 @@ export class AuthStore {
     }
   }
 
+  /** The account's details were changed on the Account page. */
+  updateUser(user: User): void {
+    this._user.set(user);
+  }
+
+  /** The account no longer exists: forget the session here (and in other tabs) and say so on the sign-in page. */
+  accountDeleted(): void {
+    this.endSession({ redirect: true, reason: 'deleted' });
+  }
+
   /** An access token that is valid for at least the next 30 seconds, refreshing first if needed. */
   async getAccessToken(): Promise<string | null> {
     if (this.accessToken && Date.now() < this.accessTokenExpiresAt - EXPIRY_MARGIN_MS) {
@@ -112,7 +122,7 @@ export class AuthStore {
       return true;
     } catch (error) {
       if (error instanceof HttpErrorResponse && error.status === 401) {
-        this.endSession({ redirect: this._status() === 'signed-in', expired: true });
+        this.endSession({ redirect: this._status() === 'signed-in', reason: 'expired' });
         return false;
       }
       throw error; // Network trouble is not a reason to sign the user out.
@@ -132,7 +142,8 @@ export class AuthStore {
     this._status.set('signed-in');
   }
 
-  private endSession(options: { redirect: boolean; expired?: boolean }): void {
+  /** `reason` becomes a query parameter, so the sign-in page can say why the user is back there. */
+  private endSession(options: { redirect: boolean; reason?: 'expired' | 'deleted' }): void {
     this.accessToken = null;
     this.accessTokenExpiresAt = 0;
     this.storage.clear();
@@ -140,7 +151,7 @@ export class AuthStore {
     this._status.set('signed-out');
 
     if (options.redirect) {
-      void this.router.navigate(['/sign-in'], { queryParams: options.expired ? { expired: 1 } : {} });
+      void this.router.navigate(['/sign-in'], { queryParams: options.reason ? { [options.reason]: 1 } : {} });
     }
   }
 }

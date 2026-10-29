@@ -60,9 +60,24 @@
     gap: 20px;
   }
 
+  // The name opens the Account page, underlined like the other links when it's the current page.
   &__user {
+    display: inline-flex;
+    align-items: center;
+    min-height: 64px;
+    border-bottom: 2px solid transparent;
     font-size: 12px;
     color: var(--color-on-dark-muted);
+    text-decoration: none;
+
+    &:hover {
+      color: var(--color-on-dark);
+    }
+
+    &--active {
+      color: var(--color-on-dark);
+      border-bottom-color: var(--color-accent-on-dark);
+    }
   }
 
   &__signout {
