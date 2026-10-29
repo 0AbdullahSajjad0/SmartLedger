@@ -1,5 +1,6 @@
 import { HttpTestingController } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
+import { Router } from '@angular/router';
 import { TEST_API, provideAuthTesting } from '../../core/auth/testing';
 import { ReceiptDetail } from '../../core/receipts/receipt.models';
 import { ReceiptPage } from './receipt-page';
@@ -157,6 +158,29 @@ describe('ReceiptPage', () => {
     await fixture.whenStable();
 
     expect(savedAs).toBe('receipt-0003.pdf');
+  });
+
+  it('deletes a receipt permanently, after saying what will be lost', async () => {
+    const { fixture, page } = await render(receiptDetail({ status: 'Approved', currency: 'USD', baseCurrency: 'USD' }), 'preview');
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+    const button = (label: string) => [...page.querySelectorAll('button')].find((b) => b.textContent?.trim() === label)!;
+
+    button('Delete receipt').click();
+    fixture.detectChanges();
+    expect(page.querySelector('.danger__question')?.textContent).toContain("can't be recovered. It also leaves your reports.");
+
+    button('Delete permanently').click();
+    const deletion = await vi.waitFor(() => http.expectOne({ method: 'DELETE', url: RECEIPT_URL }));
+    deletion.flush(null, { status: 204, statusText: 'No Content' });
+    await fixture.whenStable();
+
+    expect(navigate).toHaveBeenCalledWith('/receipts');
+  });
+
+  it('offers no delete while AI is still reading the receipt', async () => {
+    const { page } = await render(receiptDetail({ status: 'Processing', hasPreview: false }));
+
+    expect([...page.querySelectorAll('button')].some((b) => b.textContent?.includes('Delete receipt'))).toBe(false);
   });
 
   it('says so when the receipt does not exist or is not yours', async () => {

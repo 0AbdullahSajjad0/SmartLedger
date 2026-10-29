@@ -1,5 +1,6 @@
 import { HttpTestingController, TestRequest } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
+import { Router } from '@angular/router';
 import { TEST_API, provideAuthTesting } from '../../core/auth/testing';
 import { PagedResult, ReceiptSummary } from '../../core/receipts/receipt.models';
 import { Receipts } from './receipts';
@@ -37,59 +38,124 @@ describe('Receipts', () => {
     http = TestBed.inject(HttpTestingController);
   });
 
-  afterEach(() => http.verify());
+  afterEach(() => {
+    http.verify();
+    vi.useRealTimers();
+  });
 
-  async function render(inputs: { status?: string; page?: string } = {}) {
+  async function render(inputs: Record<string, string> = {}) {
     const fixture = TestBed.createComponent(Receipts);
     for (const [name, value] of Object.entries(inputs)) {
       fixture.componentRef.setInput(name, value);
     }
     fixture.detectChanges();
-    const request: TestRequest = await vi.waitFor(() =>
-      http.expectOne((req) => req.url === RECEIPTS_URL),
-    );
-    return { fixture, request };
+    const request: TestRequest = await vi.waitFor(() => http.expectOne((req) => req.url === RECEIPTS_URL));
+    http.expectOne(`${TEST_API}/api/categories`).flush([
+      { id: 'cat-travel', name: 'Travel', color: '#3D4A2F', monthlyBudget: null, isArchived: false },
+      { id: 'cat-old', name: 'Old', color: '#8C8270', monthlyBudget: null, isArchived: true },
+    ]);
+    return { fixture, request, element: fixture.nativeElement as HTMLElement };
   }
 
-  it('lists receipts with entry numbers, amounts and status stamps', async () => {
-    const { fixture, request } = await render();
+  it('lists receipts with entry numbers, categories, amounts and status stamps', async () => {
+    const { fixture, request, element } = await render();
     request.flush(
       page([
-        { number: 12, vendorName: 'Paper & Co.', total: 126.45, currency: 'USD', status: 'NeedsReview' },
+        { number: 12, vendorName: 'Paper & Co.', total: 126.45, currency: 'USD', status: 'NeedsReview', categoryId: 'cat-travel' },
         { number: 11, fileName: 'IMG_2041.jpg' },
       ]),
     );
     await fixture.whenStable();
 
-    const text = (fixture.nativeElement as HTMLElement).textContent!;
-    expect(text).toContain('0012');
-    expect(text).toContain('Paper & Co.');
-    expect(text).toContain('126.45');
-    expect(text).toContain('Needs review');
-    // Not read by AI yet: the file name stands in for the vendor.
-    expect(text).toContain('IMG_2041.jpg');
+    const rows = [...element.querySelectorAll('tbody tr')].map((row) =>
+      [...row.querySelectorAll('td')].map((cell) => cell.textContent!.replace(/\s+/g, ' ').trim()),
+    );
+    expect(rows[0][0]).toBe('0012');
+    expect(rows[0][2]).toBe('Paper & Co.');
+    expect(rows[0][3]).toBe('Travel');
+    expect(rows[0][5]).toBe('126.45 USD');
+    expect(rows[0][6]).toBe('Needs review');
+    // Not read by AI yet: the file name stands in for the vendor, and there's no category.
+    expect(rows[1][2]).toBe('IMG_2041.jpg');
+    expect(rows[1][3]).toBe('—');
   });
 
-  it('asks the API for the status and page in the address', async () => {
-    const { request } = await render({ status: 'NeedsReview', page: '2' });
+  it('asks the API for the status, page and filters in the address', async () => {
+    const { request } = await render({
+      status: 'NeedsReview', page: '2', search: ' chai ', category: 'cat-travel', from: '2026-10-01', to: '2026-10-31',
+    });
 
-    expect(request.request.params.get('status')).toBe('NeedsReview');
-    expect(request.request.params.get('page')).toBe('2');
+    const params = request.request.params;
+    expect([params.get('status'), params.get('page'), params.get('search')]).toEqual(['NeedsReview', '2', 'chai']);
+    expect([params.get('categoryId'), params.get('from'), params.get('to')]).toEqual(['cat-travel', '2026-10-01', '2026-10-31']);
     request.flush(page([]));
   });
 
-  it('ignores an unknown status instead of sending it', async () => {
-    const { request } = await render({ status: 'Hacked' });
+  it('ignores an unknown status and malformed dates instead of sending them', async () => {
+    const { request } = await render({ status: 'Hacked', from: 'yesterday' });
 
     expect(request.request.params.has('status')).toBe(false);
+    expect(request.request.params.has('from')).toBe(false);
     request.flush(page([]));
+  });
+
+  it('searches once typing pauses, keeping the other filters and starting from the first page', async () => {
+    const { fixture, request, element } = await render();
+    request.flush(page([]));
+    await fixture.whenStable();
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+    vi.useFakeTimers();
+
+    const box = element.querySelector<HTMLInputElement>('#ledger-search')!;
+    for (const text of ['c', 'ch', 'cha']) {
+      box.value = text;
+      box.dispatchEvent(new Event('input'));
+      vi.advanceTimersByTime(100);
+    }
+    expect(navigate).not.toHaveBeenCalled();
+
+    vi.advanceTimersByTime(400);
+    expect(navigate).toHaveBeenCalledTimes(1);
+    expect(navigate).toHaveBeenCalledWith([], {
+      queryParams: { search: 'cha', page: null },
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
+    });
+  });
+
+  it('filters by category, archived ones included', async () => {
+    const { fixture, request, element } = await render();
+    request.flush(page([]));
+    await fixture.whenStable();
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+
+    const select = element.querySelector<HTMLSelectElement>('#ledger-category')!;
+    expect([...select.options].map((o) => o.textContent)).toEqual(['All categories', 'Travel', 'Old (archived)']);
+    select.value = 'cat-travel';
+    select.dispatchEvent(new Event('change'));
+
+    expect(navigate).toHaveBeenCalledWith([], expect.objectContaining({ queryParams: { category: 'cat-travel', page: null } }));
+  });
+
+  it('says when nothing matches, and clears the filters', async () => {
+    const { fixture, request, element } = await render({ search: 'nothing like this' });
+    request.flush(page([]));
+    await fixture.whenStable();
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+
+    expect(element.textContent).toContain('No receipts match these filters.');
+    [...element.querySelectorAll('button')].find((b) => b.textContent?.trim() === 'Clear filters')!.click();
+
+    expect(navigate).toHaveBeenCalledWith([], expect.objectContaining({
+      queryParams: { search: null, category: null, from: null, to: null, page: null },
+    }));
   });
 
   it('invites a first scan when the ledger is empty', async () => {
-    const { fixture, request } = await render();
+    const { fixture, request, element } = await render();
     request.flush(page([]));
     await fixture.whenStable();
 
-    expect((fixture.nativeElement as HTMLElement).textContent).toContain('Scan your first receipt');
+    expect(element.textContent).toContain('Scan your first receipt');
   });
 });

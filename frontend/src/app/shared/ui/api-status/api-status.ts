@@ -1,16 +1,9 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, inject, signal } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { finalize } from 'rxjs';
-import { HealthApi } from '../../../core/api/health-api';
-
-type ServerStatus = 'checking' | 'waking' | 'online' | 'offline';
-
-/** How long a health check can take before we tell the user the server is waking up. */
-const WAKING_THRESHOLD_MS = 3_000;
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ServerStatus } from '../../../core/api/server-status';
 
 /**
- * One-line server status. The API scales to zero when idle, so the first request can take a while;
- * this explains the wait instead of leaving the user staring at a button that doesn't respond.
+ * One-line server status for the sign-in pages. It reads the app-wide check started when the page loaded, so
+ * nothing is asked twice; the API scales to zero when idle, and this explains a slow first sign-in.
  */
 @Component({
   selector: 'app-api-status',
@@ -19,33 +12,10 @@ const WAKING_THRESHOLD_MS = 3_000;
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ApiStatus {
-  private readonly healthApi = inject(HealthApi);
-  private readonly destroyRef = inject(DestroyRef);
-
-  protected readonly status = signal<ServerStatus>('checking');
+  protected readonly server = inject(ServerStatus);
 
   constructor() {
-    this.check();
-  }
-
-  protected check(): void {
-    this.status.set('checking');
-
-    const wakingTimer = setTimeout(() => {
-      if (this.status() === 'checking') {
-        this.status.set('waking');
-      }
-    }, WAKING_THRESHOLD_MS);
-
-    this.healthApi
-      .check()
-      .pipe(
-        finalize(() => clearTimeout(wakingTimer)),
-        takeUntilDestroyed(this.destroyRef),
-      )
-      .subscribe({
-        next: (healthy) => this.status.set(healthy ? 'online' : 'offline'),
-        error: () => this.status.set('offline'),
-      });
+    // Normally already started by the app; harmless if so.
+    this.server.wake();
   }
 }

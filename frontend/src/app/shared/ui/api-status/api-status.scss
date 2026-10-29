@@ -19,12 +19,12 @@
     opacity: 1;
   }
 
-  &[data-status='online']::before {
+  &[data-status='ready']::before {
     background: #8fa36b;
     opacity: 1;
   }
 
-  &[data-status='offline']::before {
+  &[data-status='unreachable']::before {
     background: var(--color-accent-on-dark);
     opacity: 1;
   }

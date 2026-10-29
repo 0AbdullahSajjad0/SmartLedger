@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using SmartLedger.Application.Categories;
 using SmartLedger.Application.Common;
 using SmartLedger.Application.Common.Storage;
@@ -16,7 +17,8 @@ internal sealed class ReceiptService(
     IUserDirectory users,
     IExchangeRateService exchangeRates,
     TimeProvider timeProvider,
-    ICurrentUser currentUser) : IReceiptService
+    ICurrentUser currentUser,
+    ILogger<ReceiptService> logger) : IReceiptService
 {
     private const int MaxPageSize = 50;
 
@@ -109,9 +111,65 @@ internal sealed class ReceiptService(
         var page = Math.Max(1, query.Page);
         var pageSize = Math.Clamp(query.PageSize, 1, MaxPageSize);
 
-        var (items, totalCount) = await repository.ListAsync(UserId, query.Status, page, pageSize, cancellationToken);
+        var (items, totalCount) = await repository.ListAsync(UserId, query.Status, Tidy(query.Filter), page, pageSize, cancellationToken);
 
         return new PagedResult<ReceiptSummaryDto>(items.Select(ToSummary).ToList(), page, pageSize, totalCount);
+    }
+
+    /// <summary>
+    /// Permanently removes a receipt: its record, line items, original upload and preview. Approved receipts leave the
+    /// reports. Not while AI is still reading it, so the background worker never saves into a deleted receipt.
+    /// </summary>
+    public async Task<Result<bool>> DeleteAsync(Guid receiptId, CancellationToken cancellationToken)
+    {
+        var receipt = await repository.GetForUpdateAsync(UserId, receiptId, cancellationToken);
+        if (receipt is null)
+        {
+            return NotFound;
+        }
+        if (receipt.Status == ReceiptStatus.Processing)
+        {
+            return NotWaitingForReview(receipt.Status);
+        }
+
+        string[] files = [receipt.StorageKey, .. receipt.PreviewStorageKey is { } preview ? [preview] : Array.Empty<string>()];
+
+        // The record first: once it's gone the files are unreachable, so a file that fails to delete below is only
+        // wasted storage, never a receipt pointing at nothing.
+        repository.Remove(receipt);
+        await repository.SaveChangesAsync(cancellationToken);
+
+        foreach (var key in files)
+        {
+            try
+            {
+                await storage.DeleteAsync(key, CancellationToken.None);
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "File {StorageKey} of deleted receipt {ReceiptId} couldn't be removed", key, receiptId);
+            }
+        }
+
+        return true;
+    }
+
+    /// <summary>A search of at most 100 characters, and the dates the right way round if they were given back to front.</summary>
+    private static ReceiptFilter Tidy(ReceiptFilter? filter)
+    {
+        if (filter is null)
+        {
+            return new ReceiptFilter();
+        }
+
+        var search = Clean(filter.Search);
+        if (search is { Length: > 100 })
+        {
+            search = search[..100];
+        }
+
+        var (from, to) = filter is { From: { } f, To: { } t } && f > t ? (t, f) : (filter.From, filter.To);
+        return filter with { Search = search, From = from, To = to };
     }
 
     public async Task<Result<ReceiptDetailDto>> GetAsync(Guid receiptId, CancellationToken cancellationToken)

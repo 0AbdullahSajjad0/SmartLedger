@@ -28,4 +28,7 @@ public interface IReceiptService
 
     /// <summary>Takes back an approval or rejection, so the receipt can be corrected and decided again.</summary>
     Task<Result<ReceiptDetailDto>> ReopenAsync(Guid receiptId, CancellationToken cancellationToken);
+
+    /// <summary>Removes the receipt for good, with its line items and files. Not while AI is still reading it.</summary>
+    Task<Result<bool>> DeleteAsync(Guid receiptId, CancellationToken cancellationToken);
 }

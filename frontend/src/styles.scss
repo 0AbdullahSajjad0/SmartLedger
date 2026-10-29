@@ -132,6 +132,16 @@ a {
   &--block {
     width: 100%;
   }
+
+  // Only for actions that destroy data, after the user has been told what will be lost.
+  &--danger {
+    background: var(--color-negative);
+    border-color: var(--color-negative);
+
+    &:hover:not(:disabled) {
+      background: #6f2414;
+    }
+  }
 }
 
 // A button that looks like a small mono link: secondary actions in lists ("Retry", "Edit").

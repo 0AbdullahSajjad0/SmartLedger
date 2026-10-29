@@ -1,0 +1,19 @@
+@switch (server.state()) {
+  @case ('waking') {
+    <div class="bar" role="status">
+      <span class="bar__label mono">Starting up</span>
+      <span class="bar__text">
+        SmartLedger sleeps when no one's using it, to stay free. Waking it takes up to a minute.
+      </span>
+      <span class="bar__time mono" aria-hidden="true">{{ elapsed() }}</span>
+      <span class="bar__progress" aria-hidden="true"></span>
+    </div>
+  }
+  @case ('unreachable') {
+    <div class="bar bar--error" role="alert">
+      <span class="bar__label mono">Can't reach the server</span>
+      <span class="bar__text">Check your connection, or try again in a moment.</span>
+      <button type="button" class="bar__retry mono" (click)="server.retry()">Try again</button>
+    </div>
+  }
+}

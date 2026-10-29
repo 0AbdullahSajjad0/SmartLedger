@@ -1,17 +1,17 @@
-<p class="api-status mono" [attr.data-status]="status()" aria-live="polite">
-  @switch (status()) {
+<p class="api-status mono" [attr.data-status]="server.state()" aria-live="polite">
+  @switch (server.state()) {
     @case ('checking') {
       SERVER · CONNECTING
     }
     @case ('waking') {
-      SERVER · WAKING UP, UP TO 30 SECONDS
+      SERVER · WAKING UP, UP TO A MINUTE
     }
-    @case ('online') {
+    @case ('ready') {
       SERVER · ONLINE
     }
-    @case ('offline') {
+    @case ('unreachable') {
       SERVER · UNREACHABLE
-      <button type="button" class="api-status__retry" (click)="check()">Retry</button>
+      <button type="button" class="api-status__retry" (click)="server.retry()">Retry</button>
     }
   }
 </p>

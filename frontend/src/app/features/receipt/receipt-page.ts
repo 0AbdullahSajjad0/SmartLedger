@@ -2,7 +2,7 @@ import { DatePipe, DecimalPipe, NgTemplateOutlet } from '@angular/common';
 import { httpResource } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, DestroyRef, computed, effect, inject, input, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 import { AuthStore } from '../../core/auth/auth-store';
 import { describeHttpError } from '../../core/http/describe-http-error';
@@ -34,6 +34,7 @@ const REFRESH_WHILE_READING_MS = 3_000;
 export class ReceiptPage {
   private readonly api = inject(ReceiptsApi);
   private readonly auth = inject(AuthStore);
+  private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
 
   /** Route parameter :id. */
@@ -65,6 +66,29 @@ export class ReceiptPage {
 
   protected readonly reopening = signal(false);
   protected readonly reopenError = signal<string | null>(null);
+
+  protected readonly confirmingDelete = signal(false);
+  protected readonly deleting = signal(false);
+  protected readonly deleteError = signal<string | null>(null);
+
+  /** Permanently removes the receipt and its files, then goes back to the ledger. */
+  protected deleteReceipt(): void {
+    if (!this.receipt.hasValue() || this.deleting()) {
+      return;
+    }
+    this.deleting.set(true);
+    this.deleteError.set(null);
+    this.api
+      .delete(this.receipt.value().id)
+      .pipe(
+        finalize(() => this.deleting.set(false)),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: () => void this.router.navigateByUrl('/receipts'),
+        error: (error: unknown) => this.deleteError.set(describeHttpError(error)),
+      });
+  }
 
   /** Marks are only for review; once approved or rejected, the notes have been answered. */
   protected footnoteFor(field: string): number | null {

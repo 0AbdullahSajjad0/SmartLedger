@@ -104,6 +104,35 @@
   }
 }
 
+// ---- Delete: quiet until asked, then a ruled confirmation that says what's lost ----
+
+.danger {
+  align-self: stretch;
+  padding-top: 14px;
+  border-top: var(--rule-faint);
+
+  &__confirm {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 12px 0 0 14px;
+    border-left: 2px solid var(--color-negative);
+  }
+
+  &__question {
+    max-width: 380px;
+    font-size: 13px;
+    line-height: 1.55;
+  }
+
+  &__actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 14px;
+  }
+}
+
 // ---- The record, as an invoice sheet ----
 
 .sheet {

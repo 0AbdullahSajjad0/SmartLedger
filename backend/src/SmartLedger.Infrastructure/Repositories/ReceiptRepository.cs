@@ -50,12 +50,37 @@ internal sealed class ReceiptRepository(AppDbContext db) : IReceiptRepository
             .ToDictionaryAsync(g => g.Status, g => g.Count, cancellationToken);
 
     public async Task<(IReadOnlyList<Receipt> Items, int TotalCount)> ListAsync(
-        Guid userId, ReceiptStatus? status, int page, int pageSize, CancellationToken cancellationToken)
+        Guid userId, ReceiptStatus? status, ReceiptFilter filter, int page, int pageSize, CancellationToken cancellationToken)
     {
         var query = db.Receipts.AsNoTracking().Where(r => r.UserId == userId);
         if (status is not null)
         {
             query = query.Where(r => r.Status == status);
+        }
+
+        if (!string.IsNullOrWhiteSpace(filter.Search))
+        {
+            // LIKE with the user's text escaped, so "%" or "_" in a search are matched literally, not as wildcards.
+            // The database's case-insensitive collation makes "chai" find "Lahore Chai House".
+            var pattern = $"%{EscapeLike(filter.Search.Trim())}%";
+            query = query.Where(r =>
+                EF.Functions.Like(r.VendorName!, pattern, LikeEscape)
+                || (r.VendorName == null && EF.Functions.Like(r.FileName, pattern, LikeEscape)));
+        }
+
+        if (filter.CategoryId is { } categoryId)
+        {
+            query = query.Where(r => r.CategoryId == categoryId);
+        }
+
+        if (filter.From is { } from)
+        {
+            query = query.Where(r => r.ReceiptDate >= from);
+        }
+
+        if (filter.To is { } to)
+        {
+            query = query.Where(r => r.ReceiptDate <= to);
         }
 
         var totalCount = await query.CountAsync(cancellationToken);
@@ -85,7 +110,17 @@ internal sealed class ReceiptRepository(AppDbContext db) : IReceiptRepository
             .Select(r => r.Id)
             .ToListAsync(cancellationToken);
 
+    public void Remove(Receipt receipt) => db.Receipts.Remove(receipt);
+
     public Task SaveChangesAsync(CancellationToken cancellationToken) => db.SaveChangesAsync(cancellationToken);
+
+    private const string LikeEscape = "\\";
+
+    private static string EscapeLike(string text) =>
+        text.Replace(LikeEscape, LikeEscape + LikeEscape)
+            .Replace("%", LikeEscape + "%")
+            .Replace("_", LikeEscape + "_")
+            .Replace("[", LikeEscape + "[");
 
     // 2601: duplicate key in a unique index; 2627: unique constraint violation.
     private static bool IsDuplicateKey(DbUpdateException ex) =>

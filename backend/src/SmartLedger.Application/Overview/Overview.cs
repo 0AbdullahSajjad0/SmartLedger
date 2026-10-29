@@ -69,7 +69,7 @@ internal sealed class OverviewService(
         var lastMonth = await categories.SpendingAsync(userId, start.AddMonths(-1), start, cancellationToken);
         var userCategories = await categories.ListAsync(userId, cancellationToken);
         var counts = await receipts.CountByStatusAsync(userId, cancellationToken);
-        var (recent, _) = await receipts.ListAsync(userId, status: null, page: 1, pageSize: RecentCount, cancellationToken);
+        var (recent, _) = await receipts.ListAsync(userId, status: null, new ReceiptFilter(), page: 1, pageSize: RecentCount, cancellationToken);
         var baseCurrency = await users.GetBaseCurrencyAsync(userId, cancellationToken) ?? "USD";
         var insight = await reports.GetInsightAsync(userId, start.Year, start.Month, cancellationToken);
 
