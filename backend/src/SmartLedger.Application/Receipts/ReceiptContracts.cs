@@ -96,6 +96,12 @@ public sealed record ReceiptFile(Stream Content, string ContentType, string Down
 
 /// <param name="Status">Null for every status.</param>
 /// <param name="Page">Starts at 1.</param>
-public sealed record ReceiptQuery(ReceiptStatus? Status, int Page = 1, int PageSize = 25);
+public sealed record ReceiptQuery(ReceiptStatus? Status, int Page = 1, int PageSize = 25, ReceiptFilter? Filter = null);
+
+/// <summary>Narrows the ledger. Every part is optional; together they all have to match.</summary>
+/// <param name="Search">Part of the vendor's name, or of the file name while a receipt is still unread; any case.</param>
+/// <param name="From">Receipt date on or after this day. Receipts without a date don't match a date filter.</param>
+/// <param name="To">Receipt date on or before this day.</param>
+public sealed record ReceiptFilter(string? Search = null, Guid? CategoryId = null, DateOnly? From = null, DateOnly? To = null);
 
 public sealed record PagedResult<T>(IReadOnlyList<T> Items, int Page, int PageSize, int TotalCount);

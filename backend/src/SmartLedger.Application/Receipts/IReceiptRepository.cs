@@ -16,7 +16,10 @@ public interface IReceiptRepository
 
     /// <summary>Newest first.</summary>
     Task<(IReadOnlyList<Receipt> Items, int TotalCount)> ListAsync(
-        Guid userId, ReceiptStatus? status, int page, int pageSize, CancellationToken cancellationToken);
+        Guid userId, ReceiptStatus? status, ReceiptFilter filter, int page, int pageSize, CancellationToken cancellationToken);
+
+    /// <summary>Marks a tracked receipt for deletion; its line items go with it when saved.</summary>
+    void Remove(Receipt receipt);
 
     /// <summary>The user's receipt, tracked for changes, with its line items. Null when it isn't theirs.</summary>
     Task<Receipt?> GetForUpdateAsync(Guid userId, Guid receiptId, CancellationToken cancellationToken);

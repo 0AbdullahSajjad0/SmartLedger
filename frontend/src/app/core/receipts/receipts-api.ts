@@ -60,4 +60,9 @@ export class ReceiptsApi {
   reopen(id: string): Observable<ReceiptDetail> {
     return this.http.post<ReceiptDetail>(`${this.baseUrl}/${id}/reopen`, null);
   }
+
+  /** Removes the receipt for good: record, line items, original and preview. */
+  delete(id: string): Observable<void> {
+    return this.http.delete<void>(`${this.baseUrl}/${id}`);
+  }
 }

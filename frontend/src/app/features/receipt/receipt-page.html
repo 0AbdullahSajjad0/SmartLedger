@@ -63,6 +63,33 @@
           <p class="download__error" role="alert">{{ message }}</p>
         }
       </div>
+
+      @if (r.status !== 'Processing') {
+        <div class="danger">
+          @if (!confirmingDelete()) {
+            <button type="button" class="link-button link-button--muted" (click)="confirmingDelete.set(true)">
+              Delete receipt
+            </button>
+          } @else {
+            <div class="danger__confirm" role="group" aria-labelledby="delete-question">
+              <p id="delete-question" class="danger__question">
+                Delete this receipt permanently? Its record, line items, original file and preview are removed and
+                can't be recovered.{{ r.status === 'Approved' ? ' It also leaves your reports.' : '' }}
+              </p>
+              <div class="danger__actions">
+                <button type="button" class="btn btn--danger" [disabled]="deleting()" (click)="deleteReceipt()">
+                  {{ deleting() ? 'Deleting…' : 'Delete permanently' }}
+                </button>
+                <button type="button" class="link-button link-button--muted" [disabled]="deleting()"
+                  (click)="confirmingDelete.set(false)">Cancel</button>
+              </div>
+              @if (deleteError(); as message) {
+                <p class="download__error" role="alert">{{ message }}</p>
+              }
+            </div>
+          }
+        </div>
+      }
     </section>
 
     <article class="sheet" aria-label="Record">

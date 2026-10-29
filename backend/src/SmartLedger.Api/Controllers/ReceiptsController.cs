@@ -62,14 +62,37 @@ public sealed class ReceiptsController(IReceiptService receiptService) : Control
         return (await receiptService.UploadAsync(uploads, cancellationToken)).ToActionResult(this);
     }
 
+    /// <summary>The ledger, newest first, optionally narrowed by status, vendor search, category and receipt dates.</summary>
+    /// <param name="search">Part of the vendor's name (or of the file name while a receipt is unread), any case.</param>
+    /// <param name="from">Receipt date on or after, e.g. 2026-10-01.</param>
+    /// <param name="to">Receipt date on or before.</param>
     [HttpGet]
     [ProducesResponseType<PagedResult<ReceiptSummaryDto>>(StatusCodes.Status200OK)]
     public async Task<PagedResult<ReceiptSummaryDto>> List(
         [FromQuery] ReceiptStatus? status,
+        [FromQuery] string? search,
+        [FromQuery] Guid? categoryId,
+        [FromQuery] DateOnly? from,
+        [FromQuery] DateOnly? to,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 25,
         CancellationToken cancellationToken = default) =>
-        await receiptService.ListAsync(new ReceiptQuery(status, page, pageSize), cancellationToken);
+        await receiptService.ListAsync(
+            new ReceiptQuery(status, page, pageSize, new ReceiptFilter(search, categoryId, from, to)), cancellationToken);
+
+    /// <summary>
+    /// Deletes the receipt permanently: its record, line items, original upload and preview. Approved receipts leave
+    /// the reports. Refused (409) while AI is still reading it.
+    /// </summary>
+    [HttpDelete("{id:guid}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
+    {
+        var result = await receiptService.DeleteAsync(id, cancellationToken);
+        return result.IsSuccess ? NoContent() : result.ToActionResult(this);
+    }
 
     [HttpGet("{id:guid}")]
     [ProducesResponseType<ReceiptDetailDto>(StatusCodes.Status200OK)]

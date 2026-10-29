@@ -29,6 +29,49 @@
   }
 }
 
+// ---- Filters: one row of ledger-line fields under the tabs ----
+
+.filters {
+  display: grid;
+  grid-template-columns: minmax(200px, 2fr) minmax(160px, 1.2fr) repeat(2, minmax(140px, 1fr)) auto;
+  align-items: end;
+  gap: 16px 24px;
+  margin-bottom: 24px;
+
+  &__text {
+    font-family: var(--font-ui);
+  }
+
+  &__clear {
+    align-self: center;
+    margin-top: 18px;
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 860px) {
+  .filters {
+    grid-template-columns: 1fr 1fr;
+
+    &__search {
+      grid-column: 1 / -1;
+    }
+  }
+}
+
+.category {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+
+  &__chip {
+    flex: none;
+    width: 8px;
+    height: 8px;
+  }
+}
+
 .col-no {
   width: 64px;
 }

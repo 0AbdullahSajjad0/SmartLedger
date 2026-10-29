@@ -14,10 +14,42 @@
       [attr.aria-current]="tab.status === status() ? 'page' : null"
       routerLink="/receipts"
       [queryParams]="{ status: tab.status, page: null }"
+      queryParamsHandling="merge"
       >{{ tab.label }}</a
     >
   }
 </nav>
+
+<search class="filters" aria-label="Filter the ledger">
+  <div class="field filters__search">
+    <label class="label" for="ledger-search">Vendor</label>
+    <input id="ledger-search" class="field__input filters__text" type="search" placeholder="Search by name"
+      autocomplete="off" [value]="searchText()" (input)="onSearch($any($event.target).value)" />
+  </div>
+  <div class="field">
+    <label class="label" for="ledger-category">Category</label>
+    <select id="ledger-category" class="field__input filters__text" [value]="category() ?? ''"
+      (change)="filterBy({ category: $any($event.target).value || null })">
+      <option value="">All categories</option>
+      @for (c of categories.value(); track c.id) {
+        <option [value]="c.id">{{ c.name }}{{ c.isArchived ? ' (archived)' : '' }}</option>
+      }
+    </select>
+  </div>
+  <div class="field">
+    <label class="label" for="ledger-from">Receipt date from</label>
+    <input id="ledger-from" class="field__input" type="date" [value]="from() ?? ''" [max]="to() ?? ''"
+      (change)="filterBy({ from: $any($event.target).value || null })" />
+  </div>
+  <div class="field">
+    <label class="label" for="ledger-to">To</label>
+    <input id="ledger-to" class="field__input" type="date" [value]="to() ?? ''" [min]="from() ?? ''"
+      (change)="filterBy({ to: $any($event.target).value || null })" />
+  </div>
+  @if (filtered()) {
+    <button type="button" class="link-button filters__clear" (click)="clearFilters()">Clear filters</button>
+  }
+</search>
 
 @if (errorMessage(); as message) {
   <div class="notice notice--error" role="alert">
@@ -29,7 +61,10 @@
 
   @if (result.items.length === 0) {
     <div class="notice">
-      @if (status()) {
+      @if (filtered()) {
+        <p>No receipts match these filters.</p>
+        <button type="button" class="link-button" (click)="clearFilters()">Clear filters</button>
+      } @else if (status()) {
         <p>No receipts with this status.</p>
       } @else {
         <p>Your ledger is empty. Scan your first receipt to start it.</p>
@@ -45,6 +80,7 @@
             <th scope="col" class="col-no">No.</th>
             <th scope="col">Received</th>
             <th scope="col">Vendor</th>
+            <th scope="col">Category</th>
             <th scope="col">Receipt date</th>
             <th scope="col" class="num">Amount</th>
             <th scope="col">Status</th>
@@ -59,6 +95,16 @@
                 <a class="vendor" [class.vendor--pending]="!receipt.vendorName" [routerLink]="['/receipts', receipt.id]">
                   {{ receipt.vendorName ?? receipt.fileName }}
                 </a>
+              </td>
+              <td>
+                @if (categoryOf(receipt.categoryId); as c) {
+                  <span class="category">
+                    <span class="category__chip" [style.background]="c.color" aria-hidden="true"></span>
+                    {{ c.name }}
+                  </span>
+                } @else {
+                  <span class="muted">—</span>
+                }
               </td>
               <td class="mono muted">{{ receipt.receiptDate ? (receipt.receiptDate | date: 'dd MMM y') : '—' }}</td>
               <td class="num">
