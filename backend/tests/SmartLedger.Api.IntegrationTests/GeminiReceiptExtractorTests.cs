@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using SmartLedger.Application.Receipts.Extraction;
 using SmartLedger.Infrastructure.Extraction;
+using SmartLedger.Infrastructure.Gemini;
 
 namespace SmartLedger.Api.IntegrationTests;
 
@@ -80,10 +81,10 @@ public class GeminiReceiptExtractorTests
     }
 
     private static GeminiReceiptExtractor Extractor(FakeGemini server, string apiKey = "test-key") =>
-        new(
+        new(new GeminiApi(
             new HttpClient(server) { BaseAddress = new Uri("https://gemini.test/v1beta/") },
             Options.Create(new GeminiOptions { ApiKey = apiKey, Model = "test-model" }),
-            NullLogger<GeminiReceiptExtractor>.Instance);
+            NullLogger<GeminiApi>.Instance));
 
     private static ExtractionRequest Request() =>
         new(new MemoryStream("fake image"u8.ToArray()), "image/jpeg", ["Food & Dining", "Travel"], "USD");

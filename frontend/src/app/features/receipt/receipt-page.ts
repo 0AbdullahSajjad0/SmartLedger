@@ -10,6 +10,7 @@ import { Category, ReceiptDetail } from '../../core/receipts/receipt.models';
 import { ReceiptsApi } from '../../core/receipts/receipts-api';
 import { EntryNumberPipe } from '../../shared/formatting/entry-number.pipe';
 import { FileSizePipe } from '../../shared/formatting/file-size.pipe';
+import { saveFile } from '../../shared/files/save-file';
 import { StatusStamp } from '../../shared/ui/status-stamp/status-stamp';
 import { numberFootnotes } from './footnotes';
 import { ReceiptReviewForm } from './review-form/review-form';
@@ -144,7 +145,7 @@ export class ReceiptPage {
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe({
-        next: (blob) => saveAs(blob, downloadName(number, fileName)),
+        next: (blob) => saveFile(blob, downloadName(number, fileName)),
         error: (error: unknown) => this.downloadError.set(describeHttpError(error)),
       });
   }
@@ -179,15 +180,4 @@ export class ReceiptPage {
 function downloadName(number: number, fileName: string): string {
   const extension = fileName.includes('.') ? fileName.slice(fileName.lastIndexOf('.')).toLowerCase() : '';
   return `receipt-${number.toString().padStart(4, '0')}${extension}`;
-}
-
-/** Hands a downloaded file to the browser's "save" through a temporary link. */
-function saveAs(blob: Blob, name: string): void {
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = name;
-  link.click();
-  // The click starts the download straight away; the address is only needed until then.
-  setTimeout(() => URL.revokeObjectURL(url));
 }

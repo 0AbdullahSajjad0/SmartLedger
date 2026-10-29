@@ -13,6 +13,8 @@ internal sealed class MonthlyInsightConfiguration : IEntityTypeConfiguration<Mon
 
         builder.Property(i => i.Headline).HasMaxLength(300);
         builder.Property(i => i.Model).HasMaxLength(100);
+        builder.Property(i => i.Body).HasMaxLength(4000);
+        builder.Property(i => i.TotalSpent).HasPrecision(18, 2);
 
         builder.HasIndex(i => new { i.UserId, i.Year, i.Month }).IsUnique();
 

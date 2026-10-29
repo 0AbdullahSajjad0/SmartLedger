@@ -24,4 +24,6 @@ export interface Overview {
   categories: CategorySpending[];
   /** The newest ledger entries, in any status. */
   recent: ReceiptSummary[];
+  /** AI's headline for the month, once its analysis has been written on the Reports page. */
+  insightHeadline: string | null;
 }

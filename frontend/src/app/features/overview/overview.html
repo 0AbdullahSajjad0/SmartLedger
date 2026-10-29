@@ -128,11 +128,22 @@
       </section>
 
       <aside class="summary" aria-labelledby="summary-title">
-        <h2 id="summary-title" class="label">Summary · {{ s.approvedCount }} approved {{ s.approvedCount === 1 ? 'receipt' : 'receipts' }}</h2>
+        <h2 id="summary-title" class="label">
+          {{ s.insightHeadline ? 'AI summary' : 'Summary' }} · {{ s.approvedCount }} approved
+          {{ s.approvedCount === 1 ? 'receipt' : 'receipts' }}
+        </h2>
+        @if (s.insightHeadline) {
+          <p class="summary__lede">{{ s.insightHeadline }}</p>
+        }
         @for (line of summary(); track line; let first = $first) {
-          <p [class.summary__lede]="first">{{ line }}</p>
+          <p [class.summary__lede]="first && !s.insightHeadline">{{ line }}</p>
         } @empty {
           <p class="summary__lede">Approve receipts to see how {{ label(s.month, 'name') }} is going.</p>
+        }
+        @if (s.approvedCount > 0) {
+          <a class="mono summary__link" routerLink="/reports" [queryParams]="isCurrentMonth() ? {} : { month: s.month }">
+            {{ s.insightHeadline ? 'Read the full report →' : 'Open the report →' }}
+          </a>
         }
       </aside>
     </div>

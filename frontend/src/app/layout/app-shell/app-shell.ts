@@ -18,11 +18,11 @@ interface NavItem {
 export class AppShell {
   protected readonly auth = inject(AuthStore);
 
-  /** Grows as features ship: Reports comes later, between Scan and Categories. */
   protected readonly nav: readonly NavItem[] = [
     { label: 'Overview', path: '/overview' },
     { label: 'Receipts', path: '/receipts' },
     { label: 'Scan', path: '/scan' },
+    { label: 'Reports', path: '/reports' },
     { label: 'Categories', path: '/categories' },
   ];
 

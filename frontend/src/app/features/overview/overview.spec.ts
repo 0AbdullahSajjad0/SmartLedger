@@ -39,6 +39,7 @@ const OCTOBER: Statement = {
     receipt({ id: 'r3', number: 427, vendorName: 'Skyway Airlines', total: 482, status: 'NeedsReview', categoryId: 'travel' }),
     receipt({ id: 'r2', number: 426, vendorName: null, fileName: 'IMG_2041.jpg', total: null, status: 'Processing', receiptDate: null }),
   ],
+  insightHeadline: null,
 };
 
 describe('Overview', () => {
@@ -156,6 +157,14 @@ describe('Overview', () => {
       'Travel took the largest share: $1,640.00, 38% of the month.',
       'Spending was 12.0% higher than in September.',
     ]);
+  });
+
+  it('leads the summary with AI’s headline once the report has one', async () => {
+    await render({ ...OCTOBER, insightHeadline: 'Travel ran $140.00 over budget; everything else held.' });
+
+    expect(page.querySelector('#summary-title')?.textContent).toContain('AI summary');
+    expect(page.querySelector('.summary__lede')?.textContent).toBe('Travel ran $140.00 over budget; everything else held.');
+    expect(page.querySelector('.summary__link')?.textContent?.trim()).toBe('Read the full report →');
   });
 
   it('lists the newest entries with their category and status', async () => {

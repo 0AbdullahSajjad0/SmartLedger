@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using SmartLedger.Application.ExchangeRates;
 using SmartLedger.Application.Receipts.Extraction;
+using SmartLedger.Application.Reports;
 using SmartLedger.Infrastructure.Persistence;
 
 namespace SmartLedger.Api.IntegrationTests;
@@ -35,6 +36,7 @@ public class SmartLedgerApiFactory : WebApplicationFactory<Program>, IAsyncLifet
         {
             services.AddScoped<IReceiptExtractor, FakeReceiptExtractor>();
             services.AddSingleton<IExchangeRateProvider, FakeExchangeRateProvider>();
+            services.AddScoped<IInsightWriter, FakeInsightWriter>();
         });
     }
 
