@@ -9,7 +9,6 @@ const LABELS: Record<ReceiptStatus, string> = {
   Failed: 'Unreadable',
 };
 
-/** A receipt's status as a square ledger stamp. */
 @Component({
   selector: 'app-status-stamp',
   template: '{{ label() }}',

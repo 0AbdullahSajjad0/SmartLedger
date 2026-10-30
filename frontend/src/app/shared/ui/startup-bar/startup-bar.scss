@@ -2,7 +2,6 @@
   display: block;
 }
 
-// Espresso strip above everything, like the masthead, so it reads as part of the app rather than an error box.
 .bar {
   position: relative;
   display: flex;
@@ -33,7 +32,6 @@
     color: var(--color-on-dark);
   }
 
-  // A thin sweep along the bottom edge: something is happening.
   &__progress {
     position: absolute;
     left: 0;

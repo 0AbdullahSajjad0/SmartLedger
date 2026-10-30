@@ -15,7 +15,6 @@ namespace SmartLedger.Infrastructure.Persistence.Migrations
     [Migration("20261028091122_AddReceiptPreview")]
     partial class AddReceiptPreview
     {
-        /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618

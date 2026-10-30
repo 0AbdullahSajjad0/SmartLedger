@@ -1,7 +1,6 @@
 import { Routes } from '@angular/router';
 import { signedInGuard, signedOutGuard } from './core/auth/auth.guards';
 
-// Every page is lazy-loaded: the browser downloads a screen's code only when it's first visited.
 export const routes: Routes = [
   {
     path: 'sign-in',
@@ -52,7 +51,6 @@ export const routes: Routes = [
     ],
   },
   {
-    // No guard: the link works whether or not this browser is signed in.
     path: 'confirm-email',
     loadComponent: () => import('./layout/auth-layout/auth-layout').then((m) => m.AuthLayout),
     children: [

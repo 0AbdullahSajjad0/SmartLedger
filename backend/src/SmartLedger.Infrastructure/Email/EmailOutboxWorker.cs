@@ -8,11 +8,6 @@ using SmartLedger.Infrastructure.Persistence;
 
 namespace SmartLedger.Infrastructure.Email;
 
-/// <summary>
-/// Sends the outbox one email at a time, paced for the mail service's limits. When the service says "too many", the
-/// email waits for as long as it asks, without counting as a failure. Runs in the API's only replica (max replicas is
-/// 1), so no two workers pick the same email.
-/// </summary>
 internal sealed class EmailOutboxWorker(
     EmailSignal signal,
     IServiceScopeFactory scopeFactory,
@@ -20,10 +15,8 @@ internal sealed class EmailOutboxWorker(
     TimeProvider timeProvider,
     ILogger<EmailOutboxWorker> logger) : BackgroundService
 {
-    /// <summary>How long to wait between looks when nothing wakes the worker.</summary>
     private static readonly TimeSpan IdleCheck = TimeSpan.FromMinutes(5);
 
-    /// <summary>Waits after the 1st, 2nd, 3rd and 4th failed try; the 5th failure gives up.</summary>
     private static readonly TimeSpan[] Backoff =
         [TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(15), TimeSpan.FromHours(1)];
 
@@ -38,7 +31,6 @@ internal sealed class EmailOutboxWorker(
             }
             catch (Exception ex) when (!stoppingToken.IsCancellationRequested)
             {
-                // E.g. the database is resuming. Must not stop the worker for good.
                 logger.LogWarning(ex, "Couldn't work through the email outbox; trying again in a minute");
                 wait = TimeSpan.FromMinutes(1);
             }
@@ -47,7 +39,6 @@ internal sealed class EmailOutboxWorker(
         }
     }
 
-    /// <summary>Sends every email that is due. Returns how long until the next one is.</summary>
     private async Task<TimeSpan> SendDueAsync(CancellationToken stoppingToken)
     {
         while (true)
@@ -86,8 +77,6 @@ internal sealed class EmailOutboxWorker(
             var message = await services.GetRequiredService<EmailComposer>().ComposeAsync(email, stoppingToken);
             if (message is null)
             {
-                // Nothing to send any more: the account or alert is gone, alerts were turned off, or a reset request
-                // is too old to be useful.
                 email.GaveUpAt = now;
                 email.LastError = "Nothing to send.";
                 return;

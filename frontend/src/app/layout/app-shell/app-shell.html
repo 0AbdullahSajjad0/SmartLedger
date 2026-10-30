@@ -1,6 +1,5 @@
 <header class="masthead">
   <a class="masthead__brand" routerLink="/overview">
-    <!-- Decorative: the name next to it already says what the link is. -->
     <img class="masthead__mark" src="icon.svg" alt="" width="28" height="28" />
     SmartLedger
   </a>
@@ -9,11 +8,22 @@
     @for (item of nav; track item.path) {
       <a
         class="masthead__link"
+        [class.masthead__link--scan]="item.icon === 'scan'"
         [routerLink]="item.path"
         routerLinkActive="masthead__link--active"
         ariaCurrentWhenActive="page"
-        >{{ item.label }}</a
       >
+        <svg class="masthead__icon" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" focusable="false">
+          @switch (item.icon) {
+            @case ('overview') { <path d="M4 20h16M7 20v-7M12 20V6M17 20v-4" /> }
+            @case ('receipts') { <path d="M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6M9 16h3" /> }
+            @case ('scan') { <path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5M4 12h16" /> }
+            @case ('reports') { <path d="M4 20h16M5 16l4-5 4 3 6-8" /> }
+            @case ('categories') { <path d="M3 12V3h9l9 9-9 9zM7.5 7.5h.01" /> }
+          }
+        </svg>
+        <span>{{ item.label }}</span>
+      </a>
     }
   </nav>
 

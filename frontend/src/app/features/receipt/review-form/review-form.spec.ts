@@ -12,7 +12,6 @@ const CATEGORIES: Category[] = [
   { id: 'cat-old', name: 'Old category', color: '#8C8270', monthlyBudget: null, isArchived: true },
 ];
 
-/** Read by AI and complete: ready to approve as it is. */
 const READ = receiptDetail({
   vendorName: 'Lahore Chai House',
   receiptDate: '2026-10-15',
@@ -48,7 +47,6 @@ describe('ReceiptReviewForm', () => {
     fixture.componentRef.setInput('baseCurrency', baseCurrency);
     emitted = [];
     fixture.componentInstance.changed.subscribe((value) => emitted.push(value));
-    // No whenStable() here: when the form looks up a rate, it would wait for that request, which the test answers.
     fixture.detectChanges();
     await Promise.resolve();
     fixture.detectChanges();
@@ -204,7 +202,6 @@ describe('ReceiptReviewForm', () => {
       { status: 400, statusText: 'Bad Request' },
     );
 
-    // The message appears once the failed request's promise has been handled.
     await vi.waitFor(() => {
       fixture.detectChanges();
       expect(form.querySelector('[role="alert"]')?.textContent).toContain('Enter the amount charged instead.');

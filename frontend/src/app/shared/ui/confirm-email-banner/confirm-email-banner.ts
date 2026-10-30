@@ -7,10 +7,6 @@ import { describeHttpError } from '../../../core/http/describe-http-error';
 
 const HIDDEN_KEY = 'smartledger.confirmBannerHidden';
 
-/**
- * A note under the masthead while the email address is unconfirmed, with a button to send the link again. "Not now"
- * hides it until the browser tab is closed; it comes back next time, as alerts stay off until the address is confirmed.
- */
 @Component({
   selector: 'app-confirm-email-banner',
   templateUrl: './confirm-email-banner.html',
@@ -55,7 +51,6 @@ export class ConfirmEmailBanner {
     try {
       sessionStorage.setItem(HIDDEN_KEY, '1');
     } catch {
-      // Storage blocked: hidden for this page view only.
     }
   }
 }

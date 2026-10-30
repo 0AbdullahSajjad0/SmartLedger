@@ -6,10 +6,6 @@ using SmartLedger.Application.Receipts;
 
 namespace SmartLedger.Api.IntegrationTests;
 
-/// <summary>
-/// Narrowing the ledger (search, category, dates) and deleting receipts. The fake AI reads every photo as a
-/// Paper &amp; Co. Office Supplies receipt dated 19 Oct 2026; tests rename and redate them through the review API.
-/// </summary>
 [Collection(ApiCollection.Name)]
 public class LedgerTests(SmartLedgerApiFactory factory)
 {
@@ -48,7 +44,7 @@ public class LedgerTests(SmartLedgerApiFactory factory)
     public async Task Search_FindsUnreadReceiptsByFileName()
     {
         var client = await SignedInClientAsync();
-        var unread = await TestReceipts.UploadAndReadAsync(client, TestFiles.NotAReceiptJpeg()); // uploaded as receipt.jpg
+        var unread = await TestReceipts.UploadAndReadAsync(client, TestFiles.NotAReceiptJpeg());
         await ReceiptAsync(client, "Somewhere Else");
 
         var found = await ListAsync(client, "search=receipt.jp");
@@ -70,7 +66,7 @@ public class LedgerTests(SmartLedgerApiFactory factory)
         var backToFront = await ListAsync(client, "from=2026-10-31&to=2026-09-01");
 
         Assert.Equal([flight.Id], byCategory.Items.Select(r => r.Id));
-        Assert.Equal([paper.Id, flight.Id], byDates.Items.Select(r => r.Id)); // newest entry first
+        Assert.Equal([paper.Id, flight.Id], byDates.Items.Select(r => r.Id));
         Assert.Equal(byDates.Items.Select(r => r.Id), backToFront.Items.Select(r => r.Id));
     }
 
@@ -80,7 +76,7 @@ public class LedgerTests(SmartLedgerApiFactory factory)
         var client = await SignedInClientAsync();
         var approved = await TestReceipts.ApprovedAsync(client, amountCharged: 80m);
         var files = Directory.GetFiles(factory.StoragePath, $"{approved.Id}*", SearchOption.AllDirectories);
-        Assert.Equal(2, files.Length); // the original and its preview
+        Assert.Equal(2, files.Length);
 
         var response = await client.DeleteAsync($"/api/receipts/{approved.Id}");
         var afterwards = await client.GetAsync($"/api/receipts/{approved.Id}");
@@ -110,7 +106,6 @@ public class LedgerTests(SmartLedgerApiFactory factory)
     private static async Task<PagedResult<ReceiptSummaryDto>> ListAsync(HttpClient client, string query) =>
         (await client.GetFromJsonAsync<PagedResult<ReceiptSummaryDto>>($"/api/receipts?{query}", Json))!;
 
-    /// <summary>A receipt read by the fake AI, then given this vendor (and optionally date and category).</summary>
     private static async Task<ReceiptDetailDto> ReceiptAsync(HttpClient client, string vendor, DateOnly? date = null, Guid? categoryId = null)
     {
         var receipt = await TestReceipts.UploadAndReadAsync(client);

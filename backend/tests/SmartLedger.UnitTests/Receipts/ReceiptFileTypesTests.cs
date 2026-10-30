@@ -23,8 +23,8 @@ public class ReceiptFileTypesTests
 
     [Theory]
     [InlineData("<html><body>")]
-    [InlineData("MZ\u0090\u0000")] // Windows executable
-    [InlineData("PK\u0003\u0004")] // zip
+    [InlineData("MZ\u0090\u0000")]
+    [InlineData("PK\u0003\u0004")]
     [InlineData("")]
     public void Detect_RejectsEverythingElse(string content)
     {

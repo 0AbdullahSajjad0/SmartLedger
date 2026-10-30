@@ -5,10 +5,8 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 namespace SmartLedger.Infrastructure.Persistence.Migrations
 {
-    /// <inheritdoc />
     public partial class AddEmailAndBudgetAlerts : Migration
     {
-        /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.AddColumn<bool>(
@@ -113,7 +111,6 @@ namespace SmartLedger.Infrastructure.Persistence.Migrations
                 columns: new[] { "UserId", "Kind", "CreatedAt" });
         }
 
-        /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(

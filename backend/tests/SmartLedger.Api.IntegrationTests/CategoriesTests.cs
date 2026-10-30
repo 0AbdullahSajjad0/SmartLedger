@@ -6,10 +6,6 @@ using SmartLedger.Application.Receipts;
 
 namespace SmartLedger.Api.IntegrationTests;
 
-/// <summary>
-/// Categories, budgets and what was spent under them. The fake AI files every photo under Office Supplies, dated
-/// 19 Oct 2026; test accounts report in EUR, and amounts are approved as "amount charged" so the sums are exact.
-/// </summary>
 [Collection(ApiCollection.Name)]
 public class CategoriesTests(SmartLedgerApiFactory factory)
 {
@@ -21,7 +17,7 @@ public class CategoriesTests(SmartLedgerApiFactory factory)
         var client = await SignedInClientAsync();
         var october = await ApprovedReceiptAsync(client, amountCharged: 100m);
         await ApprovedReceiptAsync(client, amountCharged: 50m, receiptDate: new DateOnly(2026, 9, 5));
-        await TestReceipts.UploadAndReadAsync(client); // waiting for review: not spent yet
+        await TestReceipts.UploadAndReadAsync(client);
         var office = await CategoryAsync(client, "Office Supplies");
         await PutAsync(client, office.Id, new UpdateCategoryRequest(office.Name, office.Color, 500m, false));
 
@@ -34,9 +30,8 @@ public class CategoriesTests(SmartLedgerApiFactory factory)
         Assert.Equal(1, officeInOctober.ReceiptCount);
         Assert.Equal(100m, officeInOctober.Spent);
         Assert.Equal(100m, octoberMonth.TotalSpent);
-        // The budget applies from the month it was set: this one.
         Assert.Equal(500m, (await MonthAsync(client, BudgetHistoryTests.ThisMonth())).TotalBudget);
-        Assert.Equal(office.Id, octoberMonth.Categories[0].Id); // biggest spend first
+        Assert.Equal(office.Id, octoberMonth.Categories[0].Id);
         Assert.Equal(50m, septemberMonth.Categories.Single(c => c.Id == office.Id).Spent);
         Assert.Equal(october.CategoryId, office.Id);
     }
@@ -51,7 +46,7 @@ public class CategoriesTests(SmartLedgerApiFactory factory)
         var month = await MonthAsync(mine, "2026-10");
 
         Assert.Equal(0m, month.TotalSpent);
-        Assert.Equal(6, month.Categories.Count); // the defaults every account starts with
+        Assert.Equal(6, month.Categories.Count);
     }
 
     [Theory]
@@ -118,7 +113,6 @@ public class CategoriesTests(SmartLedgerApiFactory factory)
 
         Assert.Equal("Stationery", updated.Name);
         Assert.True(updated.IsArchived);
-        // Archived, but its spending this month still shows, and still counts.
         var row = month.Categories.Single(c => c.Id == office.Id);
         Assert.True(row.IsArchived);
         Assert.Equal(20m, row.Spent);

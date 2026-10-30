@@ -15,18 +15,12 @@ export interface UploadItem {
   readonly key: number;
   readonly file: File;
   readonly state: UploadState;
-  /** 0–1 while uploading. */
   readonly progress: number;
   readonly error?: string;
-  /** False when the file itself is unacceptable (wrong type, too large): trying again can't help. */
   readonly retryable: boolean;
   readonly receipt?: ReceiptSummary;
 }
 
-/**
- * Uploads files one at a time, so each gets its own progress bar and its own error, and one bad file
- * never sinks the others. Provided by the Scan page, so the queue lives as long as the page does.
- */
 @Injectable()
 export class UploadQueue {
   private readonly api = inject(ReceiptsApi);
@@ -36,7 +30,6 @@ export class UploadQueue {
   private nextKey = 1;
   private running = false;
 
-  /** Newest first. */
   readonly items = this._items.asReadonly();
   readonly busy = computed(() => this._items().some((item) => item.state === 'queued' || item.state === 'uploading'));
 
@@ -74,7 +67,6 @@ export class UploadQueue {
     this.running = true;
 
     try {
-      // Oldest queued file first.
       let next: UploadItem | undefined;
       while ((next = [...this._items()].reverse().find((item) => item.state === 'queued'))) {
         await this.upload(next);
@@ -104,7 +96,6 @@ export class UploadQueue {
             }
           },
           error: (error: unknown) => {
-            // A server refusal may be temporary (rate limit, network, cold start), so offer a retry.
             this.patch(item.key, { state: 'failed', error: describeHttpError(error), retryable: true });
             resolve();
           },
@@ -113,10 +104,6 @@ export class UploadQueue {
     });
   }
 
-  /**
-   * AI reads receipts in the background, a few seconds each. Check every 3 seconds until it's done
-   * (for at most 3 minutes), so the intake log shows the vendor and total as soon as they're known.
-   */
   private watchReading(key: number, receiptId: string): void {
     timer(READ_POLL_MS, READ_POLL_MS)
       .pipe(
@@ -140,7 +127,7 @@ export class UploadQueue {
             });
           }
         },
-        error: () => undefined, // The ledger still shows the result; the log just stops updating.
+        error: () => undefined,
       });
   }
 
@@ -149,7 +136,6 @@ export class UploadQueue {
   }
 }
 
-/** The same checks the API makes, so obvious problems show immediately without a round trip. */
 function checkFile(file: File): string | null {
   const extension = file.name.slice(file.name.lastIndexOf('.')).toLowerCase();
 

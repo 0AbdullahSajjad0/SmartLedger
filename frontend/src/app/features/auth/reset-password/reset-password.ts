@@ -7,11 +7,6 @@ import { finalize } from 'rxjs';
 import { AuthApi } from '../../../core/auth/auth-api';
 import { describeHttpError } from '../../../core/http/describe-http-error';
 
-/**
- * Chooses a new password from the emailed link: /reset-password?user={id}#token={token}. The token travels after
- * "#", which browsers never send to a server, and is removed from the address bar as soon as the page has it, so it
- * doesn't stay in the history.
- */
 @Component({
   selector: 'app-reset-password',
   imports: [ReactiveFormsModule, RouterLink],
@@ -24,7 +19,6 @@ export class ResetPassword {
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
 
-  /** Query parameter: the account the link is for. */
   readonly user = input<string>();
 
   protected readonly token = readToken(inject(ActivatedRoute).snapshot.fragment);
@@ -69,7 +63,6 @@ export class ResetPassword {
   }
 }
 
-/** The token from "token=…" after the "#", or null when the link was cut short. */
 function readToken(fragment: string | null): string | null {
   return new URLSearchParams(fragment ?? '').get('token') || null;
 }

@@ -7,7 +7,6 @@ import { FileSizePipe } from '../../shared/formatting/file-size.pipe';
 import { StatusStamp } from '../../shared/ui/status-stamp/status-stamp';
 import { UploadQueue } from './upload-queue';
 
-/** The scanner bed: drop, choose or photograph receipts, and watch them arrive in the intake log. */
 @Component({
   selector: 'app-scan',
   imports: [RouterLink, DecimalPipe, EntryNumberPipe, FileSizePipe, StatusStamp],
@@ -21,16 +20,15 @@ export class Scan {
   protected readonly accept = RECEIPT_UPLOAD_LIMITS.accept;
   protected readonly maxFiles = RECEIPT_UPLOAD_LIMITS.maxFilesPerUpload;
 
-  /** True while files are dragged over the bed, to light it up. */
   protected readonly dragging = signal(false);
 
   protected onFilesChosen(input: HTMLInputElement): void {
     this.queue.add(Array.from(input.files ?? []));
-    input.value = ''; // Lets the same file be chosen again, e.g. after fixing it.
+    input.value = '';
   }
 
   protected onDragOver(event: DragEvent): void {
-    event.preventDefault(); // Required, or the browser won't allow a drop here.
+    event.preventDefault();
     this.dragging.set(true);
   }
 
@@ -39,7 +37,7 @@ export class Scan {
   }
 
   protected onDrop(event: DragEvent): void {
-    event.preventDefault(); // Stop the browser from opening the file itself.
+    event.preventDefault();
     this.dragging.set(false);
     this.queue.add(Array.from(event.dataTransfer?.files ?? []));
   }

@@ -1,10 +1,10 @@
+@use '../../../styles/phone';
+
 :host {
   display: flex;
   flex-direction: column;
   gap: 44px;
 }
-
-// ---- Header and the lede sentence beneath it ----
 
 .report-header {
   display: flex;
@@ -47,8 +47,6 @@
     }
   }
 }
-
-// ---- The analysis beside the trend and vendors ----
 
 .columns {
   display: flex;
@@ -97,7 +95,6 @@
       color: #3a352e;
     }
 
-    // A drop cap on the first paragraph, as in a printed report.
     p:first-child::first-letter {
       float: left;
       margin: 6px 8px 0 0;
@@ -188,8 +185,6 @@
   }
 }
 
-// ---- Budget against actual ----
-
 .section-head {
   display: flex;
   justify-content: space-between;
@@ -207,6 +202,7 @@
     font-size: 12px;
     letter-spacing: 0.08em;
     text-transform: uppercase;
+    white-space: nowrap;
   }
 }
 
@@ -262,5 +258,51 @@
     padding: 24px 0 0;
     border-left: 0;
     border-top: var(--rule);
+  }
+}
+
+@include phone.phone {
+  .budget__table {
+    @include phone.stacked-table;
+    min-width: 0;
+
+    tr {
+      grid-template-columns: minmax(0, 1fr) auto;
+      grid-template-areas:
+        'name spent'
+        'budget variance';
+    }
+
+    tfoot tr {
+      border-top: var(--rule);
+      border-bottom: 3px double var(--color-ink);
+    }
+
+    tfoot th,
+    tfoot td {
+      padding: 0;
+      border: 0;
+    }
+  }
+
+  .budget__name {
+    grid-area: name;
+  }
+
+  .budget__spent {
+    grid-area: spent;
+  }
+
+  .budget__budget {
+    grid-area: budget;
+    text-align: left;
+    font-size: 13px;
+    @include phone.cell-label('Budget');
+  }
+
+  .budget__variance {
+    grid-area: variance;
+    font-size: 13px;
+    @include phone.cell-label('Variance');
   }
 }

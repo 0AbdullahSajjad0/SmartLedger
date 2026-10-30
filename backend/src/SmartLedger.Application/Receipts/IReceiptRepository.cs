@@ -5,29 +5,21 @@ namespace SmartLedger.Application.Receipts;
 
 public interface IReceiptRepository
 {
-    /// <summary>Saves new receipts, giving each the user's next entry numbers (0001, 0002…).</summary>
     Task AddAsync(Guid userId, IReadOnlyList<Receipt> receipts, CancellationToken cancellationToken);
 
-    /// <summary>Null when the receipt doesn't exist or belongs to another user.</summary>
     Task<Receipt?> GetAsync(Guid userId, Guid receiptId, CancellationToken cancellationToken);
 
-    /// <summary>How many of the user's receipts are in each status; statuses with none are left out.</summary>
     Task<IReadOnlyDictionary<ReceiptStatus, int>> CountByStatusAsync(Guid userId, CancellationToken cancellationToken);
 
-    /// <summary>Newest first.</summary>
     Task<(IReadOnlyList<Receipt> Items, int TotalCount)> ListAsync(
         Guid userId, ReceiptStatus? status, ReceiptFilter filter, int page, int pageSize, CancellationToken cancellationToken);
 
-    /// <summary>Marks a tracked receipt for deletion; its line items go with it when saved.</summary>
     void Remove(Receipt receipt);
 
-    /// <summary>The user's receipt, tracked for changes, with its line items. Null when it isn't theirs.</summary>
     Task<Receipt?> GetForUpdateAsync(Guid userId, Guid receiptId, CancellationToken cancellationToken);
 
-    /// <summary>For background processing: any user's receipt, tracked for changes, with its line items.</summary>
     Task<Receipt?> GetForUpdateAsync(Guid receiptId, CancellationToken cancellationToken);
 
-    /// <summary>Oldest first, across all users.</summary>
     Task<IReadOnlyList<Guid>> ListIdsWithStatusAsync(ReceiptStatus status, CancellationToken cancellationToken);
 
     Task SaveChangesAsync(CancellationToken cancellationToken);

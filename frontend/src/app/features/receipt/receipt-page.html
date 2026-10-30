@@ -48,7 +48,6 @@
       </dl>
 
       <div class="download">
-        <!-- A download rather than a new tab: PDFs and HEIC photos don't open reliably from a blob: address. -->
         <button type="button" class="link-button" [disabled]="downloading()" (click)="downloadOriginal()">
           {{ downloading() ? 'Downloading…' : 'Download original' }}
         </button>
@@ -164,24 +163,24 @@
 
         @if (r.lineItems.length > 0) {
           <div class="ledger-scroll">
-            <table class="ledger">
-              <thead>
-                <tr>
-                  <th scope="col">No.</th>
-                  <th scope="col">Description</th>
-                  <th scope="col" class="num">Qty</th>
-                  <th scope="col" class="num">Unit price</th>
-                  <th scope="col" class="num">Amount</th>
+            <table class="ledger items" role="table">
+              <thead role="rowgroup">
+                <tr role="row">
+                  <th scope="col" role="columnheader">No.</th>
+                  <th scope="col" role="columnheader">Description</th>
+                  <th scope="col" class="num" role="columnheader">Qty</th>
+                  <th scope="col" class="num" role="columnheader">Unit price</th>
+                  <th scope="col" class="num" role="columnheader">Amount</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody role="rowgroup">
                 @for (line of r.lineItems; track line.lineNumber) {
-                  <tr>
-                    <td class="mono">{{ line.lineNumber.toString().padStart(2, '0') }}</td>
-                    <td>{{ line.description }}</td>
-                    <td class="num">{{ line.quantity }}</td>
-                    <td class="num">{{ line.unitPrice | number: '1.2-2' }}</td>
-                    <td class="num">{{ line.amount | number: '1.2-2' }}</td>
+                  <tr role="row">
+                    <td class="mono items__no" role="cell">{{ line.lineNumber.toString().padStart(2, '0') }}</td>
+                    <td class="items__description" role="cell">{{ line.description }}</td>
+                    <td class="num items__qty" role="cell">{{ line.quantity }}</td>
+                    <td class="num items__unit" role="cell">{{ line.unitPrice | number: '1.2-2' }}</td>
+                    <td class="num items__amount" role="cell">{{ line.amount | number: '1.2-2' }}</td>
                   </tr>
                 }
               </tbody>

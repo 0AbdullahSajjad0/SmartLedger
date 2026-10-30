@@ -10,10 +10,6 @@ using SmartLedger.Infrastructure.Persistence;
 
 namespace SmartLedger.Api.IntegrationTests;
 
-/// <summary>
-/// Budgets keep their history: a change applies from the current month on, and past months keep the budget they had.
-/// Earlier budgets are written straight into the database, as edits through the API can only touch this month.
-/// </summary>
 [Collection(ApiCollection.Name)]
 public class BudgetHistoryTests(SmartLedgerApiFactory factory)
 {
@@ -111,7 +107,6 @@ public class BudgetHistoryTests(SmartLedgerApiFactory factory)
     private static decimal? Budget(CategoryMonthDto month, Guid categoryId) =>
         month.Categories.Single(c => c.Id == categoryId).MonthlyBudget;
 
-    /// <summary>A budget that started <paramref name="monthsAgo"/> months ago, as if it had been set then.</summary>
     private async Task AddHistoryAsync(Guid categoryId, int monthsAgo, decimal amount)
     {
         await using var scope = factory.Services.CreateAsyncScope();
@@ -121,7 +116,6 @@ public class BudgetHistoryTests(SmartLedgerApiFactory factory)
         await db.SaveChangesAsync();
     }
 
-    /// <summary>The category's budget entries, oldest first.</summary>
     private async Task<decimal?[]> HistoryAsync(Guid categoryId)
     {
         await using var scope = factory.Services.CreateAsyncScope();

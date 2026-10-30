@@ -6,10 +6,6 @@ using SmartLedger.Infrastructure.Identity;
 
 namespace SmartLedger.Infrastructure.Persistence;
 
-/// <summary>
-/// Creates a demo user with the categories and receipts from the design prototype, so a fresh
-/// local database has realistic data. Runs only in Development and does nothing if the user exists.
-/// </summary>
 public sealed class DevelopmentDataSeeder(AppDbContext db, UserManager<ApplicationUser> userManager, TimeProvider timeProvider)
 {
     public const string DemoEmail = "demo@smartledger.local";
@@ -21,7 +17,6 @@ public sealed class DevelopmentDataSeeder(AppDbContext db, UserManager<Applicati
             return;
         }
 
-        // No password: this account exists only to have data to look at locally.
         var user = new ApplicationUser
         {
             UserName = DemoEmail,
@@ -43,7 +38,6 @@ public sealed class DevelopmentDataSeeder(AppDbContext db, UserManager<Applicati
         var receipts = CreateReceipts(user.Id, categories.ToDictionary(c => c.Key, c => c.Value.Category)).ToList();
         db.Receipts.AddRange(receipts);
 
-        // The budgets apply from the month of the oldest demo receipt, so every month shown has them.
         var firstMonth = CategoryBudget.FirstOfMonth(receipts.Min(r => r.ReceiptDate!.Value));
         db.CategoryBudgets.AddRange(categories.Values.Select(c =>
             new CategoryBudget { CategoryId = c.Category.Id, EffectiveFrom = firstMonth, Amount = c.Budget }));

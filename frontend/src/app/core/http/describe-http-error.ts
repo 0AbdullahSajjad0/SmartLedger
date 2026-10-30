@@ -5,7 +5,6 @@ interface ProblemDetails {
   errors?: Record<string, string[]>;
 }
 
-/** Turns a failed API call into one sentence a person can act on. */
 export function describeHttpError(error: unknown): string {
   if (!(error instanceof HttpErrorResponse)) {
     return 'Something went wrong. Please try again.';

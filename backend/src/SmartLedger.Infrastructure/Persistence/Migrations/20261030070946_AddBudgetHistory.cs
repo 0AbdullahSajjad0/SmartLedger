@@ -5,14 +5,8 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 namespace SmartLedger.Infrastructure.Persistence.Migrations
 {
-    /// <summary>
-    /// Budgets get a history: one row per change, so changing a budget no longer rewrites past months. Each existing
-    /// budget is copied into a row starting from the month its category was created (the months it really applied to),
-    /// before the old column is dropped. Archived categories already left the totals, so they get no row.
-    /// </summary>
     public partial class AddBudgetHistory : Migration
     {
-        /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.CreateTable(
@@ -43,7 +37,6 @@ namespace SmartLedger.Infrastructure.Persistence.Migrations
                 columns: new[] { "CategoryId", "EffectiveFrom" },
                 unique: true);
 
-            // Copy before dropping: every active category's budget, from the first of the month it was created.
             migrationBuilder.Sql("""
                 INSERT INTO [CategoryBudgets] ([Id], [CategoryId], [EffectiveFrom], [Amount], [CreatedAt], [UpdatedAt])
                 SELECT NEWID(), [Id], DATEFROMPARTS(YEAR([CreatedAt]), MONTH([CreatedAt]), 1), [MonthlyBudget],
@@ -57,7 +50,6 @@ namespace SmartLedger.Infrastructure.Persistence.Migrations
                 table: "Categories");
         }
 
-        /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.AddColumn<decimal>(
@@ -68,7 +60,6 @@ namespace SmartLedger.Infrastructure.Persistence.Migrations
                 scale: 2,
                 nullable: true);
 
-            // Back to one budget per category: the latest one.
             migrationBuilder.Sql("""
                 UPDATE [c] SET [MonthlyBudget] = [latest].[Amount]
                 FROM [Categories] AS [c]

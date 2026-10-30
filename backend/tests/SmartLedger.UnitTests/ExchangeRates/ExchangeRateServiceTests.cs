@@ -19,7 +19,6 @@ public class ExchangeRateServiceTests
 
         var quote = await Service().GetRateAsync("PKR", "EUR", ReceiptDay, CancellationToken.None);
 
-        // 1 PKR = 1/280 USD = 0.9/280 EUR.
         Assert.True(quote.IsSuccess);
         Assert.Equal(0.0032142857m, quote.Value.Rate);
         Assert.Equal(ReceiptDay, quote.Value.RateDate);
@@ -41,7 +40,6 @@ public class ExchangeRateServiceTests
     [Fact]
     public async Task ADayWithoutRates_UsesTheNearestEarlierDay()
     {
-        // Today's rates aren't published until tomorrow; yesterday's are.
         source.Publish(Today.AddDays(-1), ("PKR", 277m), ("EUR", 0.92m));
 
         var quote = await Service().GetRateAsync("PKR", "EUR", Today, CancellationToken.None);

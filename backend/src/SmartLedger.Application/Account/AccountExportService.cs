@@ -10,11 +10,6 @@ using SmartLedger.Domain.Entities;
 
 namespace SmartLedger.Application.Account;
 
-/// <summary>
-/// Builds the "export my data" archive: <c>account.json</c> with everything, <c>receipts.csv</c> and
-/// <c>line-items.csv</c> for spreadsheets, and <c>files/</c> with every upload exactly as it was received.
-/// Previews are left out; they are copies made from the originals.
-/// </summary>
 internal sealed class AccountExportService(
     IAccountDataReader reader,
     IFileStorage storage,
@@ -55,7 +50,6 @@ internal sealed class AccountExportService(
     {
         await using var zip = await ZipArchive.CreateAsync(destination, ZipArchiveMode.Create, leaveOpen: true, entryNameEncoding: null, cancellationToken);
 
-        // The files first, so the data written after them can say which ones made it in.
         var files = new Dictionary<Guid, string>();
         foreach (var receipt in data.Receipts)
         {
@@ -74,10 +68,6 @@ internal sealed class AccountExportService(
         await AddTextAsync(zip, "README.txt", Encoding.UTF8.GetBytes(Readme(data, exportedAt, files)), cancellationToken);
     }
 
-    /// <summary>
-    /// Copies the upload into <c>files/</c>, named by entry number. Null when it isn't in storage. A failure while
-    /// copying is not caught: half a file can't be taken back out of the archive, so the download fails instead.
-    /// </summary>
     private async Task<string?> AddOriginalAsync(ZipArchive zip, Receipt receipt, CancellationToken cancellationToken)
     {
         var stored = await storage.OpenReadAsync(receipt.StorageKey, cancellationToken);
@@ -90,10 +80,8 @@ internal sealed class AccountExportService(
 
         await using (stored.Content)
         {
-            // The extension of the type detected at upload (the storage key ends with it), never the user's file name.
             var path = $"files/receipt-{receipt.Number.ToString("0000", CultureInfo.InvariantCulture)}{Path.GetExtension(receipt.StorageKey)}";
 
-            // Photos and PDFs are already compressed; squeezing them again costs CPU for almost nothing.
             var entry = zip.CreateEntry(path, CompressionLevel.NoCompression);
             entry.LastWriteTime = receipt.CreatedAt;
 
@@ -235,7 +223,6 @@ internal sealed class AccountExportService(
         return text.ToString();
     }
 
-    // The archive's JSON, spelled out so the export stays the same when the database changes.
     private sealed record ExportDocument(
         DateTimeOffset ExportedAt,
         ExportAccount Account,
@@ -245,11 +232,8 @@ internal sealed class AccountExportService(
 
     private sealed record ExportAccount(string Email, string DisplayName, string BaseCurrency);
 
-    /// <param name="Budgets">Every budget change, oldest first: each applies from its month until the next one.</param>
     private sealed record ExportCategory(Guid Id, string Name, string Color, bool IsArchived, IReadOnlyList<ExportBudget> Budgets);
 
-    /// <param name="From">"yyyy-MM".</param>
-    /// <param name="MonthlyBudget">Null means no budget from that month.</param>
     private sealed record ExportBudget(string From, decimal? MonthlyBudget);
 
     private sealed record ExportReceipt(
@@ -285,11 +269,6 @@ internal sealed class AccountExportService(
 
     private sealed record ExportAnalysis(string Month, string Headline, string Body, DateTimeOffset WrittenAt);
 
-    /// <summary>
-    /// .NET 10's ZIP writer still writes one small record per file synchronously (the 16–24 byte data descriptor,
-    /// used when the output can't seek, like a download). ASP.NET Core refuses synchronous writes to a response rather
-    /// than block a thread, so those bytes wait here and go out with the next asynchronous write or flush.
-    /// </summary>
     private sealed class AsyncOnlyWriteStream(Stream inner) : Stream
     {
         private readonly MemoryStream _pending = new();
@@ -321,7 +300,6 @@ internal sealed class AccountExportService(
             await inner.WriteAsync(buffer, cancellationToken);
         }
 
-        // Nothing is sent synchronously; FlushAsync does the real work.
         public override void Flush()
         {
         }

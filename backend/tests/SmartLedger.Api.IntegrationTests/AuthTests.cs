@@ -137,10 +137,8 @@ public class AuthTests(SmartLedgerApiFactory factory)
         var first = await TestAuth.RegisterAsync(client);
         var second = (await (await RefreshAsync(client, first.RefreshToken)).Content.ReadFromJsonAsync<AuthResponse>())!;
 
-        // Someone replays the already-used first token...
         await RefreshAsync(client, first.RefreshToken);
 
-        // ...so the newest token, held by the real user, is revoked too.
         var newest = await RefreshAsync(client, second.RefreshToken);
         Assert.Equal(HttpStatusCode.Unauthorized, newest.StatusCode);
     }

@@ -6,10 +6,6 @@ using SmartLedger.Application.Receipts.Extraction;
 
 namespace SmartLedger.Infrastructure.Extraction;
 
-/// <summary>
-/// Reads uploaded receipts one at a time, in the background. One at a time with a pause between them keeps
-/// within the AI free tier's rate limit; a periodic sweep retries receipts whose earlier attempt failed.
-/// </summary>
 internal sealed class ReceiptExtractionWorker(
     ReceiptExtractionQueue queue,
     IServiceScopeFactory scopeFactory,
@@ -20,7 +16,6 @@ internal sealed class ReceiptExtractionWorker(
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        // Receipts uploaded before a restart, or left by a failed attempt.
         await EnqueuePendingAsync(stoppingToken);
 
         while (!stoppingToken.IsCancellationRequested)
@@ -35,7 +30,6 @@ internal sealed class ReceiptExtractionWorker(
                 }
                 catch (OperationCanceledException) when (!stoppingToken.IsCancellationRequested)
                 {
-                    // Quiet for a while: look for receipts that still need another attempt.
                     await EnqueuePendingAsync(stoppingToken);
                     continue;
                 }
@@ -55,7 +49,6 @@ internal sealed class ReceiptExtractionWorker(
         }
         catch (Exception ex) when (!stoppingToken.IsCancellationRequested)
         {
-            // An unexpected failure (e.g. the database is unreachable) must not stop the worker for everyone.
             logger.LogError(ex, "Reading receipt {ReceiptId} failed; it will be retried by the next sweep", receiptId);
         }
     }

@@ -1,10 +1,10 @@
+@use '../../../styles/phone';
+
 :host {
   display: flex;
   flex-direction: column;
   gap: 44px;
 }
-
-// ---- A brand-new account: welcome ----
 
 .statement {
   display: flex;
@@ -64,8 +64,6 @@
   }
 }
 
-// ---- Header: the month, the picker, Scan ----
-
 .page-header__title em {
   font-style: italic;
 }
@@ -82,8 +80,6 @@
   font-family: var(--font-ui);
   cursor: pointer;
 }
-
-// ---- Key figures, divided by ledger rules; the lead figure is twice as wide ----
 
 .figures {
   display: flex;
@@ -143,7 +139,6 @@
     font-size: 12px;
     color: var(--color-muted);
 
-    // More spent than last month is worth a look; less is good news.
     &--up {
       color: var(--color-caution);
     }
@@ -162,8 +157,6 @@
     }
   }
 }
-
-// ---- Spending by category, with the summary beside it ----
 
 .columns {
   display: flex;
@@ -243,7 +236,6 @@
   }
 }
 
-// The statement's notes: a ruled column like the margin of a printed report.
 .summary {
   flex: 4 1 280px;
   min-width: 0;
@@ -265,7 +257,6 @@
     text-transform: uppercase;
   }
 
-  // The first sentence leads, set in the display face like a report's standfirst.
   p.summary__lede {
     font-family: var(--font-display);
     font-size: 22px;
@@ -273,8 +264,6 @@
     color: var(--color-ink);
   }
 }
-
-// ---- Recent entries ----
 
 .recent {
   display: flex;
@@ -303,7 +292,6 @@
   color: var(--color-muted);
 }
 
-// Tablet widths: the four figures as a 2 × 2 grid, so none wraps onto a row of its own behind a stray rule.
 @media (min-width: 721px) and (max-width: 960px) {
   .figures {
     display: grid;
@@ -337,5 +325,50 @@
     padding: 18px 0 0;
     border-left: 0;
     border-top: var(--rule-faint);
+  }
+}
+
+@include phone.phone {
+  .recent__table {
+    @include phone.stacked-table;
+    min-width: 0;
+
+    tr {
+      grid-template-columns: minmax(0, 1fr) auto;
+      grid-template-areas:
+        'vendor amount'
+        'category status'
+        'date entry';
+    }
+  }
+
+  .recent__vendor {
+    grid-area: vendor;
+    font-size: 15px;
+  }
+
+  .recent__amount {
+    grid-area: amount;
+    white-space: nowrap;
+  }
+
+  .recent__category {
+    grid-area: category;
+  }
+
+  .recent__status {
+    grid-area: status;
+    justify-self: end;
+  }
+
+  .recent__date {
+    grid-area: date;
+    font-size: 12px;
+  }
+
+  .recent__entry {
+    grid-area: entry;
+    justify-self: end;
+    font-size: 12px;
   }
 }

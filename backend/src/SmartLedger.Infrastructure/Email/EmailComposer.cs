@@ -12,17 +12,14 @@ using SmartLedger.Infrastructure.Persistence;
 
 namespace SmartLedger.Infrastructure.Email;
 
-/// <summary>Writes an outbox email at the moment it is sent, from what is true then.</summary>
 internal sealed class EmailComposer(
     AppDbContext db,
     UserManager<ApplicationUser> userManager,
     IOptions<EmailOptions> options,
     TimeProvider timeProvider)
 {
-    /// <summary>A reset link lives this long, and a request older than this is not worth answering any more.</summary>
     public static readonly TimeSpan PasswordResetLifetime = TimeSpan.FromHours(1);
 
-    /// <summary>Null when there is nothing to send any more.</summary>
     public async Task<EmailMessage?> ComposeAsync(OutgoingEmail email, CancellationToken cancellationToken)
     {
         var user = await userManager.FindByIdAsync(email.UserId.ToString());
@@ -42,8 +39,6 @@ internal sealed class EmailComposer(
 
     private async Task<EmailMessage?> EmailConfirmationAsync(ApplicationUser user, OutgoingEmail email)
     {
-        // Confirmed in the meantime (e.g. through a password reset link), or asked for so long ago that a newer
-        // request has surely been sent.
         if (user.EmailConfirmed || timeProvider.GetUtcNow() - email.CreatedAt > EmailConfirmationTokenProviderOptions.Lifetime)
         {
             return null;
@@ -66,23 +61,17 @@ internal sealed class EmailComposer(
             "You're receiving this because this address was used to open a SmartLedger account.");
     }
 
-    /// <summary>Identity tokens contain "+", "/" and "="; Base64Url makes them safe in a link.</summary>
     private static string Encode(string token) => WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(token));
 
     private async Task<EmailMessage?> PasswordResetAsync(ApplicationUser user, OutgoingEmail email)
     {
-        // The user asked over an hour ago and has probably asked again since; a late link would only confuse.
         if (timeProvider.GetUtcNow() - email.CreatedAt > PasswordResetLifetime)
         {
             return null;
         }
 
-        // Made now, so its hour starts when it is sent. It stops working once used: resetting the password renews the
-        // account's security stamp, which the token is tied to.
         var token = await userManager.GeneratePasswordResetTokenAsync(user);
 
-        // The token goes after "#": browsers never send that part to a server, so it stays out of hosting logs and
-        // the Referer header.
         var link = new Uri(options.Value.AppUri, $"reset-password?user={user.Id}#token={Encode(token)}");
 
         return EmailTemplate.Render(
@@ -101,8 +90,6 @@ internal sealed class EmailComposer(
 
     private async Task<EmailMessage?> BudgetAlertAsync(ApplicationUser user, Guid? alertId, CancellationToken cancellationToken)
     {
-        // Turned off since the alert was recorded: respect the latest choice. Unconfirmed addresses get no alerts, so
-        // an account opened with someone else's address can't be used to send them mail.
         if (!user.BudgetAlerts || !user.EmailConfirmed)
         {
             return null;
@@ -128,7 +115,6 @@ internal sealed class EmailComposer(
         var shortMonth = month.ToString("MMMM", CultureInfo.InvariantCulture);
         var spent = Money(user.BaseCurrency, alert.Spent);
         var budget = Money(user.BaseCurrency, alert.Budget);
-        // Rounded like the Categories page shows it, so the email and the page say the same number.
         var percent = (int)Math.Round(alert.Spent / alert.Budget * 100, MidpointRounding.AwayFromZero);
         var link = new Uri(options.Value.AppUri, $"categories?month={Months.Format(month)}");
 
@@ -150,7 +136,6 @@ internal sealed class EmailComposer(
             "You get these because budget alerts are on. You can turn them off on your Account page in SmartLedger.");
     }
 
-    /// <summary>"USD 1,640.00": the same way the app's AI analysis writes amounts.</summary>
     private static string Money(string currency, decimal amount) =>
         $"{currency} {amount.ToString("N2", CultureInfo.InvariantCulture)}";
 }

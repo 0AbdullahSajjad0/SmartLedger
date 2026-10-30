@@ -3,10 +3,6 @@ using SmartLedger.Application.Receipts.Extraction;
 
 namespace SmartLedger.Api.IntegrationTests;
 
-/// <summary>
-/// Stands in for Gemini in integration tests, so they're fast, free and deterministic. Photos arrive as the cleaned
-/// JPEG, so what it "read" is decided by the photo's width (<see cref="TestFiles.NotAReceiptWidth"/>).
-/// </summary>
 internal sealed class FakeReceiptExtractor : IReceiptExtractor
 {
     public async Task<ExtractedReceipt> ExtractAsync(ExtractionRequest request, CancellationToken cancellationToken)
@@ -17,7 +13,6 @@ internal sealed class FakeReceiptExtractor : IReceiptExtractor
         switch (request.ContentType)
         {
             case "image/jpeg":
-                // Must be a real JPEG: the preview, never the original upload.
                 var photo = new MagickImageInfo(content.ToArray());
                 if (photo.Width == TestFiles.NotAReceiptWidth)
                 {
@@ -28,7 +23,6 @@ internal sealed class FakeReceiptExtractor : IReceiptExtractor
             case "application/pdf":
                 break;
             default:
-                // The worker logs this and the receipt stays "Processing", so the test waiting for it fails.
                 throw new InvalidOperationException($"AI was sent {request.ContentType}; photos must go as the cleaned JPEG.");
         }
 

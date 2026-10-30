@@ -6,15 +6,10 @@ using SmartLedger.Application.ExchangeRates;
 
 namespace SmartLedger.Infrastructure.ExchangeRates;
 
-/// <summary>
-/// Daily rates from the free, open "currency-api" (github.com/fawazahmed0/exchange-api): no key, 150+ currencies
-/// including PKR, history by date. Published as static files on jsDelivr's CDN, with a Cloudflare mirror as backup.
-/// </summary>
 internal sealed class CurrencyApiExchangeRateProvider(HttpClient http) : IExchangeRateProvider
 {
     public const string SourceName = "currency-api";
 
-    /// <summary>Tried in order. Both serve identical files, so a "not found" from the first is the answer.</summary>
     internal static readonly string[] SourceUrls =
     [
         "https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@{date}/v1/currencies/usd.min.json",
@@ -33,7 +28,7 @@ internal sealed class CurrencyApiExchangeRateProvider(HttpClient http) : IExchan
                 using var response = await http.GetAsync(template.Replace("{date}", day), cancellationToken);
                 if (response.StatusCode == HttpStatusCode.NotFound)
                 {
-                    return null; // Not published for that day (yet), or before the history starts.
+                    return null;
                 }
 
                 response.EnsureSuccessStatusCode();
@@ -44,14 +39,13 @@ internal sealed class CurrencyApiExchangeRateProvider(HttpClient http) : IExchan
             catch (Exception ex) when (ex is HttpRequestException or JsonException or InvalidDataException
                 || (ex is TaskCanceledException && !cancellationToken.IsCancellationRequested))
             {
-                lastFailure = ex; // Try the mirror.
+                lastFailure = ex;
             }
         }
 
         throw new ExchangeRatesUnavailableException($"No rate source answered for {day}.", lastFailure);
     }
 
-    /// <summary>Reads <c>{ "date": "2026-10-15", "usd": { "pkr": 277.02, "eur": 0.92, "btc": 0.0000088, … } }</c>.</summary>
     internal static DailyRates Parse(JsonElement root, DateOnly requested)
     {
         if (root.ValueKind != JsonValueKind.Object
@@ -65,7 +59,6 @@ internal sealed class CurrencyApiExchangeRateProvider(HttpClient http) : IExchan
                 ? parsed
                 : requested;
 
-        // Only real currencies: the file also lists cryptocurrencies and metals.
         var rates = new Dictionary<string, decimal>(StringComparer.Ordinal);
         foreach (var rate in usd.EnumerateObject())
         {

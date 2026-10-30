@@ -1,0 +1,62 @@
+$max-width: 640px;
+
+@mixin phone {
+  @media (max-width: $max-width) {
+    @content;
+  }
+}
+
+@mixin out-of-sight {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+@mixin stacked-table {
+  display: block;
+  border-top: var(--rule-strong);
+
+  thead {
+    @include out-of-sight;
+  }
+
+  tbody,
+  tfoot {
+    display: block;
+  }
+
+  tr {
+    display: grid;
+    align-items: baseline;
+    gap: 4px 16px;
+    padding: 14px 0;
+    border-bottom: var(--rule-faint);
+  }
+
+  th,
+  td {
+    display: block;
+    padding: 0;
+    border: 0;
+  }
+
+  tbody tr:hover td {
+    background: transparent;
+  }
+}
+
+@mixin cell-label($text) {
+  &::before {
+    content: $text;
+    margin-right: 6px;
+    font-family: var(--font-ui);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--color-muted);
+  }
+}

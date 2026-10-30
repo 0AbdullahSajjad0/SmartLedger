@@ -5,10 +5,6 @@ import { CategoriesApi } from '../../../core/categories/categories-api';
 import { CATEGORY_NAME_MAX_LENGTH, CATEGORY_PALETTE, CategorySpending } from '../../../core/categories/category.models';
 import { describeHttpError } from '../../../core/http/describe-http-error';
 
-/**
- * A table row that edits one category in place: name, colour and monthly budget. With no category it creates one.
- * Used as an attribute on a <tr>, so it sits in the ledger like any other row.
- */
 @Component({
   selector: 'tr[app-category-editor]',
   imports: [ReactiveFormsModule],
@@ -21,11 +17,9 @@ export class CategoryEditor {
   private readonly api = inject(CategoriesApi);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
 
-  /** The category to edit; null to create a new one. */
   readonly category = input.required<CategorySpending | null>();
   readonly baseCurrency = input.required<string>();
 
-  /** The change was saved (or the category archived); the page reloads its figures. */
   readonly saved = output<void>();
   readonly cancelled = output<void>();
 
@@ -36,7 +30,6 @@ export class CategoryEditor {
 
   protected readonly form = this.fb.group({
     name: ['', [Validators.required, Validators.maxLength(CATEGORY_NAME_MAX_LENGTH)]],
-    // New categories start on deep teal, the first colour none of the defaults uses.
     color: [CATEGORY_PALETTE[6].color as string],
     monthlyBudget: this.fb.control<number | null>(null, Validators.min(0)),
   });
@@ -46,7 +39,6 @@ export class CategoryEditor {
   protected readonly submitted = signal(false);
 
   constructor() {
-    // Fill in the category being edited, and put the cursor in the name, as soon as the row appears.
     afterNextRender(() => {
       const category = this.category();
       if (category) {
@@ -70,7 +62,6 @@ export class CategoryEditor {
     await this.run(this.category()?.isArchived ?? false, { name: name.trim(), color, monthlyBudget });
   }
 
-  /** Out of the pickers and AI's choices from now on; past receipts keep it. Undone with Unarchive. */
   protected async archive(): Promise<void> {
     const category = this.category();
     if (category) {
@@ -78,7 +69,6 @@ export class CategoryEditor {
     }
   }
 
-  /** Escape cancels, like closing a dialog. */
   protected onKeydown(event: KeyboardEvent): void {
     if (event.key === 'Escape' && !this.busy()) {
       this.cancelled.emit();

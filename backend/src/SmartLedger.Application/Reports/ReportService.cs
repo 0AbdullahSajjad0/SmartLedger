@@ -138,7 +138,6 @@ internal sealed class ReportService(
         return new ReportFile(Csv.ToBytes(csv), "text/csv", $"smartledger-{Months.Format(start)}.csv");
     }
 
-    /// <summary>What a month's report and its analysis are built from.</summary>
     private sealed record MonthData(
         DateOnly Start,
         string BaseCurrency,
@@ -157,7 +156,6 @@ internal sealed class ReportService(
     {
         var userId = UserId;
         var userCategories = await categories.ListAsync(userId, cancellationToken);
-        // The budgets this month had, not today's: changing a budget never rewrites past months.
         var budgets = await categories.BudgetsAsync(userId, start, cancellationToken);
         var approved = await reports.ApprovedAsync(userId, start, start.AddMonths(1), cancellationToken);
         var previous = await categories.SpendingAsync(userId, start.AddMonths(-1), start, cancellationToken);
@@ -169,8 +167,6 @@ internal sealed class ReportService(
             .GroupBy(r => r.CategoryId!.Value)
             .ToDictionary(g => g.Key, g => (Count: g.Count(), Spent: g.Sum(r => r.BaseCurrencyTotal ?? 0m)));
 
-        // Budget against actual: every active category (a budget with nothing spent is still news), plus archived
-        // ones that have spending this month.
         var categoryRows = userCategories
             .Where(c => !c.IsArchived || spentByCategory.ContainsKey(c.Id))
             .Select(c =>
@@ -199,7 +195,6 @@ internal sealed class ReportService(
         var first = start.AddMonths(-(TrendMonths - 1));
         var totals = await reports.MonthlyTotalsAsync(UserId, first, start.AddMonths(1), cancellationToken);
 
-        // Every month appears, with zero when nothing was approved, so the chart has no gaps.
         return Enumerable.Range(0, TrendMonths)
             .Select(i => first.AddMonths(i))
             .Select(m => new MonthTotalDto(
@@ -208,14 +203,12 @@ internal sealed class ReportService(
             .ToList();
     }
 
-    /// <summary>Vendors by spend. The same shop spelled "STARBUCKS" and "Starbucks" counts once.</summary>
     private static List<VendorSpendingDto> TopVendors(IReadOnlyList<Receipt> approved, IReadOnlyDictionary<Guid, string> categoryNames) =>
         approved
             .Where(r => r.VendorName is not null)
             .GroupBy(r => r.VendorName!.Trim(), StringComparer.OrdinalIgnoreCase)
             .Select(g =>
             {
-                // The category most of this vendor's money went under.
                 var mainCategory = g
                     .Where(r => r.CategoryId is not null)
                     .GroupBy(r => r.CategoryId!.Value)

@@ -15,7 +15,6 @@ export class AccountApi {
     return this.http.put<User>(this.url, { displayName });
   }
 
-  /** Sends the "confirm your email" link again (nothing is sent if one went out a few minutes ago). */
   sendConfirmationEmail(): Observable<void> {
     return this.http.post<void>(`${this.url}/confirmation-email`, null);
   }
@@ -24,10 +23,6 @@ export class AccountApi {
     return this.http.put<User>(`${this.url}/notifications`, { budgetAlerts });
   }
 
-  /**
-   * Every other device is signed out. This one stays signed in: the API keeps the session its refresh token belongs
-   * to (even if the token is rotated while the request is on its way).
-   */
   changePassword(currentPassword: string, newPassword: string): Observable<void> {
     return this.http.post<void>(`${this.url}/password`, { currentPassword, newPassword, refreshToken: this.storage.get() });
   }
@@ -36,7 +31,6 @@ export class AccountApi {
     return this.http.post<void>(`${this.url}/sign-out-others`, { refreshToken: this.storage.get() });
   }
 
-  /** A ZIP of everything in the account: data as JSON and CSV, and the original files. */
   export(): Observable<Blob> {
     return this.http.get(`${this.url}/export`, { responseType: 'blob' });
   }

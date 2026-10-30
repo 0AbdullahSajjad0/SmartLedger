@@ -5,7 +5,6 @@ using SmartLedger.Application.Common.Storage;
 
 namespace SmartLedger.Infrastructure.Storage;
 
-/// <summary>Keeps files in a folder on disk, so development and tests need no cloud account.</summary>
 internal sealed class LocalFileStorage(IOptions<StorageOptions> options, IWebHostEnvironment environment) : IFileStorage
 {
     private static readonly FileExtensionContentTypeProvider ContentTypes = new();
@@ -49,7 +48,6 @@ internal sealed class LocalFileStorage(IOptions<StorageOptions> options, IWebHos
         return Task.CompletedTask;
     }
 
-    /// <summary>Resolves the key inside the root folder and refuses anything that would escape it ("../").</summary>
     private string PathFor(string key)
     {
         var path = Path.GetFullPath(Path.Combine(_root, key));

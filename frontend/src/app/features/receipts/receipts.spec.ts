@@ -75,7 +75,6 @@ describe('Receipts', () => {
     expect(rows[0][3]).toBe('Travel');
     expect(rows[0][5]).toBe('126.45 USD');
     expect(rows[0][6]).toBe('Needs review');
-    // Not read by AI yet: the file name stands in for the vendor, and there's no category.
     expect(rows[1][2]).toBe('IMG_2041.jpg');
     expect(rows[1][3]).toBe('—');
   });

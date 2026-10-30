@@ -16,23 +16,17 @@ public sealed class AccountController(IAccountService account, IAccountExportSer
 {
     private Guid UserId => currentUser.UserId!.Value;
 
-    /// <summary>Changes the name shown in the app.</summary>
     [HttpPut]
     [ProducesResponseType<UserDto>(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> UpdateProfile(UpdateProfileRequest request, CancellationToken cancellationToken) =>
         (await account.UpdateProfileAsync(UserId, request, cancellationToken)).ToActionResult(this);
 
-    /// <summary>Turns budget alert emails (at 80% and 100% of a category's monthly budget) on or off.</summary>
     [HttpPut("notifications")]
     [ProducesResponseType<UserDto>(StatusCodes.Status200OK)]
     public async Task<IActionResult> UpdateNotifications(UpdateNotificationsRequest request, CancellationToken cancellationToken) =>
         (await account.UpdateNotificationsAsync(UserId, request, cancellationToken)).ToActionResult(this);
 
-    /// <summary>
-    /// Sends the "confirm your email" link again. Always 202: nothing goes out if the address is already confirmed or
-    /// a link was sent in the last few minutes.
-    /// </summary>
     [HttpPost("confirmation-email")]
     [EnableRateLimiting(RateLimitPolicies.Auth)]
     [ProducesResponseType(StatusCodes.Status202Accepted)]
@@ -42,10 +36,6 @@ public sealed class AccountController(IAccountService account, IAccountExportSer
         return result.IsSuccess ? Accepted() : result.ToActionResult(this);
     }
 
-    /// <summary>
-    /// Changes the password after checking the current one. Every other device is signed out; the session of
-    /// <c>refreshToken</c> stays signed in. A wrong current password is a 400 and counts towards the sign-in lockout.
-    /// </summary>
     [HttpPost("password")]
     [EnableRateLimiting(RateLimitPolicies.Auth)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
@@ -56,10 +46,6 @@ public sealed class AccountController(IAccountService account, IAccountExportSer
         return result.IsSuccess ? NoContent() : result.ToActionResult(this);
     }
 
-    /// <summary>
-    /// Ends every session except this device's (the one <c>refreshToken</c> belongs to). Other devices can still use
-    /// the access token they hold until it expires, at most 15 minutes.
-    /// </summary>
     [HttpPost("sign-out-others")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> SignOutOthers(SignOutOthersRequest request, CancellationToken cancellationToken)
@@ -68,10 +54,6 @@ public sealed class AccountController(IAccountService account, IAccountExportSer
         return NoContent();
     }
 
-    /// <summary>
-    /// Everything stored for the account as a ZIP: account.json, receipts.csv, line-items.csv and the original files.
-    /// Streamed while it is built, so even a large archive needs little memory.
-    /// </summary>
     [HttpGet("export")]
     [EnableRateLimiting(RateLimitPolicies.Exports)]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(FileStreamResult))]
@@ -85,7 +67,6 @@ public sealed class AccountController(IAccountService account, IAccountExportSer
         }
 
         Response.ContentType = "application/zip";
-        // Private: one user's receipts, never kept by a shared cache.
         Response.Headers.CacheControl = "private, no-store";
         Response.Headers.ContentDisposition = new ContentDispositionHeaderValue("attachment")
         {
@@ -96,10 +77,6 @@ public sealed class AccountController(IAccountService account, IAccountExportSer
         return new EmptyResult();
     }
 
-    /// <summary>
-    /// Deletes the account after checking the password: receipts, line items, categories, analyses, sessions and every
-    /// uploaded file. Can't be undone. A POST with a body, because a DELETE body is not reliably passed on by proxies.
-    /// </summary>
     [HttpPost("delete")]
     [EnableRateLimiting(RateLimitPolicies.Auth)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]

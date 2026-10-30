@@ -25,7 +25,6 @@ public class ErrorResponseTests(SmartLedgerApiFactory factory)
     [Fact]
     public async Task AnyRoute_WhenAnonymous_ReturnsProblemDetails401()
     {
-        // Endpoints require sign-in by default, so anonymous callers can't even probe which routes exist.
         var response = await factory.CreateClient().GetAsync("/does-not-exist");
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);

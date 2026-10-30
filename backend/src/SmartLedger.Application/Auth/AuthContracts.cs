@@ -17,23 +17,15 @@ public sealed record RefreshRequest([Required] string RefreshToken);
 
 public sealed record ForgotPasswordRequest([Required, EmailAddress, StringLength(256)] string Email);
 
-/// <param name="UserId">From the link in the email.</param>
-/// <param name="Token">From the link in the email, as it appears there (Base64Url).</param>
 public sealed record ResetPasswordRequest(
     Guid UserId,
     [Required, StringLength(2048)] string Token,
     [Required, StringLength(128, MinimumLength = 10)] string NewPassword);
 
-/// <param name="UserId">From the link in the email.</param>
-/// <param name="Token">From the link in the email, as it appears there (Base64Url).</param>
 public sealed record ConfirmEmailRequest(Guid UserId, [Required, StringLength(2048)] string Token);
 
-/// <param name="BudgetAlerts">Whether the user gets an email when a category reaches 80% and 100% of its budget.</param>
-/// <param name="EmailConfirmed">Whether the user proved the address is theirs. Alerts go only to confirmed addresses.</param>
 public sealed record UserDto(Guid Id, string Email, string DisplayName, string BaseCurrency, bool BudgetAlerts, bool EmailConfirmed);
 
-/// <param name="AccessToken">Short-lived JWT, sent as "Authorization: Bearer …".</param>
-/// <param name="RefreshToken">Long-lived, single-use token for getting the next access token.</param>
 public sealed record AuthResponse(
     string AccessToken,
     DateTimeOffset AccessTokenExpiresAt,

@@ -26,10 +26,8 @@ internal sealed class BudgetAlertRepository(AppDbContext db) : IBudgetAlertRepos
             await db.SaveChangesAsync(cancellationToken);
             return true;
         }
-        // The unique (CategoryId, Year, Month, Level) index: another approval recorded this alert first.
         catch (DbUpdateException ex) when (ex.InnerException is SqlException { Number: 2601 or 2627 })
         {
-            // Forget the rejected alert and its email, so a later save in this request doesn't try them again.
             foreach (var entry in db.ChangeTracker.Entries()
                          .Where(e => e.State == EntityState.Added && e.Entity is BudgetAlert or OutgoingEmail)
                          .ToList())

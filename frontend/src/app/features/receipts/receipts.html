@@ -72,31 +72,30 @@
       }
     </div>
   } @else {
-    <!-- Dim only when switching page or filter ("loading"), not during quiet background refreshes ("reloading"). -->
     <div class="ledger-scroll" [class.is-refreshing]="ledger.status() === 'loading'">
-      <table class="ledger">
-        <thead>
-          <tr>
-            <th scope="col" class="col-no">No.</th>
-            <th scope="col">Received</th>
-            <th scope="col">Vendor</th>
-            <th scope="col">Category</th>
-            <th scope="col">Receipt date</th>
-            <th scope="col" class="num">Amount</th>
-            <th scope="col">Status</th>
+      <table class="ledger receipts" role="table">
+        <thead role="rowgroup">
+          <tr role="row">
+            <th scope="col" class="col-no" role="columnheader">No.</th>
+            <th scope="col" role="columnheader">Received</th>
+            <th scope="col" role="columnheader">Vendor</th>
+            <th scope="col" role="columnheader">Category</th>
+            <th scope="col" role="columnheader">Receipt date</th>
+            <th scope="col" class="num" role="columnheader">Amount</th>
+            <th scope="col" role="columnheader">Status</th>
           </tr>
         </thead>
-        <tbody>
+        <tbody role="rowgroup">
           @for (receipt of result.items; track receipt.id) {
-            <tr>
-              <td class="mono faint">{{ receipt.number | entryNumber }}</td>
-              <td class="mono muted">{{ receipt.createdAt | date: 'dd MMM y' }}</td>
-              <td>
+            <tr role="row">
+              <td class="mono faint receipts__no" role="cell">{{ receipt.number | entryNumber }}</td>
+              <td class="mono muted receipts__received" role="cell">{{ receipt.createdAt | date: 'dd MMM y' }}</td>
+              <td class="receipts__vendor" role="cell">
                 <a class="vendor" [class.vendor--pending]="!receipt.vendorName" [routerLink]="['/receipts', receipt.id]">
                   {{ receipt.vendorName ?? receipt.fileName }}
                 </a>
               </td>
-              <td>
+              <td class="receipts__category" role="cell">
                 @if (categoryOf(receipt.categoryId); as c) {
                   <span class="category">
                     <span class="category__chip" [style.background]="c.color" aria-hidden="true"></span>
@@ -106,15 +105,15 @@
                   <span class="muted">—</span>
                 }
               </td>
-              <td class="mono muted">{{ receipt.receiptDate ? (receipt.receiptDate | date: 'dd MMM y') : '—' }}</td>
-              <td class="num">
+              <td class="mono muted receipts__date" role="cell">{{ receipt.receiptDate ? (receipt.receiptDate | date: 'dd MMM y') : '—' }}</td>
+              <td class="num receipts__amount" role="cell">
                 @if (receipt.total !== null) {
                   {{ receipt.total | number: '1.2-2' }} <span class="currency">{{ receipt.currency }}</span>
                 } @else {
                   —
                 }
               </td>
-              <td><app-status-stamp [status]="receipt.status" /></td>
+              <td class="receipts__status" role="cell"><app-status-stamp [status]="receipt.status" /></td>
             </tr>
           }
         </tbody>

@@ -13,7 +13,6 @@ describe('ReceiptPage', () => {
 
   beforeEach(() => {
     localStorage.clear();
-    // jsdom has no blob: URLs; the page only needs an address string back.
     URL.createObjectURL = vi.fn(() => 'blob:test-receipt');
     URL.revokeObjectURL = vi.fn();
     TestBed.configureTestingModule({ imports: [ReceiptPage], providers: provideAuthTesting() });
@@ -22,7 +21,6 @@ describe('ReceiptPage', () => {
 
   afterEach(() => http.verify());
 
-  /** Renders the page; `image` is which picture it's expected to fetch once the details arrive. */
   async function render(receipt: ReceiptDetail | null, image: 'preview' | 'file' | null = null) {
     const fixture = TestBed.createComponent(ReceiptPage);
     fixture.componentRef.setInput('id', 'r-1');
@@ -39,7 +37,6 @@ describe('ReceiptPage', () => {
       details.flush({ title: 'Receipt not found.' }, { status: 404, statusText: 'Not Found' });
     }
 
-    // Answered before whenStable(), which would otherwise wait for this request forever.
     if (image) {
       const request = await vi.waitFor(() => http.expectOne(`${RECEIPT_URL}/${image}`));
       request.flush(new Blob(['jpeg'], { type: 'image/jpeg' }));
@@ -152,7 +149,6 @@ describe('ReceiptPage', () => {
 
     expect(page.querySelector('.download__note')?.textContent?.trim()).toBe('Exactly as uploaded.');
     page.querySelector<HTMLButtonElement>('.download button')!.click();
-    // The auth interceptor adds the token asynchronously, so the request appears a moment after the click.
     const original = await vi.waitFor(() => http.expectOne(`${RECEIPT_URL}/file`));
     original.flush(new Blob(['%PDF'], { type: 'application/pdf' }));
     await fixture.whenStable();

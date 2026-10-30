@@ -5,22 +5,15 @@ using SmartLedger.Domain.Entities;
 
 namespace SmartLedger.Application.Receipts.Extraction;
 
-/// <summary>
-/// Turns what the AI returned into a receipt we're willing to show. Nothing is trusted as-is: text is trimmed
-/// and capped, dates and currencies are validated, card numbers are cut to the last four digits, and totals are
-/// checked against the line items. Anything doubtful becomes a "please confirm" flag for the review screen.
-/// </summary>
 public static partial class ExtractionSanitizer
 {
     public const int MaxLineItems = 100;
 
-    /// <summary>Field names the review screen knows how to point at.</summary>
     public static readonly IReadOnlySet<string> KnownFields = new HashSet<string>(StringComparer.Ordinal)
     {
         "VendorName", "ReceiptDate", "Currency", "Subtotal", "Tax", "Total", "PaymentMethod", "Category", "LineItems",
     };
 
-    /// <summary>Earlier dates are almost certainly misread. Shared with manual editing.</summary>
     public static readonly DateOnly EarliestPlausibleDate = new(2000, 1, 1);
 
     public static void Apply(Receipt receipt, ExtractedReceipt result, IReadOnlyList<Category> categories, DateOnly today)
@@ -42,7 +35,6 @@ public static partial class ExtractionSanitizer
             }
         }
 
-        // The AI's own doubts first, limited to fields we can show.
         foreach (var flag in result.FieldsToCheck)
         {
             if (flag.Field is { } field && KnownFields.Contains(field) && !string.IsNullOrWhiteSpace(flag.Reason))
@@ -114,7 +106,6 @@ public static partial class ExtractionSanitizer
         receipt.MarkExtracted();
     }
 
-    /// <summary>Card and account numbers keep only their last four digits, whatever the AI returned.</summary>
     public static string? MaskCardNumbers(string? text) =>
         text is null ? null : LongDigitRun().Replace(text, match =>
         {
@@ -158,7 +149,6 @@ public static partial class ExtractionSanitizer
             return null;
         }
 
-        // A day of slack for time zones; anything further ahead, or very old, is almost certainly misread.
         if (date > today.AddDays(1) || date < EarliestPlausibleDate)
         {
             problem = $"The date reads as {date:dd MMM yyyy}, which looks wrong.";
@@ -177,7 +167,6 @@ public static partial class ExtractionSanitizer
         return string.IsNullOrEmpty(trimmed) ? null : trimmed.Length <= maxLength ? trimmed : trimmed[..maxLength];
     }
 
-    // Five or more digits, possibly broken up by spaces or dashes (e.g. "4242 4242 4242 4242").
     [GeneratedRegex(@"\d(?:[ \-]?\d){4,}")]
     private static partial Regex LongDigitRun();
 }

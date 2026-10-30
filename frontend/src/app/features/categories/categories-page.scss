@@ -1,3 +1,5 @@
+@use '../../../styles/phone';
+
 :host {
   display: flex;
   flex-direction: column;
@@ -11,9 +13,6 @@
   color: #3a352e;
 }
 
-// ---- Month: previous · this · next ----
-
-// A past month is a closed page of the ledger: said once, quietly, above the figures.
 .closed {
   display: flex;
   flex-wrap: wrap;
@@ -52,8 +51,6 @@
     font-weight: 600;
   }
 }
-
-// ---- Three big figures, divided by ledger rules ----
 
 .figures {
   display: flex;
@@ -94,8 +91,6 @@
   }
 }
 
-// ---- The table ----
-
 .categories {
   min-width: 760px;
   transition: opacity 120ms ease;
@@ -135,7 +130,6 @@
   text-align: right;
 }
 
-// A 2px rule filled to the share used, coloured by how close to the budget it is.
 .usage {
   --tone: var(--color-ink);
   display: flex;
@@ -168,8 +162,6 @@
     color: var(--tone);
   }
 }
-
-// ---- Archived ----
 
 .archived {
   display: flex;
@@ -207,4 +199,58 @@
 .loading {
   padding: 32px 0;
   color: var(--color-muted);
+}
+
+@include phone.phone {
+  .categories {
+    @include phone.stacked-table;
+    min-width: 0;
+
+    tr {
+      grid-template-columns: minmax(0, 1fr) auto auto;
+      grid-template-areas:
+        'name name spent'
+        'usage usage usage'
+        'budget count actions';
+    }
+
+    tr[app-category-editor] {
+      display: block;
+      padding: 0;
+    }
+
+    &__name {
+      grid-area: name;
+    }
+
+    &__spent {
+      grid-area: spent;
+    }
+
+    &__usage {
+      grid-area: usage;
+      padding: 4px 0;
+
+      > .muted {
+        display: none;
+      }
+    }
+
+    &__budget {
+      grid-area: budget;
+      text-align: left;
+      font-size: 13px;
+      @include phone.cell-label('Budget');
+    }
+
+    &__count {
+      grid-area: count;
+      font-size: 13px;
+      @include phone.cell-label('Receipts');
+    }
+
+    &__actions {
+      grid-area: actions;
+    }
+  }
 }

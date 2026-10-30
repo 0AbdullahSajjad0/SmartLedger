@@ -31,7 +31,6 @@
         Nothing has been approved for {{ label(r.month, 'name') }} yet.
         <a routerLink="/receipts" [queryParams]="{ status: 'NeedsReview' }">Review receipts</a> to build the report.
       } @else {
-        <!-- Kept on one line each: any whitespace here would become a space before the commas. -->
         @for (part of lede(); track $index) {
           @if (part.tone) {<span class="lede__figure" [class.lede__figure--under]="part.tone === 'under'" [class.lede__figure--over]="part.tone === 'over'">{{ part.text }}</span>} @else {<ng-container>{{ part.text }}</ng-container>}
         }
@@ -127,40 +126,40 @@
     </div>
     @if (budgetRows().length > 0) {
       <div class="ledger-scroll">
-        <table class="ledger budget__table">
-          <thead>
-            <tr>
-              <th scope="col">Category</th>
-              <th scope="col" class="num">Spent</th>
-              <th scope="col" class="num">Budget</th>
-              <th scope="col" class="num">Variance</th>
+        <table class="ledger budget__table" role="table">
+          <thead role="rowgroup">
+            <tr role="row">
+              <th scope="col" role="columnheader">Category</th>
+              <th scope="col" class="num" role="columnheader">Spent</th>
+              <th scope="col" class="num" role="columnheader">Budget</th>
+              <th scope="col" class="num" role="columnheader">Variance</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody role="rowgroup">
             @for (category of budgetRows(); track category.id) {
               @let v = variance(category);
-              <tr>
-                <td>
+              <tr role="row">
+                <td class="budget__name" role="cell">
                   <span class="name">
                     <span class="name__chip" [style.background]="category.color" aria-hidden="true"></span>
                     {{ category.name }}
                   </span>
                 </td>
-                <td class="num">{{ category.spent | number: '1.2-2' }}</td>
-                <td class="num muted">{{ category.monthlyBudget !== null ? (category.monthlyBudget | number: '1.2-2') : '—' }}</td>
-                <td class="num" [class.over]="v !== null && v > 0" [class.muted]="v === null || v <= 0">
+                <td class="num budget__spent" role="cell">{{ category.spent | number: '1.2-2' }}</td>
+                <td class="num muted budget__budget" role="cell">{{ category.monthlyBudget !== null ? (category.monthlyBudget | number: '1.2-2') : '—' }}</td>
+                <td class="num budget__variance" role="cell" [class.over]="v !== null && v > 0" [class.muted]="v === null || v <= 0">
                   {{ v === null ? '—' : (v > 0 ? '+' : v < 0 ? '−' : '') + ((v < 0 ? -v : v) | number: '1.2-2') }}
                 </td>
               </tr>
             }
           </tbody>
-          <tfoot>
-            <tr>
-              <th scope="row">Total</th>
-              <td class="num">{{ r.spent | number: '1.2-2' }}</td>
-              <td class="num">{{ r.totalBudget > 0 ? (r.totalBudget | number: '1.2-2') : '—' }}</td>
+          <tfoot role="rowgroup">
+            <tr role="row">
+              <th scope="row" class="budget__name" role="rowheader">Total</th>
+              <td class="num budget__spent" role="cell">{{ r.spent | number: '1.2-2' }}</td>
+              <td class="num budget__budget" role="cell">{{ r.totalBudget > 0 ? (r.totalBudget | number: '1.2-2') : '—' }}</td>
               @let total = r.totalBudget > 0 ? r.spent - r.totalBudget : null;
-              <td class="num" [class.over]="total !== null && total > 0">
+              <td class="num budget__variance" role="cell" [class.over]="total !== null && total > 0">
                 {{ total === null ? '—' : (total > 0 ? '+' : total < 0 ? '−' : '') + ((total < 0 ? -total : total) | number: '1.2-2') }}
               </td>
             </tr>

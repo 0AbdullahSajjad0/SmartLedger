@@ -26,7 +26,6 @@ internal sealed class ReceiptService(
 
     private static readonly Error NotFound = Error.NotFound("receipts.not_found", "Receipt not found.");
 
-    /// <summary>Why a receipt in this status can't be edited, approved or rejected.</summary>
     private static Error NotWaitingForReview(ReceiptStatus status) => status switch
     {
         ReceiptStatus.Processing => Error.Conflict("receipts.processing", "AI is still reading this receipt. Try again in a few seconds."),
@@ -35,7 +34,6 @@ internal sealed class ReceiptService(
         _ => Error.Conflict("receipts.not_ready", "Fill in this receipt's details first."),
     };
 
-    // Every endpoint behind this service requires sign-in, so a missing user is a bug, not a user error.
     private Guid UserId => currentUser.UserId ?? throw new InvalidOperationException("No signed-in user.");
 
     public async Task<Result<IReadOnlyList<ReceiptSummaryDto>>> UploadAsync(
@@ -53,7 +51,6 @@ internal sealed class ReceiptService(
             return Error.Validation("receipts.too_many_files", $"Upload at most {ReceiptFileTypes.MaxFilesPerUpload} files at a time.");
         }
 
-        // Check every file before storing any, so a bad file doesn't leave half a batch behind.
         var accepted = new List<(UploadedFile File, ReceiptFileType Type)>();
         foreach (var file in files)
         {
@@ -78,7 +75,6 @@ internal sealed class ReceiptService(
                     FileName = Path.GetFileName(file.FileName),
                     ContentType = type.ContentType,
                     SizeBytes = file.Length,
-                    // Keyed by user and receipt id: never by the user's file name, which could contain anything.
                     StorageKey = $"{userId}/{receiptId}{type.Extension}",
                 };
 
@@ -91,7 +87,6 @@ internal sealed class ReceiptService(
         }
         catch
         {
-            // Don't leave orphaned files when the batch fails part-way.
             foreach (var receipt in receipts)
             {
                 await storage.DeleteAsync(receipt.StorageKey, CancellationToken.None);
@@ -99,7 +94,6 @@ internal sealed class ReceiptService(
             throw;
         }
 
-        // Reading happens in the background, so the upload answers immediately.
         foreach (var receipt in receipts)
         {
             extractionQueue.Enqueue(receipt.Id);
@@ -118,10 +112,6 @@ internal sealed class ReceiptService(
         return new PagedResult<ReceiptSummaryDto>(items.Select(ToSummary).ToList(), page, pageSize, totalCount);
     }
 
-    /// <summary>
-    /// Permanently removes a receipt: its record, line items, original upload and preview. Approved receipts leave the
-    /// reports. Not while AI is still reading it, so the background worker never saves into a deleted receipt.
-    /// </summary>
     public async Task<Result<bool>> DeleteAsync(Guid receiptId, CancellationToken cancellationToken)
     {
         var receipt = await repository.GetForUpdateAsync(UserId, receiptId, cancellationToken);
@@ -136,8 +126,6 @@ internal sealed class ReceiptService(
 
         string[] files = [receipt.StorageKey, .. receipt.PreviewStorageKey is { } preview ? [preview] : Array.Empty<string>()];
 
-        // The record first: once it's gone the files are unreachable, so a file that fails to delete below is only
-        // wasted storage, never a receipt pointing at nothing.
         repository.Remove(receipt);
         await repository.SaveChangesAsync(cancellationToken);
 
@@ -156,7 +144,6 @@ internal sealed class ReceiptService(
         return true;
     }
 
-    /// <summary>A search of at most 100 characters, and the dates the right way round if they were given back to front.</summary>
     private static ReceiptFilter Tidy(ReceiptFilter? filter)
     {
         if (filter is null)
@@ -229,7 +216,6 @@ internal sealed class ReceiptService(
             return NotWaitingForReview(receipt.Status);
         }
 
-        // Checks the request's attributes can't express.
         var currency = Clean(request.Currency)?.ToUpperInvariant();
         if (currency is not null && !Currencies.IsKnown(currency))
         {
@@ -242,7 +228,6 @@ internal sealed class ReceiptService(
             return Error.Validation("receipts.implausible_date", "The receipt date must be between 2000 and today.");
         }
 
-        // An archived category may stay on a receipt that already has it, but can't be newly chosen.
         if (request.CategoryId is { } categoryId && categoryId != receipt.CategoryId)
         {
             var userCategories = await categories.ListAsync(UserId, cancellationToken);
@@ -268,7 +253,6 @@ internal sealed class ReceiptService(
             return Error.Validation("receipts.empty_line", "Every line item needs a description.");
         }
 
-        // Apply each field, remembering which changed: changing a field answers AI's "please check" note on it.
         var changed = new HashSet<string>(StringComparer.Ordinal);
         void Apply<T>(string field, T current, T updated, Action<T> assign)
         {
@@ -285,20 +269,19 @@ internal sealed class ReceiptService(
         Apply("Subtotal", receipt.Subtotal, Money(request.Subtotal), value => receipt.Subtotal = value);
         Apply("Tax", receipt.Tax, Money(request.Tax), value => receipt.Tax = value);
         Apply("Total", receipt.Total, Money(request.Total), value => receipt.Total = value);
-        // Whatever is typed, a card number keeps only its last four digits.
         Apply("PaymentMethod", receipt.PaymentMethod, ExtractionSanitizer.MaskCardNumbers(Clean(request.PaymentMethod)),
             value => receipt.PaymentMethod = value);
         Apply("Category", receipt.CategoryId, request.CategoryId, value =>
         {
             receipt.CategoryId = value;
-            receipt.CategorySuggestedByAi = false; // the user's choice now
+            receipt.CategorySuggestedByAi = false;
         });
         receipt.Notes = Clean(request.Notes);
 
         if (!SameLines(receipt.LineItems, lineItems))
         {
             changed.Add("LineItems");
-            receipt.LineItems.Clear(); // removed lines are deleted when saved
+            receipt.LineItems.Clear();
             receipt.LineItems.AddRange(lineItems);
         }
 
@@ -335,7 +318,6 @@ internal sealed class ReceiptService(
         decimal? amountCharged = null;
         if (request.AmountCharged is { } charged)
         {
-            // The user's statement says what it really cost; the rate on record is the one that implies.
             amountCharged = Money(charged);
             rate = total > 0
                 ? Math.Round(amountCharged.Value / total, ExchangeRateService.RateDecimals, MidpointRounding.AwayFromZero)
@@ -356,7 +338,6 @@ internal sealed class ReceiptService(
         receipt.Approve(baseCurrency, rate, rateDate, amountCharged, timeProvider.GetUtcNow());
         await repository.SaveChangesAsync(cancellationToken);
 
-        // The approval counts towards the category's budget now; tell the user if it crossed 80% or 100%.
         await budgetAlerts.CheckAsync(receipt, cancellationToken);
         return ToDetail(receipt);
     }
@@ -395,7 +376,6 @@ internal sealed class ReceiptService(
         return ToDetail(receipt);
     }
 
-    /// <summary>E.g. "date and category", for "Add the date and category before approving."</summary>
     private static string MissingForApproval(Receipt receipt)
     {
         var missing = new List<string>();
@@ -445,7 +425,6 @@ internal sealed class ReceiptService(
             : Error.Validation("receipts.unsupported_type", $"\"{name}\" isn't a JPG, PNG, WebP, HEIC or PDF file.");
     }
 
-    /// <summary>A ledger row. Shared with the overview's recent entries.</summary>
     internal static ReceiptSummaryDto ToSummary(Receipt r) => new(
         r.Id, r.Number, r.Status, r.VendorName, r.ReceiptDate, r.Currency, r.Total, r.BaseCurrencyTotal,
         r.CategoryId, r.FileName, r.CreatedAt);

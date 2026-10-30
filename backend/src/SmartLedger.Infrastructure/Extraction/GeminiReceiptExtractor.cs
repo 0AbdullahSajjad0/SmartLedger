@@ -4,10 +4,6 @@ using SmartLedger.Infrastructure.Gemini;
 
 namespace SmartLedger.Infrastructure.Extraction;
 
-/// <summary>
-/// Reads receipts with Google Gemini: the image (or PDF) plus the user's categories go in, and Gemini must answer in
-/// our receipt schema. Everything it says is checked by <see cref="ExtractionSanitizer"/> before it's saved.
-/// </summary>
 internal sealed class GeminiReceiptExtractor(GeminiApi gemini) : IReceiptExtractor
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
@@ -62,8 +58,6 @@ internal sealed class GeminiReceiptExtractor(GeminiApi gemini) : IReceiptExtract
             parsed.FieldsToCheck?.Select(f => new ExtractedFlag(f.Field, f.Reason)).ToList() ?? [],
             text);
     }
-
-    // ---- Our receipt schema's shape ----
 
     private sealed record GeminiReceipt(
         bool IsReceipt,

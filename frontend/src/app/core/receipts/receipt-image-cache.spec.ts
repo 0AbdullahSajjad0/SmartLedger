@@ -32,7 +32,6 @@ describe('receiptImageCacheInterceptor', () => {
 
   async function load(url: string): Promise<Blob> {
     const pending = firstValueFrom(client.get(url, { responseType: 'blob' }));
-    // Only asked of the server when it isn't cached; expectNone keeps a cached hit honest.
     http.match(url).forEach((request) => request.flush(new Blob([url], { type: 'image/jpeg' })));
     return pending;
   }

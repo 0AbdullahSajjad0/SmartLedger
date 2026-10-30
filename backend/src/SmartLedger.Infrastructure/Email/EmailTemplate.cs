@@ -4,10 +4,6 @@ using SmartLedger.Application.Email;
 
 namespace SmartLedger.Infrastructure.Email;
 
-/// <summary>
-/// The look of every email: the app's ledger style, built from tables and inline styles because mail apps ignore
-/// stylesheets and web fonts. Every value is HTML-encoded, since some (category names) are typed by users.
-/// </summary>
 internal static class EmailTemplate
 {
     private const string Ink = "#1c1a17";
@@ -16,9 +12,6 @@ internal static class EmailTemplate
     private const string Muted = "#5e574c";
     private const string Accent = "#a84b26";
 
-    /// <param name="eyebrow">The small capitals above the title, e.g. "Budget alert".</param>
-    /// <param name="paragraphs">Plain sentences; encoded here.</param>
-    /// <param name="footer">Small print under the sheet: why the email was sent.</param>
     public static EmailMessage Render(
         string to,
         string subject,
@@ -35,9 +28,7 @@ internal static class EmailTemplate
             .Append($"<body style=\"margin:0;padding:0;background:{Paper};\">")
             .Append($"<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"background:{Paper};\"><tr><td align=\"center\" style=\"padding:32px 16px;\">")
             .Append("<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"max-width:560px;\">")
-            // Masthead: the wordmark on espresso.
             .Append($"<tr><td style=\"background:{Ink};padding:16px 28px;font-family:Georgia,'Times New Roman',serif;font-size:20px;font-weight:bold;color:{Paper};\">SmartLedger</td></tr>")
-            // The sheet.
             .Append($"<tr><td style=\"background:{Sheet};border:1px solid {Ink};border-top:0;padding:32px 28px;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.6;color:{Ink};\">")
             .Append($"<p style=\"margin:0 0 8px;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:{Accent};\">")
             .Append(Encode(eyebrow)).Append("</p>")
@@ -72,5 +63,4 @@ internal static class EmailTemplate
     }
 
     private static string Encode(string value) => HtmlEncoder.Default.Encode(value);
-
 }

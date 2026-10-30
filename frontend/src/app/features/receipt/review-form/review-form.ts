@@ -22,19 +22,13 @@ interface LineItemForm {
   amount: FormControl<number | null>;
 }
 
-/** Amounts within a cent count as equal, like the API's own checks. */
 const TOLERANCE = 0.01;
 
-/** Every ISO currency code the browser knows, for the currency field's suggestions. */
 const CURRENCY_NAMES = new Intl.DisplayNames(['en'], { type: 'currency' });
 const CURRENCIES = Intl.supportedValuesOf('currency').map((code) => ({ code, name: CURRENCY_NAMES.of(code) ?? code }));
 
 const MONEY = new Intl.NumberFormat('en', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-/**
- * The record as an editable form, for receipts waiting for review (or that AI couldn't read). Saving, approving and
- * rejecting go to the API; the updated receipt comes back through `changed`.
- */
 @Component({
   selector: 'app-receipt-review-form',
   imports: [ReactiveFormsModule, DatePipe, DecimalPipe, NgTemplateOutlet],
@@ -48,10 +42,8 @@ export class ReceiptReviewForm {
 
   readonly receipt = input.required<ReceiptDetail>();
   readonly categories = input.required<Category[]>();
-  /** The user's reporting currency: what approving converts to. */
   readonly baseCurrency = input.required<string>();
 
-  /** The receipt as the API returned it after saving, approving or rejecting. */
   readonly changed = output<ReceiptDetail>();
 
   protected readonly currencies = CURRENCIES;
@@ -71,7 +63,6 @@ export class ReceiptReviewForm {
     amountCharged: this.fb.control<number | null>(null, Validators.min(0.01)),
   });
 
-  /** The form's values as a signal, so the checks and the conversion below follow every change. */
   protected readonly value = toSignal(this.form.valueChanges.pipe(map(() => this.form.getRawValue())), {
     initialValue: this.form.getRawValue(),
   });
@@ -83,19 +74,16 @@ export class ReceiptReviewForm {
 
   protected readonly footnotes = computed(() => numberFootnotes(this.receipt().extractionFlags));
 
-  /** The user's active categories, plus an archived one if this receipt already has it. */
   protected readonly categoryOptions = computed(() =>
     this.categories().filter((c) => !c.isArchived || c.id === this.receipt().categoryId),
   );
 
-  /** Arithmetic that doesn't add up. Shown as warnings, not errors: discounts and tips are real. */
   protected readonly checks = computed(() => {
     const { lineItems, subtotal, tax, total } = this.value();
     const warnings: string[] = [];
 
     if (lineItems.length > 0) {
       const lines = lineItems.reduce((sum, line) => sum + (line.amount ?? 0), 0);
-      // Compare with the subtotal, or with the total when there's no subtotal or tax to account for.
       const target = subtotal ?? (tax === null ? total : null);
       if (target !== null && Math.abs(lines - target) > TOLERANCE) {
         warnings.push(
@@ -111,7 +99,6 @@ export class ReceiptReviewForm {
     return warnings;
   });
 
-  /** What approving still needs, e.g. ['date', 'category']. */
   protected readonly missing = computed(() => {
     const v = this.value();
     return [
@@ -126,7 +113,6 @@ export class ReceiptReviewForm {
   protected readonly fromCurrency = computed(() => this.value().currency.trim().toUpperCase());
   protected readonly sameCurrency = computed(() => this.fromCurrency() === this.baseCurrency());
 
-  // A plain string, so the rate is looked up again only when currency or date change, not on every keystroke.
   private readonly rateKey = computed(() => {
     const from = this.fromCurrency();
     const date = this.value().receiptDate;
@@ -144,7 +130,6 @@ export class ReceiptReviewForm {
 
   protected readonly quoteError = computed(() => (this.quote.error() ? describeHttpError(this.quote.error()) : null));
 
-  /** The amount that will go into the ledger, in the base currency, as far as it can be known yet. */
   protected readonly converted = computed(() => {
     const { total, amountCharged } = this.value();
     if (amountCharged !== null) {
@@ -160,8 +145,6 @@ export class ReceiptReviewForm {
   });
 
   constructor() {
-    // Show the receipt as stored: on first load, and again after every save, so the form reflects what the API kept
-    // (e.g. a card number cut to its last four digits).
     effect(() => {
       const receipt = this.receipt();
       untracked(() => this.load(receipt));
@@ -186,7 +169,6 @@ export class ReceiptReviewForm {
     this.form.controls.lineItems.markAsDirty();
   }
 
-  /** Quantity × unit price, filled in as either changes. The amount can still be typed over (discounts). */
   protected recalculate(index: number): void {
     const { quantity, unitPrice, amount } = this.form.controls.lineItems.at(index).controls;
     if (quantity.value !== null && unitPrice.value !== null) {
@@ -218,7 +200,6 @@ export class ReceiptReviewForm {
 
     await this.run('approve', async () => {
       const id = this.receipt().id;
-      // Unsaved corrections are saved first, so what's approved is what's on screen.
       if (this.detailsChanged()) {
         await firstValueFrom(this.api.update(id, this.request()));
       }
@@ -227,7 +208,6 @@ export class ReceiptReviewForm {
   }
 
   protected async reject(): Promise<void> {
-    // No "are you sure?": rejecting can be undone with Reopen.
     await this.run('reject', async () => this.changed.emit(await firstValueFrom(this.api.reject(this.receipt().id))));
   }
 
@@ -247,7 +227,6 @@ export class ReceiptReviewForm {
     }
   }
 
-  /** Anything but the amount charged, which is only sent with the approval. */
   private detailsChanged(): boolean {
     return Object.entries(this.form.controls).some(([name, control]) => name !== 'amountCharged' && control.dirty);
   }
@@ -310,7 +289,6 @@ function text(value: string): string | null {
   return trimmed ? trimmed : null;
 }
 
-/** ['date', 'category'] → "date and category". */
 function listOf(items: string[]): string {
   return items.length === 1 ? items[0] : `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`;
 }

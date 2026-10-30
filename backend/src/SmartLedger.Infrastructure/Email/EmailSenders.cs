@@ -9,10 +9,6 @@ using EmailMessage = SmartLedger.Application.Email.EmailMessage;
 
 namespace SmartLedger.Infrastructure.Email;
 
-/// <summary>
-/// Azure Communication Services Email. The client signs in with the Container App's managed identity (no key or
-/// connection string). Its own retries are off: the outbox worker decides when to try again.
-/// </summary>
 internal sealed class AzureEmailSender(EmailClient client, IOptions<EmailOptions> options) : IEmailSender
 {
     private static readonly TimeSpan DefaultThrottleWait = TimeSpan.FromMinutes(1);
@@ -26,7 +22,6 @@ internal sealed class AzureEmailSender(EmailClient client, IOptions<EmailOptions
 
         try
         {
-            // Started, not Completed: waiting for delivery would poll the service, and status checks have a quota too.
             await client.SendAsync(WaitUntil.Started, email, cancellationToken);
         }
         catch (RequestFailedException ex) when (ex.Status == 429)
@@ -41,7 +36,6 @@ internal sealed class AzureEmailSender(EmailClient client, IOptions<EmailOptions
             : null;
 }
 
-/// <summary>For development: saves each email as an HTML file to open in a browser, and logs where it went.</summary>
 internal sealed class LocalEmailSender(
     IOptions<EmailOptions> options,
     IWebHostEnvironment environment,

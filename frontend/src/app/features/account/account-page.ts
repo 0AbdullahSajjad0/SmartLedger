@@ -8,7 +8,6 @@ import { AuthStore } from '../../core/auth/auth-store';
 import { describeHttpError } from '../../core/http/describe-http-error';
 import { saveFile } from '../../shared/files/save-file';
 
-/** One button's request: whether it's running, whether it worked, and what went wrong if it didn't. */
 class RequestState {
   readonly busy = signal(false);
   readonly done = signal(false);
@@ -38,7 +37,6 @@ class RequestState {
   }
 }
 
-/** Name, password, email alerts, other devices, the data export and deleting the account. */
 @Component({
   selector: 'app-account-page',
   imports: [ReactiveFormsModule],
@@ -69,7 +67,6 @@ export class AccountPage {
   protected readonly download = new RequestState(this.destroyRef);
   protected readonly deleteAccount = new RequestState(this.destroyRef);
 
-  /** Which forms have had a submit attempt: their errors show even on fields not visited yet. */
   protected readonly submitted = signal<ReadonlySet<'profile' | 'password' | 'deletion'>>(new Set());
   protected readonly confirmingDelete = signal(false);
 
@@ -100,7 +97,6 @@ export class AccountPage {
     });
   }
 
-  /** Saves as soon as the box is ticked or cleared; puts the tick back if the server refused. */
   protected setBudgetAlerts(box: HTMLInputElement): void {
     const on = box.checked;
     this.saveAlerts.send(
@@ -156,7 +152,6 @@ export class AccountPage {
   }
 }
 
-/** Today in the browser's time zone, as yyyy-MM-dd. */
 function localDate(): string {
   const now = new Date();
   const pad = (n: number) => String(n).padStart(2, '0');

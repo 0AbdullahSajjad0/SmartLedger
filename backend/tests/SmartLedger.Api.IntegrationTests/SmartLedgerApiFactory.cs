@@ -11,10 +11,6 @@ using SmartLedger.Infrastructure.Persistence;
 
 namespace SmartLedger.Api.IntegrationTests;
 
-/// <summary>
-/// Runs the API in memory against a real, freshly migrated SQL Server database:
-/// a SQL Server container in CI, a separate LocalDB database on a developer machine.
-/// </summary>
 public class SmartLedgerApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
 {
     private static readonly string ConnectionString =
@@ -35,7 +31,6 @@ public class SmartLedgerApiFactory : WebApplicationFactory<Program>, IAsyncLifet
         builder.UseSetting("Email:AppUrl", AppUrl);
         builder.UseSetting("Email:DelayBetweenEmails", "00:00:00");
 
-        // No real AI, rate source or mail service in tests: the fakes answer instantly and the same way every time.
         builder.ConfigureTestServices(services =>
         {
             services.AddScoped<IReceiptExtractor, FakeReceiptExtractor>();
@@ -49,7 +44,6 @@ public class SmartLedgerApiFactory : WebApplicationFactory<Program>, IAsyncLifet
 
     public FakeEmailSender Emails { get; } = new();
 
-    /// <summary>Uploaded files go to a fresh temporary folder per test run.</summary>
     public string StoragePath { get; } = Path.Combine(Path.GetTempPath(), "smartledger-tests", Guid.NewGuid().ToString("N"));
 
     public async Task InitializeAsync()
@@ -70,9 +64,6 @@ public class SmartLedgerApiFactory : WebApplicationFactory<Program>, IAsyncLifet
     }
 }
 
-/// <summary>
-/// All integration tests share one API instance and database, and run one class at a time.
-/// </summary>
 [CollectionDefinition(Name)]
 public sealed class ApiCollection : ICollectionFixture<SmartLedgerApiFactory>
 {

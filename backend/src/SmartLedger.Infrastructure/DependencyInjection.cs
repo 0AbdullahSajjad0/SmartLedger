@@ -38,15 +38,10 @@ namespace SmartLedger.Infrastructure;
 
 public static class DependencyInjection
 {
-    /// <summary>
-    /// Registers the infrastructure layer's services (database, repositories, AI, file storage).
-    /// </summary>
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
         services.TryAddSingleton(TimeProvider.System);
 
-        // Azure SQL serverless pauses when idle and needs up to a minute to resume;
-        // retrying transient errors covers that instead of failing the first request.
         services.AddDbContext<AppDbContext>(options => options.UseSqlServer(
             configuration.GetConnectionString("Default"),
             sql => sql.EnableRetryOnFailure()));
@@ -83,7 +78,6 @@ public static class DependencyInjection
         services.AddScoped<EmailComposer>();
         services.AddHostedService<EmailOutboxWorker>();
 
-        // Chosen when first used, from the validated options: Local in development, Azure in production.
         services.AddSingleton<IEmailSender>(provider =>
         {
             var options = provider.GetRequiredService<IOptions<EmailOptions>>().Value;
@@ -91,7 +85,6 @@ public static class DependencyInjection
             return options.Provider switch
             {
                 EmailProvider.Local => ActivatorUtilities.CreateInstance<LocalEmailSender>(provider),
-                // No connection string or key: the Container App's managed identity has a role on the resource.
                 EmailProvider.AzureCommunicationServices => ActivatorUtilities.CreateInstance<AzureEmailSender>(
                     provider,
                     new EmailClient(
@@ -108,8 +101,7 @@ public static class DependencyInjection
         services.AddScoped<IExchangeRateRepository, ExchangeRateRepository>();
 
         services.AddHttpClient<IExchangeRateProvider, CurrencyApiExchangeRateProvider>(client =>
-                client.Timeout = Timeout.InfiniteTimeSpan) // The resilience handler below owns timeouts.
-            // Static files on a CDN: quick retries for blips, and an overall limit so approving never hangs.
+                client.Timeout = Timeout.InfiniteTimeSpan)
             .AddStandardResilienceHandler(resilience =>
             {
                 resilience.AttemptTimeout.Timeout = TimeSpan.FromSeconds(10);
@@ -124,13 +116,11 @@ public static class DependencyInjection
             .ValidateOnStart();
         services.AddSingleton<IValidateOptions<GeminiOptions>, GeminiOptionsValidation>();
 
-        // One Gemini client, shared by the receipt reader and the monthly report writer.
         services.AddHttpClient<GeminiApi>((provider, client) =>
             {
                 client.BaseAddress = provider.GetRequiredService<IOptions<GeminiOptions>>().Value.BaseUrl;
-                client.Timeout = Timeout.InfiniteTimeSpan; // The resilience handler below owns timeouts.
+                client.Timeout = Timeout.InfiniteTimeSpan;
             })
-            // Retries rate limits (429), outages (5xx) and timeouts with backoff, honouring Retry-After.
             .AddStandardResilienceHandler(resilience =>
             {
                 resilience.AttemptTimeout.Timeout = TimeSpan.FromSeconds(60);
@@ -154,7 +144,6 @@ public static class DependencyInjection
             .ValidateDataAnnotations()
             .ValidateOnStart();
 
-        // Chosen when first used, from the validated options: Local in development and tests, AzureBlob in production.
         services.AddSingleton<IFileStorage>(provider =>
         {
             var options = provider.GetRequiredService<IOptions<StorageOptions>>().Value;
@@ -162,8 +151,6 @@ public static class DependencyInjection
             return options.Provider switch
             {
                 StorageProvider.Local => ActivatorUtilities.CreateInstance<LocalFileStorage>(provider),
-                // No connection string or key: the Container App's managed identity has the
-                // "Storage Blob Data Contributor" role on the account.
                 StorageProvider.AzureBlob => new BlobFileStorage(
                     new BlobServiceClient(new Uri(options.BlobServiceUri!), new DefaultAzureCredential())
                         .GetBlobContainerClient(options.ContainerName)),
@@ -178,7 +165,6 @@ public static class DependencyInjection
             {
                 options.User.RequireUniqueEmail = true;
 
-                // Length over complexity rules (NIST SP 800-63B): long passphrases beat "Passw0rd!".
                 options.Password.RequiredLength = 10;
                 options.Password.RequireDigit = false;
                 options.Password.RequireLowercase = false;
@@ -189,11 +175,9 @@ public static class DependencyInjection
                 options.Lockout.MaxFailedAccessAttempts = 5;
                 options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
 
-                // Confirmation links get their own, longer-lived provider; reset links keep the default one.
                 options.Tokens.EmailConfirmationTokenProvider = EmailConfirmationTokenProvider.ProviderName;
             })
             .AddEntityFrameworkStores<AppDbContext>()
-            // Password reset tokens: signed with Data Protection, tied to the account's security stamp.
             .AddDefaultTokenProviders()
             .AddTokenProvider<EmailConfirmationTokenProvider>(EmailConfirmationTokenProvider.ProviderName);
 
@@ -202,9 +186,6 @@ public static class DependencyInjection
         services.Configure<DataProtectionTokenProviderOptions>(options =>
             options.TokenLifespan = EmailComposer.PasswordResetLifetime);
 
-        // The signing keys live in the database so reset links survive restarts and deployments. They're stored
-        // unencrypted, as the database is already private (Entra-only sign-in, no public data); Key Vault could wrap
-        // them later.
         services.AddDataProtection()
             .SetApplicationName("SmartLedger")
             .PersistKeysToDbContext<AppDbContext>();
@@ -224,7 +205,6 @@ public static class DependencyInjection
             {
                 var jwt = jwtOptions.Value;
 
-                // Keep claim names as issued ("sub", "email") instead of the long XML-era URIs.
                 bearer.MapInboundClaims = false;
                 bearer.TokenValidationParameters = new TokenValidationParameters
                 {

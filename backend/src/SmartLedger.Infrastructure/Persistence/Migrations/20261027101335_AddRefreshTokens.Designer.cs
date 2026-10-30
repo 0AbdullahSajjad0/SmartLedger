@@ -15,7 +15,6 @@ namespace SmartLedger.Infrastructure.Persistence.Migrations
     [Migration("20261027101335_AddRefreshTokens")]
     partial class AddRefreshTokens
     {
-        /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618

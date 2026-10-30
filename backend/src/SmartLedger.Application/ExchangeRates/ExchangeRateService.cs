@@ -9,10 +9,8 @@ internal sealed class ExchangeRateService(
     TimeProvider timeProvider,
     ILogger<ExchangeRateService> logger) : IExchangeRateService
 {
-    /// <summary>How many earlier days to try when a day has no rates.</summary>
     public const int DaysToLookBack = 7;
 
-    /// <summary>Decimal places kept in a quoted rate: enough for weak currencies (1 IRR ≈ 0.0000238 USD).</summary>
     public const int RateDecimals = 10;
 
     public async Task<Result<ExchangeRateQuote>> GetRateAsync(
@@ -34,7 +32,6 @@ internal sealed class ExchangeRateService(
             return new ExchangeRateQuote(from, to, 1m, date);
         }
 
-        // Rates for future days don't exist; a receipt dated "tomorrow" (time zones) uses today's.
         var today = DateOnly.FromDateTime(timeProvider.GetUtcNow().UtcDateTime);
         var start = date > today ? today : date;
         string[] wanted = [from, to];
@@ -63,7 +60,7 @@ internal sealed class ExchangeRateService(
 
             if (fetched is null)
             {
-                continue; // Nothing published for that day; try the day before.
+                continue;
             }
 
             await repository.SaveAsync(fetched, cancellationToken);
@@ -82,7 +79,6 @@ internal sealed class ExchangeRateService(
             $"No exchange rate is available for {date:dd MMM yyyy}. Enter the amount charged instead.");
     }
 
-    // Through the dollar: 1 PKR = 1/277.02 USD, so PKR → EUR is EUR-per-USD ÷ PKR-per-USD.
     private static ExchangeRateQuote Quote(string from, string to, IReadOnlyDictionary<string, decimal> unitsPerUsd, DateOnly day) =>
         new(from, to, Math.Round(unitsPerUsd[to] / unitsPerUsd[from], RateDecimals, MidpointRounding.AwayFromZero), day);
 }

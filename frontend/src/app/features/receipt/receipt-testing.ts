@@ -1,6 +1,5 @@
 import { ReceiptDetail } from '../../core/receipts/receipt.models';
 
-/** A receipt as the API returns it, waiting for review with nothing read yet; tests override what they need. */
 export function receiptDetail(changes: Partial<ReceiptDetail> = {}): ReceiptDetail {
   return {
     id: 'r-1',

@@ -72,7 +72,6 @@ describe('Overview', () => {
     fixture.detectChanges();
   }
 
-  /** Each key figure as "label: value · note". */
   function figures(): string[] {
     return [...page.querySelectorAll('.figure')].map((figure) => {
       const text = (selector: string) => [...figure.querySelectorAll(selector)].map((e) => e.textContent!.replace(/\s+/g, ' ').trim());
@@ -89,7 +88,6 @@ describe('Overview', () => {
   });
 
   it('shows the month’s key figures', async () => {
-    // A past month, so the labels don't depend on today's date.
     await render({ ...OCTOBER, month: '2025-03' }, '2025-03');
 
     expect(page.querySelector('h1')?.textContent?.replace(/\s+/g, ' ').trim()).toBe('March 2025');

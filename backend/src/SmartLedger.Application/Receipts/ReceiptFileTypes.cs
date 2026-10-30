@@ -2,20 +2,14 @@ using System.Text;
 
 namespace SmartLedger.Application.Receipts;
 
-/// <summary>A file type we accept, with the extension and content type we store it under.</summary>
 public sealed record ReceiptFileType(string ContentType, string Extension);
 
-/// <summary>
-/// Identifies uploads by their first bytes (their "magic number"), not by the name or the content type the
-/// browser claims. A renamed .exe or .html file is rejected, whatever it is called.
-/// </summary>
 public static class ReceiptFileTypes
 {
     public const long MaxSizeBytes = 10 * 1024 * 1024;
 
     public const int MaxFilesPerUpload = 10;
 
-    /// <summary>Enough bytes to recognise every format below.</summary>
     public const int SignatureLength = 12;
 
     public static readonly ReceiptFileType Jpeg = new("image/jpeg", ".jpg");
@@ -24,7 +18,6 @@ public static class ReceiptFileTypes
     public static readonly ReceiptFileType Heic = new("image/heic", ".heic");
     public static readonly ReceiptFileType Pdf = new("application/pdf", ".pdf");
 
-    // HEIC/HEIF photos (iPhone default) are ISO media files: bytes 4-11 read "ftyp" plus a brand.
     private static readonly string[] HeicBrands = ["heic", "heix", "hevc", "hevx", "mif1", "msf1"];
 
     public static ReceiptFileType? Detect(ReadOnlySpan<byte> header)

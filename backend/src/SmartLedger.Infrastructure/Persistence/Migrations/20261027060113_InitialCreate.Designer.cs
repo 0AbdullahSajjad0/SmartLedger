@@ -15,7 +15,6 @@ namespace SmartLedger.Infrastructure.Persistence.Migrations
     [Migration("20261027060113_InitialCreate")]
     partial class InitialCreate
     {
-        /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618

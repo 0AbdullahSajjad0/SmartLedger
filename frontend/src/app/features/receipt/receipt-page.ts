@@ -15,15 +15,10 @@ import { StatusStamp } from '../../shared/ui/status-stamp/status-stamp';
 import { numberFootnotes } from './footnotes';
 import { ReceiptReviewForm } from './review-form/review-form';
 
-/** Originals every browser can show inline, for receipts uploaded before the server made previews. */
 const PREVIEWABLE = new Set(['image/jpeg', 'image/png', 'image/webp']);
 
 const REFRESH_WHILE_READING_MS = 3_000;
 
-/**
- * One receipt: the original on the left, the record on the right. Becomes the review screen
- * once AI extraction fills in the details.
- */
 @Component({
   selector: 'app-receipt-page',
   imports: [RouterLink, DatePipe, DecimalPipe, NgTemplateOutlet, EntryNumberPipe, FileSizePipe, StatusStamp, ReceiptReviewForm],
@@ -37,12 +32,10 @@ export class ReceiptPage {
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
 
-  /** Route parameter :id. */
   readonly id = input.required<string>();
 
   protected readonly receipt = httpResource<ReceiptDetail>(() => `${this.api.baseUrl}/${this.id()}`);
 
-  /** For the category's name rather than its id, and the review form's category picker. */
   protected readonly categories = httpResource<Category[]>(() => this.api.categoriesUrl, { defaultValue: [] });
 
   protected readonly categoryName = computed(() => {
@@ -50,15 +43,12 @@ export class ReceiptPage {
     return categoryId ? (this.categories.value().find((c) => c.id === categoryId)?.name ?? null) : null;
   });
 
-  /** Fields the AI wasn't sure about, numbered like footnotes: "Paid with ¹" → "¹ One digit was faded." */
   protected readonly footnotes = computed(() =>
     this.receipt.hasValue() ? numberFootnotes(this.receipt.value().extractionFlags) : [],
   );
 
-  /** What approving converts to. */
   protected readonly baseCurrency = computed(() => this.auth.user()?.baseCurrency ?? 'USD');
 
-  /** Waiting for review, or AI couldn't read it: the record is a form. */
   protected readonly editable = computed(() => {
     const status = this.receipt.hasValue() ? this.receipt.value().status : null;
     return status === 'NeedsReview' || status === 'Failed';
@@ -71,7 +61,6 @@ export class ReceiptPage {
   protected readonly deleting = signal(false);
   protected readonly deleteError = signal<string | null>(null);
 
-  /** Permanently removes the receipt and its files, then goes back to the ledger. */
   protected deleteReceipt(): void {
     if (!this.receipt.hasValue() || this.deleting()) {
       return;
@@ -90,19 +79,12 @@ export class ReceiptPage {
       });
   }
 
-  /** Marks are only for review; once approved or rejected, the notes have been answered. */
   protected footnoteFor(field: string): number | null {
     return this.editable() ? (this.footnotes().find((note) => note.field === field)?.number ?? null) : null;
   }
 
-  /**
-   * The picture beside the record: the cleaned preview once the server has made it. Receipts from before previews
-   * existed fall back to the original, if it's a format browsers can show. It needs the access token, so it's
-   * fetched like any API call (an <img src> can't send an Authorization header), then shown via a blob: URL.
-   */
   protected readonly image = httpResource.blob(() => this.imageSource());
 
-  // A plain string, so saving or reopening the receipt (a new object, same picture) doesn't download it again.
   private readonly imageSource = computed(() => {
     if (!this.receipt.hasValue()) {
       return undefined;
@@ -114,10 +96,8 @@ export class ReceiptPage {
     return status !== 'Processing' && PREVIEWABLE.has(contentType) ? this.api.fileUrl(id) : undefined;
   });
 
-  /** A temporary blob: address for the image, released when the image changes or the page closes. */
   protected readonly imageUrl = signal<string | null>(null);
 
-  /** Photos keep whatever the camera saved in them, which can include where they were taken. */
   protected readonly originalIsPhoto = computed(() =>
     this.receipt.hasValue() ? this.receipt.value().contentType.startsWith('image/') : false,
   );
@@ -129,12 +109,10 @@ export class ReceiptPage {
     this.receipt.error() ? describeHttpError(this.receipt.error()) : null,
   );
 
-  /** The review form saved, approved or rejected the receipt: show it as the API now has it. */
   protected onChanged(receipt: ReceiptDetail): void {
     this.receipt.set(receipt);
   }
 
-  /** Takes back an approval or rejection, so the record becomes a form again. */
   protected reopen(): void {
     if (!this.receipt.hasValue() || this.reopening()) {
       return;
@@ -153,7 +131,6 @@ export class ReceiptPage {
       });
   }
 
-  /** Fetched only when asked for: originals can be 10 MB, and the page itself shows the small preview. */
   protected downloadOriginal(): void {
     if (!this.receipt.hasValue() || this.downloading()) {
       return;
@@ -175,7 +152,6 @@ export class ReceiptPage {
   }
 
   constructor() {
-    // While AI is still reading this receipt, check again every few seconds.
     effect((onCleanup) => {
       const reading = this.receipt.hasValue() && this.receipt.value().status === 'Processing';
       if (!reading) {
@@ -186,7 +162,6 @@ export class ReceiptPage {
     });
 
     effect((onCleanup) => {
-      // Check hasValue() first: reading value() of a resource in an error state throws.
       const blob = this.image.hasValue() ? this.image.value() : undefined;
       if (!blob) {
         this.imageUrl.set(null);
@@ -200,7 +175,6 @@ export class ReceiptPage {
   }
 }
 
-/** Named by entry number, like the API does, never by the uploader's original file name. */
 function downloadName(number: number, fileName: string): string {
   const extension = fileName.includes('.') ? fileName.slice(fileName.lastIndexOf('.')).toLowerCase() : '';
   return `receipt-${number.toString().padStart(4, '0')}${extension}`;

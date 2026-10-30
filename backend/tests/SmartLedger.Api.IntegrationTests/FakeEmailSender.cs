@@ -3,7 +3,6 @@ using SmartLedger.Application.Email;
 
 namespace SmartLedger.Api.IntegrationTests;
 
-/// <summary>Keeps every "sent" email in memory, so tests can read them. Shared by all tests; filter by address.</summary>
 public sealed class FakeEmailSender : IEmailSender
 {
     private readonly ConcurrentQueue<EmailMessage> _sent = new();
@@ -14,11 +13,9 @@ public sealed class FakeEmailSender : IEmailSender
         return Task.CompletedTask;
     }
 
-    /// <param name="where">Narrows to one kind of email, e.g. <see cref="IsBudgetAlert"/>.</param>
     public IReadOnlyList<EmailMessage> SentTo(string address, Func<EmailMessage, bool>? where = null) =>
         _sent.Where(m => string.Equals(m.To, address, StringComparison.OrdinalIgnoreCase) && (where?.Invoke(m) ?? true)).ToList();
 
-    /// <summary>Waits for the background worker to send the <paramref name="count"/>th matching email to the address.</summary>
     public async Task<EmailMessage> WaitForAsync(string address, Func<EmailMessage, bool>? where = null, int count = 1)
     {
         var deadline = DateTime.UtcNow.AddSeconds(15);

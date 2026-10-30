@@ -12,7 +12,6 @@ using SmartLedger.Infrastructure.Persistence;
 
 namespace SmartLedger.Api.IntegrationTests;
 
-/// <summary>The Account page: name, password, other devices, export and deleting the account.</summary>
 [Collection(ApiCollection.Name)]
 public class AccountTests(SmartLedgerApiFactory factory)
 {
@@ -48,7 +47,6 @@ public class AccountTests(SmartLedgerApiFactory factory)
         var response = await client.PostAsJsonAsync("/api/account/password",
             new ChangePasswordRequest("not my password", NewPassword, auth.RefreshToken));
 
-        // 400 with a message for the form; a 401 would make the app sign the user out.
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         Assert.Equal("That password isn't right.", (await response.Content.ReadFromJsonAsync<ProblemDetails>())!.Title);
         Assert.Equal(HttpStatusCode.OK, (await SignInAsync(auth.User.Email, TestAuth.Password)).StatusCode);
@@ -86,7 +84,6 @@ public class AccountTests(SmartLedgerApiFactory factory)
     {
         var (client, first) = await SignedInAsync();
         var otherDevice = await (await SignInAsync(first.User.Email, TestAuth.Password)).Content.ReadFromJsonAsync<AuthResponse>();
-        // Another tab may have just refreshed: the token the page sends is the one before.
         var latest = await (await RefreshAsync(first.RefreshToken)).Content.ReadFromJsonAsync<AuthResponse>();
 
         var response = await client.PostAsJsonAsync("/api/account/sign-out-others", new SignOutOthersRequest(first.RefreshToken));
@@ -180,7 +177,6 @@ public class AccountTests(SmartLedgerApiFactory factory)
         await TestReceipts.UploadAndReadAsync(client);
         await client.PostAsync("/api/reports/insight?month=2026-10", null);
 
-        // Someone else's account must not be touched.
         var (otherClient, other) = await SignedInAsync();
         await TestReceipts.UploadAndReadAsync(otherClient);
 

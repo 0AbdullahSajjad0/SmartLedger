@@ -5,14 +5,10 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 namespace SmartLedger.Infrastructure.Persistence.Migrations
 {
-    /// <inheritdoc />
     public partial class AddReceiptReview : Migration
     {
-        /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            // Rates change from "dollars per unit" to "units per dollar". The table is only a cache, filled on demand
-            // from the rate source, so it's emptied rather than converted; nothing had been stored in it yet.
             migrationBuilder.Sql("DELETE FROM [ExchangeRates];");
 
             migrationBuilder.DropColumn(
@@ -56,7 +52,6 @@ namespace SmartLedger.Infrastructure.Persistence.Migrations
                 defaultValue: 0m);
         }
 
-        /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropColumn(

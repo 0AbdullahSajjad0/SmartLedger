@@ -8,16 +8,10 @@ using SmartLedger.Application.Receipts.Previews;
 
 namespace SmartLedger.Infrastructure.Previews;
 
-/// <summary>
-/// Photos are decoded and re-encoded with ImageMagick, so only pixels we wrote ourselves are stored and sent on:
-/// nothing hidden in the original file survives. PDFs get their first page rendered with PDFium.
-/// </summary>
 internal sealed class ReceiptPreviewRenderer : IReceiptPreviewRenderer
 {
-    /// <summary>Longest side of a preview. Keeps small print legible on long receipts, at a fraction of the size.</summary>
     public const uint MaxEdge = 3072;
 
-    /// <summary>Photos with more pixels than this (50 MP) are refused before decoding, so a small file can't claim to be enormous.</summary>
     public const ulong MaxPixels = 50_000_000;
 
     private const uint JpegQuality = 85;
@@ -27,14 +21,12 @@ internal sealed class ReceiptPreviewRenderer : IReceiptPreviewRenderer
 
     public async Task<byte[]> RenderAsync(Stream original, string contentType, CancellationToken cancellationToken)
     {
-        // At most 10 MB (checked at upload), so reading it into memory is fine and lets both libraries seek freely.
         using var buffer = new MemoryStream();
         await original.CopyToAsync(buffer, cancellationToken);
         var bytes = buffer.ToArray();
 
         if (contentType == ReceiptFileTypes.Pdf.ContentType)
         {
-            // PDFium ships native builds for these three only.
             if (OperatingSystem.IsWindows() || OperatingSystem.IsLinux() || OperatingSystem.IsMacOS())
             {
                 return RenderPdfFirstPage(bytes);
@@ -57,12 +49,10 @@ internal sealed class ReceiptPreviewRenderer : IReceiptPreviewRenderer
     {
         ImageMagickSetup.EnsureInitialized();
 
-        // The detected format is stated, never guessed by ImageMagick from the contents.
         var settings = new MagickReadSettings { Format = format, FrameIndex = 0, FrameCount = 1 };
 
         try
         {
-            // Read the size from the header first, without decoding any pixels.
             var info = new MagickImageInfo(bytes, settings);
             if ((ulong)info.Width * info.Height > MaxPixels)
             {
@@ -71,10 +61,8 @@ internal sealed class ReceiptPreviewRenderer : IReceiptPreviewRenderer
 
             using var image = new MagickImage(bytes, settings);
 
-            // Phones store photos sideways plus an "orientation" tag; apply it, since the tag is about to be removed.
             image.AutoOrient();
 
-            // Convert colours to standard sRGB while the colour profile is still there (iPhones use Display P3).
             if (image.ColorSpace == ColorSpace.CMYK)
             {
                 image.TransformColorSpace(image.GetColorProfile() ?? ColorProfiles.USWebCoatedSWOP, ColorProfiles.SRGB);
@@ -84,16 +72,14 @@ internal sealed class ReceiptPreviewRenderer : IReceiptPreviewRenderer
                 image.TransformColorSpace(ColorProfiles.SRGB);
             }
 
-            // JPEG has no transparency: put transparent screenshots on white, like paper.
             if (image.HasAlpha)
             {
                 image.BackgroundColor = MagickColors.White;
                 image.Alpha(AlphaAction.Remove);
             }
 
-            image.Resize(new MagickGeometry(MaxEdge, MaxEdge) { Greater = true }); // only ever shrinks
+            image.Resize(new MagickGeometry(MaxEdge, MaxEdge) { Greater = true });
 
-            // Removes EXIF (GPS location, camera, date taken), XMP, colour profiles and comments.
             image.Strip();
 
             image.Quality = JpegQuality;
@@ -116,14 +102,13 @@ internal sealed class ReceiptPreviewRenderer : IReceiptPreviewRenderer
     {
         try
         {
-            // Page size is in points (1/72 inch). Render at print quality, but never past the preview size limit.
             var page = Conversion.GetPageSize(pdf, page: 0);
             var longestInches = Math.Max(page.Width, page.Height) / 72f;
             var dpi = (int)Math.Clamp(MaxEdge / longestInches, 1, PdfDpi);
 
             using var bitmap = Conversion.ToImage(pdf, page: 0, options: new RenderOptions(
                 Dpi: dpi,
-                WithAnnotations: true, // stamps such as "PAID" are often annotations
+                WithAnnotations: true,
                 BackgroundColor: SKColors.White));
             using var jpeg = bitmap.Encode(SKEncodedImageFormat.Jpeg, (int)JpegQuality);
             return jpeg.ToArray();

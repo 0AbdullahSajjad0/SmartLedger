@@ -2,7 +2,6 @@ using SmartLedger.Application.Receipts.Extraction;
 
 namespace SmartLedger.Infrastructure.Extraction;
 
-/// <summary>What we ask Gemini, and the exact JSON shape it must answer in.</summary>
 internal static class GeminiPrompt
 {
     public const string System = """
@@ -36,7 +35,6 @@ internal static class GeminiPrompt
             """;
     }
 
-    /// <summary>OpenAPI-style schema (the subset Gemini supports). Category is limited to the user's own names.</summary>
     public static object ResponseSchema(IReadOnlyList<string> categoryNames)
     {
         object NullableString() => new { Type = "STRING", Nullable = true };

@@ -17,16 +17,12 @@ export class SignIn {
   private readonly auth = inject(AuthStore);
   private readonly router = inject(Router);
 
-  /** Query parameter: the page that sent the user here, to return to after signing in. */
   readonly returnUrl = input<string>();
 
-  /** Query parameter: set when the session ran out. */
   readonly expired = input(false, { transform: booleanAttribute });
 
-  /** Query parameter: set after a new password was chosen from a reset link. */
   readonly reset = input(false, { transform: booleanAttribute });
 
-  /** Query parameter: set after the user deleted their account. */
   readonly deleted = input(false, { transform: booleanAttribute });
 
   protected readonly form = inject(NonNullableFormBuilder).group({
@@ -39,7 +35,6 @@ export class SignIn {
   protected readonly submitted = signal(false);
   protected readonly serverError = signal<string | null>(null);
 
-  /** Errors appear once a field has been left, or after a submit attempt, not while typing the first time. */
   protected showError(field: SignInField): boolean {
     const control = this.form.controls[field];
     return control.invalid && (control.touched || this.submitted());
@@ -64,7 +59,6 @@ export class SignIn {
     }
   }
 
-  /** Only follow paths inside this app; "//evil.example" would leave it (an open redirect). */
   private safeReturnUrl(): string {
     const url = this.returnUrl();
     return url?.startsWith('/') && !url.startsWith('//') ? url : '/overview';
