@@ -63,9 +63,12 @@ export class CategoriesPage {
     return category.monthlyBudget ? (category.spent / category.monthlyBudget) * 100 : null;
   }
 
-  /** Over budget is rust, nearly there (90%+) is mustard, otherwise ink, as on a printed statement. */
+  /**
+   * Over budget is rust, nearly there (80%+) is mustard, otherwise ink, as on a printed statement. The same levels
+   * as the budget alert emails.
+   */
   protected tone(used: number | null): 'over' | 'near' | 'fine' {
-    return used === null || used < 90 ? 'fine' : used > 100 ? 'over' : 'near';
+    return used === null || used < 80 ? 'fine' : used > 100 ? 'over' : 'near';
   }
 
   protected onSaved(): void {

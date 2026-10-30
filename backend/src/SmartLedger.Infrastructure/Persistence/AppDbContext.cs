@@ -1,15 +1,27 @@
+using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using SmartLedger.Domain.Common;
 using SmartLedger.Domain.Entities;
+using SmartLedger.Infrastructure.Email;
 using SmartLedger.Infrastructure.Identity;
 
 namespace SmartLedger.Infrastructure.Persistence;
 
 public class AppDbContext(DbContextOptions<AppDbContext> options, TimeProvider timeProvider)
-    : IdentityDbContext<ApplicationUser, IdentityRole<Guid>, Guid>(options)
+    : IdentityDbContext<ApplicationUser, IdentityRole<Guid>, Guid>(options), IDataProtectionKeyContext
 {
+    public DbSet<BudgetAlert> BudgetAlerts => Set<BudgetAlert>();
+
+    public DbSet<OutgoingEmail> OutgoingEmails => Set<OutgoingEmail>();
+
+    /// <summary>
+    /// The keys that sign password reset links. Kept in the database, not in the container, so links sent before a
+    /// restart or a new deployment still work.
+    /// </summary>
+    public DbSet<DataProtectionKey> DataProtectionKeys => Set<DataProtectionKey>();
+
     public DbSet<Category> Categories => Set<Category>();
 
     public DbSet<Receipt> Receipts => Set<Receipt>();

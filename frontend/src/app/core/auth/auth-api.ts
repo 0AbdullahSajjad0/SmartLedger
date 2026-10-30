@@ -30,6 +30,15 @@ export class AuthApi {
     return this.http.post<void>(`${this.baseUrl}/logout`, { refreshToken }, skipAuth());
   }
 
+  /** Always succeeds, whether or not an account uses the address. */
+  forgotPassword(email: string): Observable<void> {
+    return this.http.post<void>(`${this.baseUrl}/forgot-password`, { email }, skipAuth());
+  }
+
+  resetPassword(userId: string, token: string, newPassword: string): Observable<void> {
+    return this.http.post<void>(`${this.baseUrl}/reset-password`, { userId, token, newPassword }, skipAuth());
+  }
+
   me(): Observable<User> {
     return this.http.get<User>(`${this.baseUrl}/me`);
   }

@@ -11,4 +11,7 @@ internal sealed class UserDirectory(AppDbContext db) : IUserDirectory
             .Where(u => u.Id == userId)
             .Select(u => (string?)u.BaseCurrency)
             .SingleOrDefaultAsync(cancellationToken);
+
+    public Task<bool> WantsBudgetAlertsAsync(Guid userId, CancellationToken cancellationToken) =>
+        db.Users.AnyAsync(u => u.Id == userId && u.BudgetAlerts, cancellationToken);
 }

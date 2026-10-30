@@ -6,6 +6,8 @@
 
   @if (deleted()) {
     <p class="auth-form__notice" role="status">Your account and everything in it have been deleted.</p>
+  } @else if (reset()) {
+    <p class="auth-form__sent" role="status">Your password has been changed. Sign in with the new one.</p>
   } @else if (expired()) {
     <p class="auth-form__notice" role="status">Your session ended. Please sign in again.</p>
   }
@@ -46,6 +48,7 @@
         <span id="password-error" class="field__error">Enter your password.</span>
       }
     </div>
+    <a class="auth-form__aside" routerLink="/forgot-password">Forgot your password?</a>
 
     <label class="checkbox">
       <input type="checkbox" formControlName="rememberMe" />

@@ -47,6 +47,32 @@ public sealed class AuthController(IAuthService authService, ICurrentUser curren
         return NoContent();
     }
 
+    /// <summary>
+    /// Emails a password reset link if an account uses the address. Always 202, whether or not it does, so the form
+    /// can't be used to find out who has an account.
+    /// </summary>
+    [HttpPost("forgot-password")]
+    [AllowAnonymous]
+    [EnableRateLimiting(RateLimitPolicies.Auth)]
+    [ProducesResponseType(StatusCodes.Status202Accepted)]
+    public async Task<IActionResult> ForgotPassword(ForgotPasswordRequest request, CancellationToken cancellationToken)
+    {
+        await authService.RequestPasswordResetAsync(request, cancellationToken);
+        return Accepted();
+    }
+
+    /// <summary>Sets a new password from a reset link. Every device is signed out; the user signs in again.</summary>
+    [HttpPost("reset-password")]
+    [AllowAnonymous]
+    [EnableRateLimiting(RateLimitPolicies.Auth)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> ResetPassword(ResetPasswordRequest request, CancellationToken cancellationToken)
+    {
+        var result = await authService.ResetPasswordAsync(request, cancellationToken);
+        return result.IsSuccess ? NoContent() : result.ToActionResult(this);
+    }
+
     [HttpGet("me")]
     [ProducesResponseType<UserDto>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using SmartLedger.Application.Email;
 using SmartLedger.Application.ExchangeRates;
 using SmartLedger.Application.Receipts.Extraction;
 using SmartLedger.Application.Reports;
@@ -30,15 +31,23 @@ public class SmartLedgerApiFactory : WebApplicationFactory<Program>, IAsyncLifet
         builder.UseSetting("Storage:Provider", "Local");
         builder.UseSetting("Storage:LocalPath", StoragePath);
         builder.UseSetting("Gemini:DelayBetweenRequests", "00:00:00");
+        builder.UseSetting("Email:Provider", "Local");
+        builder.UseSetting("Email:AppUrl", AppUrl);
+        builder.UseSetting("Email:DelayBetweenEmails", "00:00:00");
 
-        // No real AI or rate source in tests: the fakes answer instantly and the same way every time.
+        // No real AI, rate source or mail service in tests: the fakes answer instantly and the same way every time.
         builder.ConfigureTestServices(services =>
         {
             services.AddScoped<IReceiptExtractor, FakeReceiptExtractor>();
             services.AddSingleton<IExchangeRateProvider, FakeExchangeRateProvider>();
             services.AddScoped<IInsightWriter, FakeInsightWriter>();
+            services.AddSingleton<IEmailSender>(Emails);
         });
     }
+
+    public const string AppUrl = "https://app.test";
+
+    public FakeEmailSender Emails { get; } = new();
 
     /// <summary>Uploaded files go to a fresh temporary folder per test run.</summary>
     public string StoragePath { get; } = Path.Combine(Path.GetTempPath(), "smartledger-tests", Guid.NewGuid().ToString("N"));

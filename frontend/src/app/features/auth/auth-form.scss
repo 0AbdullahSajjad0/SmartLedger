@@ -30,6 +30,28 @@
     font-size: 14px;
   }
 
+  &__hint {
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--color-muted);
+  }
+
+  // Confirmation that a request went through: olive, like an approved entry.
+  &__sent {
+    padding: 12px 0 12px 14px;
+    border-top: 2px solid var(--color-positive);
+    color: var(--color-positive);
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  // "Forgot your password?" under the password field, right-aligned like a margin note.
+  &__aside {
+    align-self: flex-end;
+    margin-top: -12px;
+    font-size: 13px;
+  }
+
   &__switch {
     padding-top: 24px;
     border-top: var(--rule);

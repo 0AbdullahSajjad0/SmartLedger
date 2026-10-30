@@ -12,4 +12,7 @@ public class ApplicationUser : IdentityUser<Guid>
 
     /// <summary>ISO 4217 code that every approved receipt is converted to, e.g. "USD".</summary>
     public required string BaseCurrency { get; set; }
+
+    /// <summary>Email when a category reaches 80% and 100% of its monthly budget. On unless the user turns it off.</summary>
+    public bool BudgetAlerts { get; set; } = true;
 }

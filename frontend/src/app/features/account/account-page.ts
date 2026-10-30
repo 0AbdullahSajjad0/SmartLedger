@@ -38,7 +38,7 @@ class RequestState {
   }
 }
 
-/** Name, password, other devices, the data export and deleting the account. */
+/** Name, password, email alerts, other devices, the data export and deleting the account. */
 @Component({
   selector: 'app-account-page',
   imports: [ReactiveFormsModule],
@@ -63,6 +63,7 @@ export class AccountPage {
 
   protected readonly saveProfile = new RequestState(this.destroyRef);
   protected readonly changePassword = new RequestState(this.destroyRef);
+  protected readonly saveAlerts = new RequestState(this.destroyRef);
   protected readonly signOutOthers = new RequestState(this.destroyRef);
   protected readonly download = new RequestState(this.destroyRef);
   protected readonly deleteAccount = new RequestState(this.destroyRef);
@@ -96,6 +97,19 @@ export class AccountPage {
       this.password.reset();
       this.unmarkSubmitted('password');
     });
+  }
+
+  /** Saves as soon as the box is ticked or cleared; puts the tick back if the server refused. */
+  protected setBudgetAlerts(box: HTMLInputElement): void {
+    const on = box.checked;
+    this.saveAlerts.send(
+      this.api.updateNotifications(on),
+      (user) => this.auth.updateUser(user),
+      (error) => {
+        box.checked = !on;
+        return describeHttpError(error);
+      },
+    );
   }
 
   protected signOutOtherDevices(): void {

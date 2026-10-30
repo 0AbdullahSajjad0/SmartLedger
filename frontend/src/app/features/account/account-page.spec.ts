@@ -115,6 +115,29 @@ describe('AccountPage', () => {
     expect(page.querySelector('#newPassword-hint')?.textContent).toContain('Use at least 10 characters.');
   });
 
+  it('turns budget alerts off as soon as the box is cleared, and puts the tick back if that fails', async () => {
+    const { page, settle } = await render();
+    const box = page.querySelector<HTMLInputElement>('.switch input')!;
+    expect(box.checked).toBe(true);
+
+    box.click();
+    const off = await vi.waitFor(() => http.expectOne({ method: 'PUT', url: `${ACCOUNT_URL}/notifications` }));
+    expect(off.request.body).toEqual({ budgetAlerts: false });
+    off.flush({ ...authResponse('', '').user, budgetAlerts: false });
+    await settle();
+    expect(TestBed.inject(AuthStore).user()?.budgetAlerts).toBe(false);
+    expect(page.querySelector('.setting__done')?.textContent).toContain('Alerts are off.');
+
+    box.click();
+    (await vi.waitFor(() => http.expectOne(`${ACCOUNT_URL}/notifications`))).flush(
+      { title: 'Something went wrong.' },
+      { status: 500, statusText: 'Server Error' },
+    );
+    await settle();
+    expect(box.checked).toBe(false);
+    expect(page.querySelector('[role="alert"]')?.textContent).toContain('Something went wrong.');
+  });
+
   it('signs out the other devices', async () => {
     const { page, button, settle } = await render();
 

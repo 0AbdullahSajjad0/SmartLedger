@@ -100,7 +100,8 @@ describe('CategoriesPage', () => {
       'Misc | 0 | 0.00 | — | No budget | Edit',
     ]);
     const tones = [...page.querySelectorAll('.usage')].map((u) => u.getAttribute('data-tone'));
-    expect(tones).toEqual(['over', 'fine', 'fine']);
+    // Travel is over; Food & Dining at 85% is past the 80% warning level, like the budget alert emails.
+    expect(tones).toEqual(['over', 'near', 'fine']);
   });
 
   it('says when the month went over budget', async () => {
