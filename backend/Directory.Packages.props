@@ -15,6 +15,8 @@
   <ItemGroup Label="Api">
     <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.14" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.14" />
+    <!-- The version Microsoft.Data.SqlClient brings; referenced only to leave out its native library. -->
+    <PackageVersion Include="Microsoft.Identity.Client.NativeInterop" Version="0.20.6" />
     <PackageVersion Include="Scalar.AspNetCore" Version="2.18.3" />
   </ItemGroup>
 
