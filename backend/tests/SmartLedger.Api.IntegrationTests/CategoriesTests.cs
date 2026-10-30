@@ -34,7 +34,8 @@ public class CategoriesTests(SmartLedgerApiFactory factory)
         Assert.Equal(1, officeInOctober.ReceiptCount);
         Assert.Equal(100m, officeInOctober.Spent);
         Assert.Equal(100m, octoberMonth.TotalSpent);
-        Assert.Equal(500m, octoberMonth.TotalBudget);
+        // The budget applies from the month it was set: this one.
+        Assert.Equal(500m, (await MonthAsync(client, BudgetHistoryTests.ThisMonth())).TotalBudget);
         Assert.Equal(office.Id, octoberMonth.Categories[0].Id); // biggest spend first
         Assert.Equal(50m, septemberMonth.Categories.Single(c => c.Id == office.Id).Spent);
         Assert.Equal(october.CategoryId, office.Id);

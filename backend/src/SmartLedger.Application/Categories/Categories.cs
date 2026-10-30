@@ -4,27 +4,41 @@ using SmartLedger.Domain.Entities;
 
 namespace SmartLedger.Application.Categories;
 
+/// <param name="MonthlyBudget">This month's budget. Null means none.</param>
 public sealed record CategoryDto(Guid Id, string Name, string Color, decimal? MonthlyBudget, bool IsArchived);
 
 /// <summary>One category's month: the approved receipts filed under it, against its budget.</summary>
+/// <param name="MonthlyBudget">The budget the category had in that month, which may differ from today's.</param>
 /// <param name="Spent">Sum of the receipts' base-currency totals.</param>
 public sealed record CategorySpendingDto(
     Guid Id, string Name, string Color, decimal? MonthlyBudget, bool IsArchived, int ReceiptCount, decimal Spent);
 
 /// <summary>The categories page: every category with what was spent in one month, plus the totals.</summary>
 /// <param name="Month">"yyyy-MM".</param>
-/// <param name="TotalBudget">Sum of the active categories' budgets.</param>
+/// <param name="TotalBudget">Sum of the budgets in force that month.</param>
 /// <param name="TotalSpent">Everything approved in the month, archived categories included.</param>
+/// <param name="IsClosed">A past month: its budgets are shown as they were and can no longer be changed.</param>
 public sealed record CategoryMonthDto(
-    string Month, string BaseCurrency, decimal TotalBudget, decimal TotalSpent, IReadOnlyList<CategorySpendingDto> Categories);
+    string Month,
+    string BaseCurrency,
+    decimal TotalBudget,
+    decimal TotalSpent,
+    IReadOnlyList<CategorySpendingDto> Categories,
+    bool IsClosed);
 
-/// <param name="MonthlyBudget">In the user's base currency, for every month. Null means no budget.</param>
+/// <param name="MonthlyBudget">
+/// In the user's base currency, from this month on; earlier months keep the budget they had. Null means no budget.
+/// </param>
 public sealed record CreateCategoryRequest(
     [Required, StringLength(Category.MaxNameLength, MinimumLength = 1)] string Name,
     [Required] string Color,
     [Range(typeof(decimal), "0", "999999999999")] decimal? MonthlyBudget);
 
-/// <param name="IsArchived">Archived categories leave the pickers and AI's choices, but stay on their receipts.</param>
+/// <param name="MonthlyBudget">From this month on, as for a new category; earlier months keep theirs.</param>
+/// <param name="IsArchived">
+/// Archived categories leave the pickers and AI's choices, but stay on their receipts. Archiving ends the budget from
+/// this month (the budget sent is ignored); unarchiving starts again with the budget sent.
+/// </param>
 public sealed record UpdateCategoryRequest(
     [Required, StringLength(Category.MaxNameLength, MinimumLength = 1)] string Name,
     [Required] string Color,
@@ -71,6 +85,19 @@ public interface ICategoryRepository
 
     /// <summary>Approved receipts dated from <paramref name="from"/> up to (not including) <paramref name="to"/>, by category.</summary>
     Task<IReadOnlyList<CategorySpending>> SpendingAsync(Guid userId, DateOnly from, DateOnly to, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Each of the user's categories' budget in <paramref name="month"/>, as it was then. Categories without one are
+    /// left out (or null), so <c>GetValueOrDefault</c> gives "no budget".
+    /// </summary>
+    Task<IReadOnlyDictionary<Guid, decimal?>> BudgetsAsync(Guid userId, DateOnly month, CancellationToken cancellationToken);
+
+    /// <summary>A category's whole budget history, tracked for changes.</summary>
+    Task<List<CategoryBudget>> BudgetHistoryForUpdateAsync(Guid categoryId, CancellationToken cancellationToken);
+
+    void AddBudget(CategoryBudget budget);
+
+    void RemoveBudget(CategoryBudget budget);
 
     /// <returns>False when the database turned the change down because the user already has a category with that name.</returns>
     Task<bool> SaveChangesAsync(CancellationToken cancellationToken);

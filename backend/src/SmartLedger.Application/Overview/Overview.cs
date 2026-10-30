@@ -13,7 +13,7 @@ namespace SmartLedger.Application.Overview;
 /// <param name="Month">"yyyy-MM".</param>
 /// <param name="Spent">Approved receipts dated in the month, in the base currency.</param>
 /// <param name="ApprovedCount">How many receipts make up <paramref name="Spent"/>.</param>
-/// <param name="TotalBudget">Sum of the active categories' monthly budgets; zero when none are set.</param>
+/// <param name="TotalBudget">Sum of the budgets in force that month (as they were then); zero when none are set.</param>
 /// <param name="PreviousMonthSpent">The same for the month before, for the change.</param>
 /// <param name="AwaitingReview">Read by AI and waiting for the user, from any month.</param>
 /// <param name="Unreadable">AI couldn't read them; they need filling in or rejecting.</param>
@@ -68,6 +68,8 @@ internal sealed class OverviewService(
         var thisMonth = await categories.SpendingAsync(userId, start, start.AddMonths(1), cancellationToken);
         var lastMonth = await categories.SpendingAsync(userId, start.AddMonths(-1), start, cancellationToken);
         var userCategories = await categories.ListAsync(userId, cancellationToken);
+        // The budgets this month had, not today's: changing a budget never rewrites past months.
+        var budgets = await categories.BudgetsAsync(userId, start, cancellationToken);
         var counts = await receipts.CountByStatusAsync(userId, cancellationToken);
         var (recent, _) = await receipts.ListAsync(userId, status: null, new ReceiptFilter(), page: 1, pageSize: RecentCount, cancellationToken);
         var baseCurrency = await users.GetBaseCurrencyAsync(userId, cancellationToken) ?? "USD";
@@ -79,7 +81,7 @@ internal sealed class OverviewService(
             .Select(c =>
             {
                 var spent = spentByCategory[c.Id];
-                return new CategorySpendingDto(c.Id, c.Name, c.Color, c.MonthlyBudget, c.IsArchived, spent.ReceiptCount, spent.Spent);
+                return new CategorySpendingDto(c.Id, c.Name, c.Color, budgets.GetValueOrDefault(c.Id), c.IsArchived, spent.ReceiptCount, spent.Spent);
             })
             .OrderByDescending(c => c.Spent)
             .ThenBy(c => c.Name, StringComparer.CurrentCultureIgnoreCase)
@@ -90,7 +92,7 @@ internal sealed class OverviewService(
             baseCurrency,
             thisMonth.Sum(s => s.Spent),
             thisMonth.Sum(s => s.ReceiptCount),
-            userCategories.Where(c => !c.IsArchived).Sum(c => c.MonthlyBudget ?? 0m),
+            budgets.Values.Sum(b => b ?? 0m),
             lastMonth.Sum(s => s.Spent),
             counts.GetValueOrDefault(ReceiptStatus.NeedsReview),
             counts.GetValueOrDefault(ReceiptStatus.Failed),

@@ -61,8 +61,10 @@ internal sealed class BudgetAlertService(
             return;
         }
 
-        var category = await categories.GetForUpdateAsync(approved.UserId, categoryId, cancellationToken);
-        if (category is not { MonthlyBudget: { } budget, IsArchived: false })
+        // This month's budget (archived categories have none from the month they were archived).
+        var month = new DateOnly(date.Year, date.Month, 1);
+        var budgets = await categories.BudgetsAsync(approved.UserId, month, cancellationToken);
+        if (budgets.GetValueOrDefault(categoryId) is not { } budget)
         {
             return;
         }
@@ -72,7 +74,6 @@ internal sealed class BudgetAlertService(
             return;
         }
 
-        var month = new DateOnly(date.Year, date.Month, 1);
         var spending = await categories.SpendingAsync(approved.UserId, month, month.AddMonths(1), cancellationToken);
         var spent = spending.FirstOrDefault(s => s.CategoryId == categoryId)?.Spent ?? 0m;
 

@@ -17,10 +17,14 @@ internal sealed class CategoryService(
     // Every endpoint behind this service requires sign-in, so a missing user is a bug, not a user error.
     private Guid UserId => currentUser.UserId ?? throw new InvalidOperationException("No signed-in user.");
 
+    /// <summary>The first day of the current month: the only month budgets can be changed in.</summary>
+    private DateOnly CurrentMonth => CategoryBudget.FirstOfMonth(DateOnly.FromDateTime(timeProvider.GetUtcNow().UtcDateTime));
+
     public async Task<IReadOnlyList<CategoryDto>> ListAsync(CancellationToken cancellationToken)
     {
         var categories = await repository.ListAsync(UserId, cancellationToken);
-        return categories.Select(ToDto).ToList();
+        var budgets = await repository.BudgetsAsync(UserId, CurrentMonth, cancellationToken);
+        return categories.Select(c => ToDto(c, budgets.GetValueOrDefault(c.Id))).ToList();
     }
 
     public async Task<Result<CategoryMonthDto>> GetMonthAsync(string? month, CancellationToken cancellationToken)
@@ -33,6 +37,8 @@ internal sealed class CategoryService(
         var start = parsed.Value;
 
         var categories = await repository.ListAsync(UserId, cancellationToken);
+        // The budgets that month had, not today's: changing a budget never rewrites past months.
+        var budgets = await repository.BudgetsAsync(UserId, start, cancellationToken);
         // Spending counts by receipt date, not approval date: a September dinner approved in October is September's.
         var spending = await repository.SpendingAsync(UserId, start, start.AddMonths(1), cancellationToken);
         var byCategory = spending.Where(s => s.CategoryId is not null).ToDictionary(s => s.CategoryId!.Value);
@@ -42,7 +48,7 @@ internal sealed class CategoryService(
             {
                 byCategory.TryGetValue(c.Id, out var spent);
                 return new CategorySpendingDto(
-                    c.Id, c.Name, c.Color, c.MonthlyBudget, c.IsArchived, spent?.ReceiptCount ?? 0, spent?.Spent ?? 0m);
+                    c.Id, c.Name, c.Color, budgets.GetValueOrDefault(c.Id), c.IsArchived, spent?.ReceiptCount ?? 0, spent?.Spent ?? 0m);
             })
             // Active first, biggest spend first, as a statement would list them.
             .OrderBy(c => c.IsArchived)
@@ -53,9 +59,11 @@ internal sealed class CategoryService(
         return new CategoryMonthDto(
             Months.Format(start),
             await users.GetBaseCurrencyAsync(UserId, cancellationToken) ?? "USD",
-            categories.Where(c => !c.IsArchived).Sum(c => c.MonthlyBudget ?? 0m),
+            // Archiving ends a budget from that month, so the month's own budgets already leave archived ones out.
+            budgets.Values.Sum(b => b ?? 0m),
             spending.Sum(s => s.Spent),
-            rows);
+            rows,
+            IsClosed: start < CurrentMonth);
     }
 
     public async Task<Result<CategoryDto>> CreateAsync(CreateCategoryRequest request, CancellationToken cancellationToken)
@@ -77,11 +85,11 @@ internal sealed class CategoryService(
             UserId = UserId,
             Name = checkedFields.Value.Name,
             Color = checkedFields.Value.Color,
-            MonthlyBudget = Money(request.MonthlyBudget),
         };
         repository.Add(category);
+        var budget = SetBudget(category.Id, history: [], Money(request.MonthlyBudget));
 
-        return await repository.SaveChangesAsync(cancellationToken) ? ToDto(category) : DuplicateName(category.Name);
+        return await repository.SaveChangesAsync(cancellationToken) ? ToDto(category, budget) : DuplicateName(category.Name);
     }
 
     public async Task<Result<CategoryDto>> UpdateAsync(
@@ -108,10 +116,44 @@ internal sealed class CategoryService(
 
         category.Name = checkedFields.Value.Name;
         category.Color = checkedFields.Value.Color;
-        category.MonthlyBudget = Money(request.MonthlyBudget);
         category.IsArchived = request.IsArchived;
 
-        return await repository.SaveChangesAsync(cancellationToken) ? ToDto(category) : DuplicateName(category.Name);
+        // An archived category has no budget from this month on; the months before keep theirs.
+        var history = await repository.BudgetHistoryForUpdateAsync(category.Id, cancellationToken);
+        var budget = SetBudget(category.Id, history, request.IsArchived ? null : Money(request.MonthlyBudget));
+
+        return await repository.SaveChangesAsync(cancellationToken) ? ToDto(category, budget) : DuplicateName(category.Name);
+    }
+
+    /// <summary>
+    /// Makes <paramref name="amount"/> the budget from the current month on. Past months are closed: only this month's
+    /// entry is ever written, so what earlier months had stays as it was. Returns the budget now in force.
+    /// </summary>
+    private decimal? SetBudget(Guid categoryId, List<CategoryBudget> history, decimal? amount)
+    {
+        var month = CurrentMonth;
+        var thisMonth = history.SingleOrDefault(b => b.EffectiveFrom == month);
+        var before = CategoryBudget.For(history.Where(b => b.EffectiveFrom < month), month);
+
+        if (amount == before)
+        {
+            // Same as the month before (or set back to it): no entry needed, so the history only records real changes.
+            if (thisMonth is not null)
+            {
+                repository.RemoveBudget(thisMonth);
+            }
+        }
+        else if (thisMonth is not null)
+        {
+            // Changed again within the month: the month has one budget, the latest.
+            thisMonth.Amount = amount;
+        }
+        else
+        {
+            repository.AddBudget(new CategoryBudget { CategoryId = categoryId, EffectiveFrom = month, Amount = amount });
+        }
+
+        return amount;
     }
 
     /// <summary>A trimmed name no other category of the user's has (in any case), and a colour from the palette.</summary>
@@ -147,5 +189,5 @@ internal sealed class CategoryService(
     private static decimal? Money(decimal? value) =>
         value is null ? null : Math.Round(value.Value, 2, MidpointRounding.AwayFromZero);
 
-    private static CategoryDto ToDto(Category c) => new(c.Id, c.Name, c.Color, c.MonthlyBudget, c.IsArchived);
+    private static CategoryDto ToDto(Category c, decimal? budget) => new(c.Id, c.Name, c.Color, budget, c.IsArchived);
 }

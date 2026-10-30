@@ -117,7 +117,16 @@ internal sealed class AccountExportService(
         IReadOnlyDictionary<Guid, string> files) => new(
         exportedAt,
         new ExportAccount(data.Profile.Email, data.Profile.DisplayName, data.Profile.BaseCurrency),
-        data.Categories.Select(c => new ExportCategory(c.Id, c.Name, c.Color, c.MonthlyBudget, c.IsArchived)).ToList(),
+        data.Categories.Select(c => new ExportCategory(
+            c.Id,
+            c.Name,
+            c.Color,
+            c.IsArchived,
+            data.Budgets
+                .Where(b => b.CategoryId == c.Id)
+                .OrderBy(b => b.EffectiveFrom)
+                .Select(b => new ExportBudget(Months.Format(b.EffectiveFrom), b.Amount))
+                .ToList())).ToList(),
         data.Receipts.Select(r => new ExportReceipt(
             r.Id,
             r.Number,
@@ -236,7 +245,12 @@ internal sealed class AccountExportService(
 
     private sealed record ExportAccount(string Email, string DisplayName, string BaseCurrency);
 
-    private sealed record ExportCategory(Guid Id, string Name, string Color, decimal? MonthlyBudget, bool IsArchived);
+    /// <param name="Budgets">Every budget change, oldest first: each applies from its month until the next one.</param>
+    private sealed record ExportCategory(Guid Id, string Name, string Color, bool IsArchived, IReadOnlyList<ExportBudget> Budgets);
+
+    /// <param name="From">"yyyy-MM".</param>
+    /// <param name="MonthlyBudget">Null means no budget from that month.</param>
+    private sealed record ExportBudget(string From, decimal? MonthlyBudget);
 
     private sealed record ExportReceipt(
         Guid Id,

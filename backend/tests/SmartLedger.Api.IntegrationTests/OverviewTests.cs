@@ -44,11 +44,13 @@ public class OverviewTests(SmartLedgerApiFactory factory)
             new UpdateCategoryRequest(travel.Name, travel.Color, 300m, false), Json)).EnsureSuccessStatusCode();
 
         var overview = (await client.GetFromJsonAsync<OverviewDto>("/api/overview?month=2026-10", Json))!;
+        // A budget applies from the month it's set (this one), and counts even for a category with nothing spent.
+        var thisMonth = (await client.GetFromJsonAsync<OverviewDto>("/api/overview", Json))!;
+        Assert.Equal(300m, thisMonth.TotalBudget);
 
         Assert.Equal("2026-10", overview.Month);
         Assert.Equal(140m, overview.Spent);
         Assert.Equal(2, overview.ApprovedCount);
-        Assert.Equal(300m, overview.TotalBudget); // budgets count even for categories with nothing spent
         Assert.Equal(50m, overview.PreviousMonthSpent);
         Assert.Equal(1, overview.AwaitingReview);
         Assert.Equal(1, overview.Unreadable);

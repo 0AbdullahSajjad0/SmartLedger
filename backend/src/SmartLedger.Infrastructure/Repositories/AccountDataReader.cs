@@ -24,6 +24,11 @@ internal sealed class AccountDataReader(AppDbContext db) : IAccountDataReader
             .OrderBy(c => c.Name)
             .ToListAsync(cancellationToken);
 
+        var budgets = await db.CategoryBudgets
+            .AsNoTracking()
+            .Where(b => db.Categories.Any(c => c.Id == b.CategoryId && c.UserId == userId))
+            .ToListAsync(cancellationToken);
+
         // Split query: one for receipts and one for their line items, instead of repeating every receipt per line.
         var receipts = await db.Receipts
             .AsNoTracking()
@@ -39,6 +44,6 @@ internal sealed class AccountDataReader(AppDbContext db) : IAccountDataReader
             .OrderBy(i => i.Year).ThenBy(i => i.Month)
             .ToListAsync(cancellationToken);
 
-        return new AccountData(profile, categories, receipts, insights);
+        return new AccountData(profile, categories, budgets, receipts, insights);
     }
 }

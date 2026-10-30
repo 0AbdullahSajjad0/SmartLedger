@@ -16,6 +16,7 @@ const OCTOBER: CategoryMonth = {
   baseCurrency: 'USD',
   totalBudget: 2200,
   totalSpent: 2152.3,
+  isClosed: false,
   categories: [
     category({ id: 'travel', name: 'Travel', monthlyBudget: 1500, receiptCount: 7, spent: 1640 }),
     category({ id: 'food', name: 'Food & Dining', color: '#B08A2E', monthlyBudget: 600, receiptCount: 11, spent: 512.3 }),
@@ -109,6 +110,15 @@ describe('CategoriesPage', () => {
 
     expect(figures()[2]).toBe('Over budget by: $152.30');
     expect(page.querySelector('.figures__value--over')).not.toBeNull();
+  });
+
+  it('shows a past month as closed: its own budgets, and nothing to edit', async () => {
+    await render({ ...OCTOBER, month: '2026-09', isClosed: true }, '2026-09');
+
+    expect(page.querySelector('.closed')?.textContent).toContain('These are the budgets September 2026 had.');
+    expect([...page.querySelectorAll('button')].map((b) => b.textContent?.trim())).not.toContain('Edit');
+    expect([...page.querySelectorAll('button')].some((b) => b.textContent?.includes('New category'))).toBe(false);
+    expect([...page.querySelectorAll('button')].some((b) => b.textContent?.includes('Unarchive'))).toBe(false);
   });
 
   it('lists archived categories apart, and can bring one back', async () => {
