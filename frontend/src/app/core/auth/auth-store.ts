@@ -6,16 +6,10 @@ import { AuthApi } from './auth-api';
 import { AuthResponse, RegisterRequest, SessionStatus, SignInRequest, User } from './auth.models';
 import { TokenStorage } from './token-storage';
 
-/** Refresh this long before the access token expires, so requests never race its expiry. */
 const EXPIRY_MARGIN_MS = 30_000;
 
-/** Name of the browser-wide lock that stops two tabs from using the same refresh token at once. */
 const REFRESH_LOCK = 'smartledger.refresh';
 
-/**
- * The single source of truth for the signed-in session. State is held in signals: components read
- * `user()`, `status()` and `isSignedIn()`; only this class can change them.
- */
 @Injectable({ providedIn: 'root' })
 export class AuthStore {
   private readonly api = inject(AuthApi);
@@ -25,7 +19,6 @@ export class AuthStore {
   private readonly _user = signal<User | null>(null);
   private readonly _status = signal<SessionStatus>('restoring');
 
-  /** Memory only: gone on reload, restored from the refresh token. */
   private accessToken: string | null = null;
   private accessTokenExpiresAt = 0;
   private refreshInFlight: Promise<boolean> | null = null;
@@ -39,7 +32,6 @@ export class AuthStore {
     inject(DestroyRef).onDestroy(stopListening);
   }
 
-  /** Called once on startup: signs back in with a saved refresh token, if there is one. */
   async restoreSession(): Promise<void> {
     if (!this.storage.get()) {
       this._status.set('signed-out');
@@ -49,7 +41,6 @@ export class AuthStore {
     try {
       await this.refresh();
     } catch {
-      // The API couldn't be reached. Keep the saved token so a later reload can still restore the session.
       this._status.set('signed-out');
     }
   }
@@ -67,28 +58,23 @@ export class AuthStore {
     this.endSession({ redirect: true });
 
     if (refreshToken) {
-      // Best effort: the session is already gone locally, the API call just revokes the token server-side.
       await firstValueFrom(this.api.signOut(refreshToken)).catch(() => undefined);
     }
   }
 
-  /** The account's details were changed on the Account page. */
   updateUser(user: User): void {
     this._user.set(user);
   }
 
-  /** The account no longer exists: forget the session here (and in other tabs) and say so on the sign-in page. */
   accountDeleted(): void {
     this.endSession({ redirect: true, reason: 'deleted' });
   }
 
-  /** An access token that is valid for at least the next 30 seconds, refreshing first if needed. */
   async getAccessToken(): Promise<string | null> {
     if (this.accessToken && Date.now() < this.accessTokenExpiresAt - EXPIRY_MARGIN_MS) {
       return this.accessToken;
     }
 
-    // Signed out: nothing to refresh, send the request without a token.
     if (!this.storage.get()) {
       return null;
     }
@@ -96,12 +82,6 @@ export class AuthStore {
     return (await this.refresh()) ? this.accessToken : null;
   }
 
-  /**
-   * Swaps the refresh token for new tokens. Concurrent callers in this tab share one request, and a
-   * browser-wide lock makes other tabs wait their turn and then use the newest token, because reusing
-   * an already-exchanged token would look like theft to the API and end the session everywhere.
-   * Resolves false when the session is over (the user must sign in again).
-   */
   refresh(): Promise<boolean> {
     this.refreshInFlight ??= this.withRefreshLock(() => this.exchangeRefreshToken()).finally(() => {
       this.refreshInFlight = null;
@@ -110,7 +90,6 @@ export class AuthStore {
   }
 
   private async exchangeRefreshToken(): Promise<boolean> {
-    // Read inside the lock: another tab may have just rotated it.
     const refreshToken = this.storage.get();
     if (!refreshToken) {
       this.endSession({ redirect: this._status() === 'signed-in' });
@@ -125,7 +104,7 @@ export class AuthStore {
         this.endSession({ redirect: this._status() === 'signed-in', reason: 'expired' });
         return false;
       }
-      throw error; // Network trouble is not a reason to sign the user out.
+      throw error;
     }
   }
 
@@ -142,7 +121,6 @@ export class AuthStore {
     this._status.set('signed-in');
   }
 
-  /** `reason` becomes a query parameter, so the sign-in page can say why the user is back there. */
   private endSession(options: { redirect: boolean; reason?: 'expired' | 'deleted' }): void {
     this.accessToken = null;
     this.accessTokenExpiresAt = 0;

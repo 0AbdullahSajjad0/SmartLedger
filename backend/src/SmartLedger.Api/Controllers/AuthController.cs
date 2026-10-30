@@ -37,7 +37,6 @@ public sealed class AuthController(IAuthService authService, ICurrentUser curren
     public async Task<IActionResult> Refresh(RefreshRequest request, CancellationToken cancellationToken) =>
         (await authService.RefreshAsync(request.RefreshToken, cancellationToken)).ToActionResult(this);
 
-    /// <summary>Ends the session. Anonymous on purpose: the access token may already have expired.</summary>
     [HttpPost("logout")]
     [AllowAnonymous]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
@@ -47,10 +46,6 @@ public sealed class AuthController(IAuthService authService, ICurrentUser curren
         return NoContent();
     }
 
-    /// <summary>
-    /// Emails a password reset link if an account uses the address. Always 202, whether or not it does, so the form
-    /// can't be used to find out who has an account.
-    /// </summary>
     [HttpPost("forgot-password")]
     [AllowAnonymous]
     [EnableRateLimiting(RateLimitPolicies.Auth)]
@@ -61,10 +56,6 @@ public sealed class AuthController(IAuthService authService, ICurrentUser curren
         return Accepted();
     }
 
-    /// <summary>
-    /// Confirms the email address from the emailed link. Anonymous, because the link may be opened on a device that
-    /// isn't signed in; the token itself proves who it's for.
-    /// </summary>
     [HttpPost("confirm-email")]
     [AllowAnonymous]
     [EnableRateLimiting(RateLimitPolicies.Auth)]
@@ -73,7 +64,6 @@ public sealed class AuthController(IAuthService authService, ICurrentUser curren
     public async Task<IActionResult> ConfirmEmail(ConfirmEmailRequest request, CancellationToken cancellationToken) =>
         (await authService.ConfirmEmailAsync(request, cancellationToken)).ToActionResult(this);
 
-    /// <summary>Sets a new password from a reset link. Every device is signed out; the user signs in again.</summary>
     [HttpPost("reset-password")]
     [AllowAnonymous]
     [EnableRateLimiting(RateLimitPolicies.Auth)]

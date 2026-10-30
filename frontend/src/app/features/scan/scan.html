@@ -32,7 +32,6 @@
 
       <input #filePicker class="visually-hidden" type="file" multiple [accept]="accept" tabindex="-1"
         aria-hidden="true" (change)="onFilesChosen(filePicker)" />
-      <!-- On phones, "capture" opens the rear camera straight away. -->
       <input #camera class="visually-hidden" type="file" accept="image/*" capture="environment" tabindex="-1"
         aria-hidden="true" (change)="onFilesChosen(camera)" />
     </div>

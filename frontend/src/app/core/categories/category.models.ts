@@ -1,6 +1,3 @@
-// Mirrors SmartLedger.Application.Categories contracts on the API.
-
-/** One category's month: the approved receipts filed under it, against its budget. */
 export interface CategorySpending {
   id: string;
   name: string;
@@ -8,21 +5,15 @@ export interface CategorySpending {
   monthlyBudget: number | null;
   isArchived: boolean;
   receiptCount: number;
-  /** Sum of the receipts' base-currency totals. */
   spent: number;
 }
 
-/** Every category with what was spent in one month (by receipt date, in the base currency), and the totals. */
 export interface CategoryMonth {
-  /** "yyyy-MM". */
   month: string;
   baseCurrency: string;
-  /** Sum of the budgets that month had (archiving ends a budget from its month). */
   totalBudget: number;
-  /** Everything approved in the month, archived categories included. */
   totalSpent: number;
   categories: CategorySpending[];
-  /** A past month: its budgets are as they were then and can't be changed. */
   isClosed: boolean;
 }
 
@@ -36,7 +27,6 @@ export interface UpdateCategoryRequest extends CategoryRequest {
   isArchived: boolean;
 }
 
-/** The colours the API accepts: muted earth tones that sit with espresso, cream and terra cotta. */
 export const CATEGORY_PALETTE = [
   { color: '#3D4A2F', name: 'Olive' },
   { color: '#5B6B73', name: 'Slate' },
@@ -50,5 +40,4 @@ export const CATEGORY_PALETTE = [
   { color: '#A07D5C', name: 'Sand' },
 ] as const;
 
-/** Same limit as the API. */
 export const CATEGORY_NAME_MAX_LENGTH = 60;

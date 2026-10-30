@@ -26,7 +26,6 @@ internal sealed class EmailOutbox(AppDbContext db, EmailSignal signal, TimeProvi
     public void Wake() => signal.Wake();
 }
 
-/// <summary>Wakes the email worker early. Several wakes before it looks count as one.</summary>
 internal sealed class EmailSignal
 {
     private readonly Channel<bool> _channel = Channel.CreateBounded<bool>(
@@ -34,7 +33,6 @@ internal sealed class EmailSignal
 
     public void Wake() => _channel.Writer.TryWrite(true);
 
-    /// <summary>Returns when woken or after <paramref name="timeout"/>, whichever comes first.</summary>
     public async Task WaitAsync(TimeSpan timeout, CancellationToken cancellationToken)
     {
         using var wait = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -45,7 +43,6 @@ internal sealed class EmailSignal
         }
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
-            // Timed out: time for a regular look at the outbox.
         }
     }
 }

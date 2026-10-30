@@ -36,7 +36,6 @@ internal sealed class TokenService(IOptions<JwtOptions> options, TimeProvider ti
         return (_handler.CreateToken(descriptor), expiresAt);
     }
 
-    /// <summary>A random 512-bit token for the client, and the hash we store.</summary>
     public static (string Token, string Hash) CreateRefreshToken()
     {
         var token = Base64UrlEncoder.Encode(RandomNumberGenerator.GetBytes(64));

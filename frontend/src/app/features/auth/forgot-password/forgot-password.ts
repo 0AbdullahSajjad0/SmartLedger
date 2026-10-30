@@ -6,7 +6,6 @@ import { finalize } from 'rxjs';
 import { AuthApi } from '../../../core/auth/auth-api';
 import { describeHttpError } from '../../../core/http/describe-http-error';
 
-/** Asks for a password reset link. Says the same thing whether or not the address has an account. */
 @Component({
   selector: 'app-forgot-password',
   imports: [ReactiveFormsModule, RouterLink],
@@ -25,7 +24,6 @@ export class ForgotPassword {
   protected readonly submitting = signal(false);
   protected readonly submitted = signal(false);
   protected readonly serverError = signal<string | null>(null);
-  /** The address the link was sent to, once the request went through. */
   protected readonly sentTo = signal<string | null>(null);
 
   protected showError(): boolean {

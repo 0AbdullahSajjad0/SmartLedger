@@ -69,9 +69,9 @@ public class ExtractionSanitizerTests
     }
 
     [Theory]
-    [InlineData("2027-03-01")] // months in the future
-    [InlineData("1999-12-31")] // implausibly old
-    [InlineData("19/10/2026")] // not ISO
+    [InlineData("2027-03-01")]
+    [InlineData("1999-12-31")]
+    [InlineData("19/10/2026")]
     public void AnImplausibleOrMalformedDate_IsClearedAndFlagged(string date)
     {
         var receipt = Apply(Reading() with { ReceiptDate = date });

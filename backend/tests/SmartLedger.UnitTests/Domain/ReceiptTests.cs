@@ -144,7 +144,7 @@ public class ReceiptTests
         Assert.Null(receipt.AmountCharged);
         Assert.Null(receipt.BaseCurrencyTotal);
         Assert.Null(receipt.ApprovedAt);
-        Assert.Equal(126.45m, receipt.Total); // the receipt's own details stay
+        Assert.Equal(126.45m, receipt.Total);
     }
 
     [Fact]

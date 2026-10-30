@@ -1,3 +1,5 @@
+@use '../../../../styles/phone';
+
 :host td {
   padding: 18px 12px 20px;
   background: var(--color-sheet);
@@ -29,7 +31,6 @@
   margin-top: 8px;
 }
 
-// Square chips; the chosen one gets an ink frame with a gap, like a ruled box.
 .swatch {
   display: block;
   cursor: pointer;
@@ -70,5 +71,12 @@
 @media (max-width: 720px) {
   .editor__form {
     grid-template-columns: 1fr;
+  }
+}
+
+@include phone.phone {
+  :host td {
+    display: block;
+    padding: 16px 12px 18px;
   }
 }

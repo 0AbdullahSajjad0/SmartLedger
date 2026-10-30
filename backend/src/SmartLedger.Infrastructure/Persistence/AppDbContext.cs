@@ -18,10 +18,6 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, TimeProvider t
 
     public DbSet<OutgoingEmail> OutgoingEmails => Set<OutgoingEmail>();
 
-    /// <summary>
-    /// The keys that sign password reset links. Kept in the database, not in the container, so links sent before a
-    /// restart or a new deployment still work.
-    /// </summary>
     public DbSet<DataProtectionKey> DataProtectionKeys => Set<DataProtectionKey>();
 
     public DbSet<Category> Categories => Set<Category>();
@@ -41,8 +37,6 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, TimeProvider t
         base.OnModelCreating(builder);
         builder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
 
-        // Ids are created in code (Guid v7) before saving. Telling EF it never generates them makes a new
-        // child added to a tracked parent (e.g. a line item added to a receipt) count as new, not "modified".
         foreach (var entityType in builder.Model.GetEntityTypes().Where(t => typeof(Entity).IsAssignableFrom(t.ClrType)))
         {
             builder.Entity(entityType.ClrType).Property(nameof(Entity.Id)).ValueGeneratedNever();

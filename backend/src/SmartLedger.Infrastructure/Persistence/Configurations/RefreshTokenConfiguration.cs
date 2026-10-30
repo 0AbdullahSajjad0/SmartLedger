@@ -10,7 +10,6 @@ internal sealed class RefreshTokenConfiguration : IEntityTypeConfiguration<Refre
     {
         builder.ToTable("RefreshTokens");
 
-        // SHA-256 as 64 hex characters.
         builder.Property(t => t.TokenHash).HasMaxLength(64).IsFixedLength().IsUnicode(false);
 
         builder.HasIndex(t => t.TokenHash).IsUnique();

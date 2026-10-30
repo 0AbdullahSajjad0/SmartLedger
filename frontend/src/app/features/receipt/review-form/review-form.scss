@@ -1,4 +1,5 @@
 @use '../record';
+@use '../../../../styles/phone';
 
 :host {
   display: block;
@@ -20,7 +21,6 @@
   }
 }
 
-// Text reads better in the UI face; codes, dates and numbers stay in mono like the rest of the ledger.
 .field__input--text {
   font-family: var(--font-ui);
 }
@@ -39,8 +39,6 @@
     border-bottom: 2px solid var(--color-accent);
   }
 }
-
-// ---- Line items: the ledger table with underlined inputs in its cells ----
 
 .lines {
   display: flex;
@@ -108,7 +106,6 @@
   width: 140px;
 }
 
-// Arithmetic that doesn't add up: a caution, not an error.
 .checks {
   margin: 0;
   padding: 12px 0 0 14px;
@@ -118,8 +115,6 @@
   line-height: 1.6;
   color: var(--color-caution);
 }
-
-// ---- Posting: what the receipt becomes in the base currency, and the decision ----
 
 .post {
   display: grid;
@@ -170,5 +165,69 @@
 
   &__reject {
     margin-left: auto;
+  }
+}
+
+@include phone.phone {
+  .lines__table {
+    @include phone.stacked-table;
+
+    tr {
+      grid-template-columns: auto repeat(3, minmax(0, 1fr));
+      grid-template-areas:
+        'no description description description'
+        '. qty unit amount'
+        '. . . remove';
+      gap: 8px 12px;
+    }
+
+    td {
+      padding: 0;
+    }
+
+    .cell-input {
+      min-width: 0;
+    }
+  }
+
+  .lines__no {
+    grid-area: no;
+  }
+
+  .lines__description {
+    grid-area: description;
+  }
+
+  .lines__qty {
+    grid-area: qty;
+    @include phone.cell-label('Qty');
+  }
+
+  .lines__unit {
+    grid-area: unit;
+    @include phone.cell-label('Unit price');
+  }
+
+  .lines__amount {
+    grid-area: amount;
+    @include phone.cell-label('Amount');
+  }
+
+  .lines__qty,
+  .lines__unit,
+  .lines__amount {
+    &::before {
+      display: block;
+      margin-bottom: 2px;
+    }
+  }
+
+  .lines__remove {
+    grid-area: remove;
+    justify-self: end;
+  }
+
+  .lines__empty {
+    grid-column: 1 / -1;
   }
 }

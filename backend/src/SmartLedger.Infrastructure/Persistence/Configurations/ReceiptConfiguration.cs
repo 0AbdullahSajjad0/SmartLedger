@@ -11,7 +11,6 @@ internal sealed class ReceiptConfiguration : IEntityTypeConfiguration<Receipt>
     {
         builder.ToTable("Receipts");
 
-        // Stored as text so the table is readable in SQL tools; adding a status never renumbers old rows.
         builder.Property(r => r.Status).HasConversion<string>().HasMaxLength(20);
 
         builder.Property(r => r.VendorName).HasMaxLength(200);
@@ -29,7 +28,6 @@ internal sealed class ReceiptConfiguration : IEntityTypeConfiguration<Receipt>
         builder.Property(r => r.PreviewStorageKey).HasMaxLength(500).IsUnicode(false);
 
         builder.Property(r => r.BaseCurrency).HasMaxLength(3).IsFixedLength().IsUnicode(false);
-        // 10 decimal places so weak currencies keep their precision (1 IRR ≈ 0.0000238 USD).
         builder.Property(r => r.ExchangeRate).HasPrecision(20, 10);
         builder.Property(r => r.AmountCharged).HasPrecision(18, 2);
         builder.Property(r => r.BaseCurrencyTotal).HasPrecision(18, 2);
@@ -41,7 +39,6 @@ internal sealed class ReceiptConfiguration : IEntityTypeConfiguration<Receipt>
             .HasForeignKey(l => l.ReceiptId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        // Categories are archived rather than deleted, so a category with receipts can't be removed.
         builder.HasOne<Category>()
             .WithMany()
             .HasForeignKey(r => r.CategoryId)

@@ -1,7 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
-    <!-- ASP.NET Core Identity and health checks live in the shared ASP.NET Core framework. -->
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
 
@@ -21,7 +20,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- A tiny iPhone-style photo (rotated, with GPS) for the image-processing self-check the Docker image runs in CI. -->
     <EmbeddedResource Include="Previews\self-check.heic" LogicalName="SmartLedger.Infrastructure.Previews.self-check.heic" />
   </ItemGroup>
 
@@ -30,7 +28,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- Lets the tests exercise internal classes such as the Gemini client directly. -->
     <InternalsVisibleTo Include="SmartLedger.Api.IntegrationTests" />
   </ItemGroup>
 

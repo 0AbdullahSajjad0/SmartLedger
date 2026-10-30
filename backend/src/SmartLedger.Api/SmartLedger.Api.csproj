@@ -1,18 +1,13 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
-    <!-- Identifies this project's local secrets store (outside the repo): "dotnet user-secrets". Not a secret itself. -->
     <UserSecretsId>b33e625c-8f6b-4ed5-a9de-2e72973ed3ce</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
-    <!-- Needed only by the "dotnet ef" tool at design time; not shipped with the app. -->
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" PrivateAssets="all" />
     <PackageReference Include="Scalar.AspNetCore" />
-    <!-- SQL Server's client brings Microsoft's Windows sign-in broker, whose native library (libmsalruntime.so, 36 MB)
-         only serves interactive desktop sign-in. The API signs in with its managed identity, so the native part is
-         left out: a third smaller app layer, which is downloaded on a cold start. -->
     <PackageReference Include="Microsoft.Identity.Client.NativeInterop" ExcludeAssets="native" />
   </ItemGroup>
 

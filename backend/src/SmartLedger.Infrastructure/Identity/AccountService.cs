@@ -20,8 +20,6 @@ internal sealed class AccountService(
 {
     private static readonly Error UserNotFound = Error.NotFound("account.not_found", "The account no longer exists.");
 
-    // 400, not 401: the session is fine, only the password typed into the form is wrong. The app treats a 401 as
-    // "signed out" and would end the session.
     private static readonly Error WrongPassword = Error.Validation("account.wrong_password", "That password isn't right.");
 
     private static readonly Error LockedOut =
@@ -108,14 +106,12 @@ internal sealed class AccountService(
             return Error.Validation("account.same_password", "Choose a password different from your current one.");
         }
 
-        // Also renews the security stamp, which makes any password reset link sent earlier stop working.
         var changed = await userManager.ChangePasswordAsync(user, request.CurrentPassword, request.NewPassword);
         if (!changed.Succeeded)
         {
             return Error.Validation("account.invalid_password", Describe(changed));
         }
 
-        // Whoever knew the old password may be signed in somewhere: those sessions end, this one stays.
         await RevokeOtherSessionsAsync(userId, request.RefreshToken, cancellationToken);
         return true;
     }
@@ -136,17 +132,12 @@ internal sealed class AccountService(
             return error;
         }
 
-        // The database removes everything that belongs to the user along with it (cascading deletes): receipts and
-        // their line items, categories, monthly analyses and sessions.
         var deleted = await userManager.DeleteAsync(user);
         if (!deleted.Succeeded)
         {
             throw new InvalidOperationException($"Deleting user {userId} failed: {Describe(deleted)}");
         }
 
-        // Then the files, as when deleting one receipt: a file that fails to delete is only wasted storage, never a
-        // record pointing at nothing. The whole folder goes, previews and anything an earlier failure left behind
-        // included. Not cancelled when the browser disconnects: the account is already gone.
         try
         {
             await storage.DeleteFolderAsync(userId.ToString(), CancellationToken.None);
@@ -161,10 +152,6 @@ internal sealed class AccountService(
         return true;
     }
 
-    /// <summary>
-    /// Asks for the password again before changes that matter. Wrong guesses count towards the same lockout as signing
-    /// in, so a session left open on a shared computer can't be used to try passwords.
-    /// </summary>
     private async Task<Error?> VerifyPasswordAsync(ApplicationUser user, string password)
     {
         if (await userManager.IsLockedOutAsync(user))
@@ -182,10 +169,6 @@ internal sealed class AccountService(
         return null;
     }
 
-    /// <summary>
-    /// Revokes every refresh token of the user except those from the same sign-in as <paramref name="keepRefreshToken"/>.
-    /// The family is kept rather than the token itself, because the browser may have just exchanged that token.
-    /// </summary>
     private async Task RevokeOtherSessionsAsync(Guid userId, string? keepRefreshToken, CancellationToken cancellationToken)
     {
         var sessions = db.RefreshTokens.Where(t => t.UserId == userId && t.RevokedAt == null);

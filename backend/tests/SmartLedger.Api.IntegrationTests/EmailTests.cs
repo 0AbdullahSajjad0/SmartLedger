@@ -12,15 +12,12 @@ using SmartLedger.Infrastructure.Persistence;
 
 namespace SmartLedger.Api.IntegrationTests;
 
-/// <summary>Password reset by email and budget alerts, sent by the background worker through a fake mail service.</summary>
 [Collection(ApiCollection.Name)]
 public partial class EmailTests(SmartLedgerApiFactory factory)
 {
     private const string NewPassword = "a brand new long passphrase";
 
     private static readonly System.Text.Json.JsonSerializerOptions Json = TestReceipts.Json;
-
-    // ---- Password reset ----
 
     [Fact]
     public async Task ForgotPassword_ForAnUnknownAddress_Answers202_AndSendsNothing()
@@ -117,8 +114,6 @@ public partial class EmailTests(SmartLedgerApiFactory factory)
         Assert.True(signedIn!.User.EmailConfirmed);
     }
 
-    // ---- Email confirmation ----
-
     [Fact]
     public async Task NewAccounts_GetAConfirmationLink_ThatConfirmsTheAddress()
     {
@@ -135,7 +130,6 @@ public partial class EmailTests(SmartLedgerApiFactory factory)
         Assert.Equal(HttpStatusCode.OK, confirmed.StatusCode);
         Assert.True((await confirmed.Content.ReadFromJsonAsync<UserDto>())!.EmailConfirmed);
         Assert.True((await client.GetFromJsonAsync<UserDto>("/api/auth/me"))!.EmailConfirmed);
-        // Opening the link again, e.g. from another device, still says it's confirmed.
         Assert.Equal(HttpStatusCode.OK, (await ConfirmAsync(userId, token)).StatusCode);
     }
 
@@ -172,8 +166,6 @@ public partial class EmailTests(SmartLedgerApiFactory factory)
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
-    // ---- Budget alerts ----
-
     [Fact]
     public async Task BudgetAlerts_GoOnlyToConfirmedAddresses()
     {
@@ -200,18 +192,17 @@ public partial class EmailTests(SmartLedgerApiFactory factory)
         Assert.Equal($"Snacks & <Treats> has used 85% of its {Month(today)} budget", warning.Subject);
         Assert.Contains("You've spent EUR 85.00 of your EUR 100.00 budget for Snacks & <Treats>", warning.PlainText);
         Assert.Contains("That leaves EUR 15.00 for the rest of the month.", warning.PlainText);
-        // The category name is the user's own text: it must arrive as text, never as HTML.
         Assert.Contains("Snacks &amp; &lt;Treats&gt;", warning.Html);
         Assert.DoesNotContain("<Treats>", warning.Html);
         Assert.Contains($"{SmartLedgerApiFactory.AppUrl}/categories?month={today.ToString("yyyy-MM", System.Globalization.CultureInfo.InvariantCulture)}", warning.PlainText);
 
-        await TestReceipts.ApprovedAsync(client, 10m, today, category.Id); // 95%: already warned
-        await TestReceipts.ApprovedAsync(client, 10m, today, category.Id); // 105%
+        await TestReceipts.ApprovedAsync(client, 10m, today, category.Id);
+        await TestReceipts.ApprovedAsync(client, 10m, today, category.Id);
         var exceeded = await factory.Emails.WaitForAsync(auth.User.Email, FakeEmailSender.IsBudgetAlert, count: 2);
         Assert.Equal($"Snacks & <Treats> is over its {Month(today)} budget", exceeded.Subject);
         Assert.Contains("That's EUR 5.00 more than you planned.", exceeded.PlainText);
 
-        await TestReceipts.ApprovedAsync(client, 10m, today, category.Id); // 115%: already told
+        await TestReceipts.ApprovedAsync(client, 10m, today, category.Id);
         await Task.Delay(500);
         Assert.Equal(2, factory.Emails.SentTo(auth.User.Email, FakeEmailSender.IsBudgetAlert).Count);
         Assert.Equal(category.Id, (await AlertsAsync(auth.User.Id)).Select(a => a.CategoryId).Distinct().Single());
@@ -266,8 +257,6 @@ public partial class EmailTests(SmartLedgerApiFactory factory)
         Assert.True(auth.User.BudgetAlerts);
     }
 
-    // ---- Helpers ----
-
     [GeneratedRegex(@"reset-password\?user=(?<user>[0-9a-f-]{36})#token=(?<token>[A-Za-z0-9_-]+)")]
     private static partial Regex ResetLink();
 
@@ -294,7 +283,6 @@ public partial class EmailTests(SmartLedgerApiFactory factory)
         return (Guid.Parse(match.Groups["user"].Value), match.Groups["token"].Value);
     }
 
-    /// <summary>A new account, signed in. Confirmed through its emailed link unless asked not to, as budget alerts need that.</summary>
     private async Task<(HttpClient Client, AuthResponse Auth)> SignedInAsync(bool confirmed = true)
     {
         var client = factory.CreateClient();
@@ -312,7 +300,6 @@ public partial class EmailTests(SmartLedgerApiFactory factory)
     private Task<HttpResponseMessage> ConfirmAsync(Guid userId, string token) =>
         factory.CreateClient().PostAsJsonAsync("/api/auth/confirm-email", new ConfirmEmailRequest(userId, token));
 
-    /// <summary>Gives the user's Office Supplies category (where the fake AI files every receipt) a name and budget.</summary>
     private static async Task<CategoryDto> BudgetAsync(HttpClient client, string name, decimal budget)
     {
         var categories = (await client.GetFromJsonAsync<List<CategoryDto>>("/api/categories", Json))!;

@@ -62,49 +62,49 @@
 
   <div class="lines" [class.lines--flagged]="footnoteFor('LineItems')">
     <div class="ledger-scroll">
-      <table class="ledger lines__table" formArrayName="lineItems">
+      <table class="ledger lines__table" role="table" formArrayName="lineItems">
         <caption class="visually-hidden">Line items</caption>
-        <thead>
-          <tr>
-            <th scope="col">No.</th>
-            <th scope="col">Description <ng-container *ngTemplateOutlet="mark; context: { $implicit: 'LineItems' }" /></th>
-            <th scope="col" class="num">Qty</th>
-            <th scope="col" class="num">Unit price</th>
-            <th scope="col" class="num">Amount</th>
-            <th scope="col"><span class="visually-hidden">Remove</span></th>
+        <thead role="rowgroup">
+          <tr role="row">
+            <th scope="col" role="columnheader">No.</th>
+            <th scope="col" role="columnheader">Description <ng-container *ngTemplateOutlet="mark; context: { $implicit: 'LineItems' }" /></th>
+            <th scope="col" role="columnheader" class="num">Qty</th>
+            <th scope="col" role="columnheader" class="num">Unit price</th>
+            <th scope="col" role="columnheader" class="num">Amount</th>
+            <th scope="col" role="columnheader"><span class="visually-hidden">Remove</span></th>
           </tr>
         </thead>
-        <tbody>
+        <tbody role="rowgroup">
           @for (line of form.controls.lineItems.controls; track line; let i = $index) {
-            <tr [formGroupName]="i">
-              <td class="mono">{{ (i + 1).toString().padStart(2, '0') }}</td>
-              <td>
+            <tr role="row" [formGroupName]="i">
+              <td class="mono lines__no" role="cell">{{ (i + 1).toString().padStart(2, '0') }}</td>
+              <td class="lines__description" role="cell">
                 <input class="cell-input" formControlName="description" [attr.aria-label]="'Line ' + (i + 1) + ' description'"
                   [attr.aria-invalid]="showError(line.controls.description)" />
               </td>
-              <td>
+              <td class="lines__qty" role="cell">
                 <input class="cell-input cell-input--num" type="number" step="any" min="0" inputmode="decimal"
                   formControlName="quantity" (input)="recalculate(i)" [attr.aria-label]="'Line ' + (i + 1) + ' quantity'"
                   [attr.aria-invalid]="showError(line.controls.quantity)" />
               </td>
-              <td>
+              <td class="lines__unit" role="cell">
                 <input class="cell-input cell-input--num" type="number" step="0.01" inputmode="decimal"
                   formControlName="unitPrice" (input)="recalculate(i)" [attr.aria-label]="'Line ' + (i + 1) + ' unit price'"
                   [attr.aria-invalid]="showError(line.controls.unitPrice)" />
               </td>
-              <td>
+              <td class="lines__amount" role="cell">
                 <input class="cell-input cell-input--num" type="number" step="0.01" inputmode="decimal"
                   formControlName="amount" [attr.aria-label]="'Line ' + (i + 1) + ' amount'"
                   [attr.aria-invalid]="showError(line.controls.amount)" />
               </td>
-              <td>
+              <td class="lines__remove" role="cell">
                 <button type="button" class="link-button link-button--muted" (click)="removeLine(i)"
                   [attr.aria-label]="'Remove line ' + (i + 1)">Remove</button>
               </td>
             </tr>
           } @empty {
-            <tr>
-              <td colspan="6" class="lines__empty">No line items. Add them to see what the money went on.</td>
+            <tr role="row">
+              <td colspan="6" class="lines__empty" role="cell">No line items. Add them to see what the money went on.</td>
             </tr>
           }
         </tbody>

@@ -18,7 +18,6 @@ internal sealed class AuthService(
     IEmailOutbox outbox,
     TimeProvider timeProvider) : IAuthService
 {
-    // The same message for "no such email" and "wrong password", so the login form can't be used to find accounts.
     private static readonly Error InvalidCredentials =
         Error.Unauthorized("auth.invalid_credentials", "Email or password is incorrect.");
 
@@ -34,13 +33,10 @@ internal sealed class AuthService(
     private static readonly Error InvalidConfirmationLink = Error.Validation(
         "auth.invalid_confirmation_link", "This link has expired or isn't complete. Send a new one from your Account page.");
 
-    /// <summary>A second reset or confirmation email for the same account is not sent sooner than this.</summary>
     internal static readonly TimeSpan EmailCooldown = TimeSpan.FromMinutes(5);
 
     public async Task<Result<AuthResponse>> RegisterAsync(RegisterRequest request, CancellationToken cancellationToken)
     {
-        // The user, their default categories and the first refresh token are saved together or not at all.
-        // The execution strategy reruns the whole block if Azure SQL drops the connection (e.g. while resuming).
         var strategy = db.Database.CreateExecutionStrategy();
 
         return await strategy.ExecuteAsync<Result<AuthResponse>>(async () =>
@@ -64,7 +60,6 @@ internal sealed class AuthService(
             }
 
             db.Categories.AddRange(DefaultCategories.For(user.Id));
-            // Saved by IssueTokensAsync below, in the same transaction: no account without its confirmation email.
             outbox.Add(EmailKind.EmailConfirmation, user.Id);
             var response = await IssueTokensAsync(user, rememberMe: false, familyId: Guid.CreateVersion7(), replacing: null, cancellationToken);
 
@@ -82,7 +77,6 @@ internal sealed class AuthService(
             return InvalidConfirmationLink;
         }
 
-        // Opening the link twice (or after a reset already confirmed the address) is fine: it's done either way.
         if (user.EmailConfirmed)
         {
             return ToDto(user);
@@ -107,7 +101,6 @@ internal sealed class AuthService(
 
         if (!await userManager.CheckPasswordAsync(user, request.Password))
         {
-            // Counts towards the lockout configured in DependencyInjection (5 attempts, 15 minutes).
             await userManager.AccessFailedAsync(user);
             return await userManager.IsLockedOutAsync(user) ? LockedOut : InvalidCredentials;
         }
@@ -129,8 +122,6 @@ internal sealed class AuthService(
 
         if (stored.RevokedAt is not null)
         {
-            // A token that was already exchanged is being used again: someone has a copy.
-            // End every session that came from the same sign-in, the thief's and the user's.
             if (stored.ReplacedByTokenId is not null)
             {
                 await db.RefreshTokens
@@ -186,7 +177,6 @@ internal sealed class AuthService(
         var (accessToken, accessExpiresAt) = tokenService.CreateAccessToken(user);
         var (refreshToken, refreshHash) = TokenService.CreateRefreshToken();
 
-        // Each refresh starts the inactivity window again, so an active user stays signed in.
         var lifetime = rememberMe ? jwt.RememberMeRefreshTokenLifetime : jwt.RefreshTokenLifetime;
 
         var stored = new RefreshToken
@@ -219,8 +209,6 @@ internal sealed class AuthService(
             return;
         }
 
-        // Someone pressing the button repeatedly (or using it to flood an inbox) gets one email, not many. It also
-        // protects the mail service's small hourly quota, which every user shares.
         var since = timeProvider.GetUtcNow() - EmailCooldown;
         if (await outbox.QueuedSinceAsync(user.Id, EmailKind.PasswordReset, since, cancellationToken))
         {
@@ -248,14 +236,12 @@ internal sealed class AuthService(
                 : Error.Validation("auth.invalid_password", string.Join(" ", reset.Errors.Select(e => e.Description)));
         }
 
-        // Whoever knew the old password is signed out everywhere, and failed guesses no longer block the owner.
         await db.RefreshTokens
             .Where(t => t.UserId == user.Id && t.RevokedAt == null)
             .ExecuteUpdateAsync(s => s.SetProperty(t => t.RevokedAt, timeProvider.GetUtcNow()), cancellationToken);
         await userManager.SetLockoutEndDateAsync(user, null);
         await userManager.ResetAccessFailedCountAsync(user);
 
-        // The link arrived in this inbox and was used, which proves the address as well as a confirmation link would.
         if (!user.EmailConfirmed)
         {
             user.EmailConfirmed = true;

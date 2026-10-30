@@ -2,7 +2,6 @@
   display: block;
 }
 
-// Bars stand on a single ink baseline, like figures in a printed annual report.
 .chart {
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
@@ -57,7 +56,6 @@
     background: var(--color-ink);
   }
 
-  // Exact amount on hover, above the bar.
   &__tip {
     position: absolute;
     bottom: calc(100% + 4px);
@@ -76,6 +74,17 @@
 
   &__column:hover &__tip {
     opacity: 1;
+  }
+
+  &__column:nth-child(-n + 2) &__tip {
+    left: 0;
+    transform: none;
+  }
+
+  &__column:nth-last-child(-n + 2) &__tip {
+    right: 0;
+    left: auto;
+    transform: none;
   }
 }
 

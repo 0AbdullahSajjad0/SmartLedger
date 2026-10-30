@@ -9,10 +9,6 @@ using SmartLedger.Domain.Enums;
 
 namespace SmartLedger.Api.IntegrationTests;
 
-/// <summary>
-/// Correcting what AI read, then approving, rejecting and reopening. The fake AI reads every photo as a
-/// Paper &amp; Co. receipt (USD 126.45, three lines, a note on the card number); test accounts report in EUR.
-/// </summary>
 [Collection(ApiCollection.Name)]
 public class ReviewTests(SmartLedgerApiFactory factory)
 {
@@ -31,11 +27,11 @@ public class ReviewTests(SmartLedgerApiFactory factory)
         var saved = await PutAsync(client, receipt.Id, edit);
 
         Assert.Equal(ReceiptStatus.NeedsReview, saved.Status);
-        Assert.Equal("VISA ····1111", saved.PaymentMethod); // never stored in full, even when typed
-        Assert.Empty(saved.ExtractionFlags); // the note was about the card number, which the user changed
+        Assert.Equal("VISA ····1111", saved.PaymentMethod);
+        Assert.Empty(saved.ExtractionFlags);
         Assert.Equal(["Printer paper, 5 reams", "Stapler"], saved.LineItems.Select(l => l.Description));
         Assert.Equal([1, 2], saved.LineItems.Select(l => l.LineNumber));
-        Assert.True(saved.CategorySuggestedByAi); // category untouched, so still AI's suggestion
+        Assert.True(saved.CategorySuggestedByAi);
     }
 
     [Fact]
@@ -61,8 +57,8 @@ public class ReviewTests(SmartLedgerApiFactory factory)
     }
 
     [Theory]
-    [InlineData("XYZ", 1)]   // not a currency
-    [InlineData("EUR", 0)]   // a line with no quantity
+    [InlineData("XYZ", 1)]
+    [InlineData("EUR", 0)]
     public async Task Editing_WithImpossibleValues_IsRejected(string currency, decimal quantity)
     {
         var (client, receipt) = await ReceiptWaitingForReviewAsync();
@@ -84,7 +80,7 @@ public class ReviewTests(SmartLedgerApiFactory factory)
 
         Assert.Equal(ReceiptStatus.Approved, approved.Status);
         Assert.Equal("EUR", approved.BaseCurrency);
-        Assert.Equal(0.0032142857m, approved.ExchangeRate); // 0.9 EUR ÷ 280 PKR per dollar
+        Assert.Equal(0.0032142857m, approved.ExchangeRate);
         Assert.Equal(receipt.ReceiptDate, approved.ExchangeRateDate);
         Assert.Equal(9.00m, approved.BaseCurrencyTotal);
         Assert.Null(approved.AmountCharged);
@@ -142,7 +138,7 @@ public class ReviewTests(SmartLedgerApiFactory factory)
 
         Assert.Equal(HttpStatusCode.Conflict, editWhileApproved.StatusCode);
         Assert.Equal(ReceiptStatus.NeedsReview, reopened.Status);
-        Assert.Null(reopened.BaseCurrencyTotal); // out of reports until approved again
+        Assert.Null(reopened.BaseCurrencyTotal);
         Assert.Null(reopened.ExchangeRate);
         Assert.Equal(HttpStatusCode.OK, editAfterReopening.StatusCode);
     }
@@ -174,7 +170,7 @@ public class ReviewTests(SmartLedgerApiFactory factory)
         Assert.Equal(ReceiptStatus.Failed, failed.Status);
         Assert.Equal(ReceiptStatus.NeedsReview, filledIn.Status);
         Assert.Null(filledIn.FailureReason);
-        Assert.Equal(9.00m, approved.BaseCurrencyTotal); // 7.50 GBP at 0.75 per dollar, 0.9 EUR per dollar
+        Assert.Equal(9.00m, approved.BaseCurrencyTotal);
     }
 
     [Fact]

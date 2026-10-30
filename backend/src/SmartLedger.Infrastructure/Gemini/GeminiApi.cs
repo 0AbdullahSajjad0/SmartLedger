@@ -8,11 +8,6 @@ using SmartLedger.Infrastructure.Extraction;
 
 namespace SmartLedger.Infrastructure.Gemini;
 
-/// <summary>
-/// The one place that talks to Google Gemini's generateContent. Every caller asks for structured output (a JSON
-/// schema Gemini must follow), so nothing ever parses free text. Retries for rate limits and outages come from the
-/// HTTP resilience handler registered with it.
-/// </summary>
 internal sealed class GeminiApi(HttpClient http, IOptions<GeminiOptions> options, ILogger<GeminiApi> logger)
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web)
@@ -20,7 +15,6 @@ internal sealed class GeminiApi(HttpClient http, IOptions<GeminiOptions> options
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
     };
 
-    /// <summary>The model that will answer, for recording alongside what it wrote.</summary>
     public string Model => options.Value.Model;
 
     public static object Text(string text) => new { Text = text };
@@ -28,8 +22,6 @@ internal sealed class GeminiApi(HttpClient http, IOptions<GeminiOptions> options
     public static object InlineData(string mimeType, byte[] data) =>
         new { InlineData = new { MimeType = mimeType, Data = Convert.ToBase64String(data) } };
 
-    /// <returns>The JSON Gemini wrote, which follows <paramref name="responseSchema"/>.</returns>
-    /// <exception cref="GeminiUnavailableException">No key, no connection, an error status, or no answer.</exception>
     public async Task<string> GenerateJsonAsync(
         string systemInstruction, IReadOnlyList<object> parts, object responseSchema, double temperature,
         CancellationToken cancellationToken)
@@ -56,7 +48,6 @@ internal sealed class GeminiApi(HttpClient http, IOptions<GeminiOptions> options
         {
             Content = JsonContent.Create(body, options: Json),
         };
-        // A header rather than "?key=" in the URL, so the key never shows up in request logs.
         message.Headers.Add("x-goog-api-key", gemini.ApiKey);
 
         HttpResponseMessage response;
@@ -66,7 +57,6 @@ internal sealed class GeminiApi(HttpClient http, IOptions<GeminiOptions> options
         }
         catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
         {
-            // Network errors, and the resilience handler giving up (timeouts, open circuit) after its retries.
             throw new GeminiUnavailableException("The AI service couldn't be reached.", ex);
         }
 
@@ -74,7 +64,6 @@ internal sealed class GeminiApi(HttpClient http, IOptions<GeminiOptions> options
         {
             if (!response.IsSuccessStatusCode)
             {
-                // The body explains bad keys, quota and unsupported files; never includes our key.
                 var detail = await response.Content.ReadAsStringAsync(cancellationToken);
                 logger.LogError("Gemini returned {Status}: {Detail}", (int)response.StatusCode, Truncate(detail, 2000));
                 throw new GeminiUnavailableException(
@@ -88,7 +77,6 @@ internal sealed class GeminiApi(HttpClient http, IOptions<GeminiOptions> options
 
             if (string.IsNullOrWhiteSpace(text))
             {
-                // E.g. the response was blocked by a safety filter: nothing to read.
                 logger.LogWarning("Gemini returned no content (finish reason {Reason})", reply?.Candidates?.FirstOrDefault()?.FinishReason);
                 throw new GeminiUnavailableException("The AI service returned no answer.");
             }
@@ -99,8 +87,6 @@ internal sealed class GeminiApi(HttpClient http, IOptions<GeminiOptions> options
 
     private static string Truncate(string text, int max) => text.Length <= max ? text : text[..max];
 
-    // ---- Gemini's response envelope ----
-
     private sealed record GenerateContentResponse(List<Candidate>? Candidates);
 
     private sealed record Candidate(CandidateContent? Content, string? FinishReason);
@@ -110,6 +96,5 @@ internal sealed class GeminiApi(HttpClient http, IOptions<GeminiOptions> options
     private sealed record Part(string? Text);
 }
 
-/// <summary>Gemini couldn't be used right now (missing key, outage, quota, empty answer). Trying later may work.</summary>
 internal sealed class GeminiUnavailableException(string message, Exception? innerException = null)
     : Exception(message, innerException);

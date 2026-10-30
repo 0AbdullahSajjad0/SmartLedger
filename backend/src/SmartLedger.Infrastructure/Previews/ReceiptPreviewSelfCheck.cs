@@ -4,19 +4,10 @@ using SmartLedger.Application.Receipts;
 
 namespace SmartLedger.Infrastructure.Previews;
 
-/// <summary>
-/// Proves the native image libraries load and work where the API actually runs. CI starts the built Docker image
-/// with <c>--check-image-processing</c> before deploying it: the production image is a minimal one, and a missing
-/// system library would otherwise only show up when the first user uploads a photo.
-/// </summary>
 public static class ReceiptPreviewSelfCheck
 {
     public const string CommandLineFlag = "--check-image-processing";
 
-    /// <summary>
-    /// A one-page PDF, 80 mm × 141 mm like a till receipt, with a black block in the top-left corner.
-    /// Written by hand rather than with ImageMagick, which isn't allowed to touch PDFs.
-    /// </summary>
     internal static byte[] SamplePdf()
     {
         const string content = "0 0 0 rg 20 340 80 40 re f";
@@ -29,7 +20,6 @@ public static class ReceiptPreviewSelfCheck
             "trailer <</Root 1 0 R>>\n%%EOF\n");
     }
 
-    /// <summary>Returns true when every format converts; reports each result on <paramref name="output"/>.</summary>
     public static async Task<bool> RunAsync(TextWriter output)
     {
         var renderer = new ReceiptPreviewRenderer();
@@ -45,7 +35,7 @@ public static class ReceiptPreviewSelfCheck
         using (var pdf = new MemoryStream(SamplePdf()))
         {
             ok &= await CheckAsync("PDF", () => renderer.RenderAsync(pdf, ReceiptFileTypes.Pdf.ContentType, CancellationToken.None),
-                expectedWidth: 627, expectedHeight: 1111); // 226 × 400 points at 200 dpi
+                expectedWidth: 627, expectedHeight: 1111);
         }
 
         output.WriteLine(ok ? "Image processing works." : "Image processing is broken.");

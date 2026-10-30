@@ -5,7 +5,6 @@ using SmartLedger.Application.Common.Storage;
 
 namespace SmartLedger.Infrastructure.Storage;
 
-/// <summary>Azure Blob Storage. The container is private; the API streams files to signed-in owners only.</summary>
 internal sealed class BlobFileStorage(BlobContainerClient container) : IFileStorage
 {
     public async Task SaveAsync(string key, Stream content, string contentType, CancellationToken cancellationToken)
@@ -34,7 +33,6 @@ internal sealed class BlobFileStorage(BlobContainerClient container) : IFileStor
 
     public async Task DeleteFolderAsync(string folder, CancellationToken cancellationToken)
     {
-        // Blob storage has no real folders: list the blobs whose names start with the prefix and delete each.
         var blobs = container.GetBlobsAsync(BlobTraits.None, BlobStates.None, prefix: $"{folder.TrimEnd('/')}/", cancellationToken);
         await foreach (var blob in blobs)
         {

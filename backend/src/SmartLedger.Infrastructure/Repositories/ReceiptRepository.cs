@@ -15,8 +15,6 @@ internal sealed class ReceiptRepository(AppDbContext db) : IReceiptRepository
     {
         db.Receipts.AddRange(receipts);
 
-        // Two uploads at the same moment can pick the same next number; the unique index on
-        // (UserId, Number) rejects the second, which then picks again.
         for (var attempt = 1; ; attempt++)
         {
             var next = await db.Receipts.Where(r => r.UserId == userId).MaxAsync(r => (int?)r.Number, cancellationToken) ?? 0;
@@ -60,8 +58,6 @@ internal sealed class ReceiptRepository(AppDbContext db) : IReceiptRepository
 
         if (!string.IsNullOrWhiteSpace(filter.Search))
         {
-            // LIKE with the user's text escaped, so "%" or "_" in a search are matched literally, not as wildcards.
-            // The database's case-insensitive collation makes "chai" find "Lahore Chai House".
             var pattern = $"%{EscapeLike(filter.Search.Trim())}%";
             query = query.Where(r =>
                 EF.Functions.Like(r.VendorName!, pattern, LikeEscape)
@@ -122,7 +118,6 @@ internal sealed class ReceiptRepository(AppDbContext db) : IReceiptRepository
             .Replace("_", LikeEscape + "_")
             .Replace("[", LikeEscape + "[");
 
-    // 2601: duplicate key in a unique index; 2627: unique constraint violation.
     private static bool IsDuplicateKey(DbUpdateException ex) =>
         ex.InnerException is SqlException { Number: 2601 or 2627 };
 }

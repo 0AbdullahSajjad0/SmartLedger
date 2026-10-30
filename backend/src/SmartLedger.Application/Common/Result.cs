@@ -7,11 +7,9 @@ public enum ErrorType
     NotFound,
     Conflict,
 
-    /// <summary>A service we depend on is down; trying again later may work.</summary>
     Unavailable,
 }
 
-/// <summary>An expected failure (wrong password, duplicate email…) returned instead of thrown.</summary>
 public sealed record Error(string Code, string Message, ErrorType Type)
 {
     public static Error Validation(string code, string message) => new(code, message, ErrorType.Validation);
@@ -25,10 +23,6 @@ public sealed record Error(string Code, string Message, ErrorType Type)
     public static Error Unavailable(string code, string message) => new(code, message, ErrorType.Unavailable);
 }
 
-/// <summary>
-/// Either a value or an <see cref="Error"/>. Services return this for outcomes the caller must handle,
-/// keeping exceptions for real bugs and outages.
-/// </summary>
 public sealed class Result<T>
 {
     private readonly T? _value;

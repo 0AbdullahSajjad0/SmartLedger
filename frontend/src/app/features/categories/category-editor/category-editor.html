@@ -1,4 +1,4 @@
-<td colspan="6" (keydown)="onKeydown($event)">
+<td colspan="6" role="cell" (keydown)="onKeydown($event)">
   <form class="editor__form" [formGroup]="form" (ngSubmit)="save()" novalidate
     [attr.aria-label]="category() ? 'Edit ' + category()!.name : 'New category'">
     <div class="field editor__name">

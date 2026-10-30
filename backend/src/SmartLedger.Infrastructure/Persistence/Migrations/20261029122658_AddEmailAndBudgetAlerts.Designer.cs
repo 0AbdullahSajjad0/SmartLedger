@@ -15,7 +15,6 @@ namespace SmartLedger.Infrastructure.Persistence.Migrations
     [Migration("20261029122658_AddEmailAndBudgetAlerts")]
     partial class AddEmailAndBudgetAlerts
     {
-        /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618

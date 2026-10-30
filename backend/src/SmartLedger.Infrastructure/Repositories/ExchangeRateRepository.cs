@@ -44,8 +44,6 @@ internal sealed class ExchangeRateRepository(AppDbContext db) : IExchangeRateRep
         }
         catch (DbUpdateException ex) when (ex.InnerException is SqlException { Number: 2601 or 2627 })
         {
-            // Another request stored the same day a moment earlier; its rows are just as good. Forget ours, or the
-            // next save on this context (e.g. the approval itself) would try to insert them again.
             foreach (var entry in db.ChangeTracker.Entries<ExchangeRate>().Where(e => e.State == EntityState.Added).ToList())
             {
                 entry.State = EntityState.Detached;

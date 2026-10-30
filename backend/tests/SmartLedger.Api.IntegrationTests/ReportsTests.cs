@@ -9,10 +9,6 @@ using SmartLedger.Application.Reports;
 
 namespace SmartLedger.Api.IntegrationTests;
 
-/// <summary>
-/// The month in review, AI's analysis (faked) and the CSV export. The fake AI reads every photo as a Paper &amp; Co.
-/// Office Supplies receipt dated 19 Oct 2026; test accounts report in EUR; amounts are approved as "amount charged".
-/// </summary>
 [Collection(ApiCollection.Name)]
 public class ReportsTests(SmartLedgerApiFactory factory)
 {
@@ -37,7 +33,6 @@ public class ReportsTests(SmartLedgerApiFactory factory)
         var vendor = Assert.Single(report.TopVendors);
         Assert.Equal(("Paper & Co. Office Supply", "Office Supplies", 2, 140m), (vendor.Vendor, vendor.CategoryName, vendor.ReceiptCount, vendor.Spent));
 
-        // Budget against actual lists every active category, spent or not.
         Assert.Equal(6, report.Categories.Count);
         Assert.Equal(140m, report.Categories[0].Spent);
         Assert.Null(report.Insight);
@@ -61,7 +56,6 @@ public class ReportsTests(SmartLedgerApiFactory factory)
         Assert.Equal(insight.Headline, report.Insight?.Headline);
         Assert.Equal(insight.Headline, overview!.InsightHeadline);
 
-        // What the AI saw: totals and names, never the receipt's notes, card number or line items.
         var sent = FakeInsightWriter.LastRequest!;
         Assert.Equal("September 2026", sent.PreviousMonthName);
         Assert.Equal("Paper & Co. Office Supply", Assert.Single(sent.LargestReceipts).Vendor);
@@ -133,12 +127,11 @@ public class ReportsTests(SmartLedgerApiFactory factory)
     {
         var client = await SignedInClientAsync();
         var receipt = await TestReceipts.UploadAndReadAsync(client);
-        // A vendor name that would run as a formula in a spreadsheet.
         var edit = new UpdateReceiptRequest("=HYPERLINK(\"http://evil.test\",\"Click\")", receipt.ReceiptDate, receipt.Currency,
             receipt.Subtotal, receipt.Tax, receipt.Total, receipt.PaymentMethod, receipt.CategoryId, "Team, offsite", []);
         (await client.PutAsJsonAsync($"/api/receipts/{receipt.Id}", edit, Json)).EnsureSuccessStatusCode();
         (await client.PostAsJsonAsync($"/api/receipts/{receipt.Id}/approve", new ApproveReceiptRequest(113.81m), Json)).EnsureSuccessStatusCode();
-        await TestReceipts.ApprovedAsync(client, amountCharged: 50m, receiptDate: new DateOnly(2026, 9, 3)); // another month
+        await TestReceipts.ApprovedAsync(client, amountCharged: 50m, receiptDate: new DateOnly(2026, 9, 3));
 
         var response = await client.GetAsync("/api/reports/export?month=2026-10");
         var bytes = await response.Content.ReadAsByteArrayAsync();
@@ -147,7 +140,7 @@ public class ReportsTests(SmartLedgerApiFactory factory)
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Equal("text/csv", response.Content.Headers.ContentType?.MediaType);
         Assert.Equal("smartledger-2026-10.csv", response.Content.Headers.ContentDisposition?.FileName);
-        Assert.Equal([0xEF, 0xBB, 0xBF], bytes[..3]); // UTF-8 marker, so Excel reads accents and "····" correctly
+        Assert.Equal([0xEF, 0xBB, 0xBF], bytes[..3]);
         Assert.Equal("Entry,Date,Vendor,Category,Currency,Total,Exchange rate,Total (EUR),Amount charged,Paid with,Notes", lines[0]);
         var row = Assert.Single(lines[1..]);
         Assert.StartsWith("0001,2026-10-19,\"'=HYPERLINK(\"\"http://evil.test\"\",\"\"Click\"\")\",Office Supplies,USD,126.45,", row);

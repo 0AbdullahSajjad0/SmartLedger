@@ -81,7 +81,6 @@ describe('UploadQueue', () => {
     (await vi.waitFor(() => http.expectOne(RECEIPTS_URL))).flush([receipt(2, 'b.jpg')]);
 
     await vi.waitFor(() => expect(queue.items().every((item) => item.state === 'done')).toBe(true));
-    // Newest first in the intake log.
     expect(queue.items().map((item) => item.receipt?.number)).toEqual([2, 1]);
   });
 });

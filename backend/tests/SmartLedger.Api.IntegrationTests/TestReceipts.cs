@@ -14,10 +14,6 @@ internal static class TestReceipts
         Converters = { new JsonStringEnumConverter() },
     };
 
-    /// <summary>
-    /// The background worker reads uploads on its own schedule, so a receipt's status changes by itself shortly
-    /// after upload. Tests that care about status wait for it to settle instead of racing the worker.
-    /// </summary>
     public static async Task<ReceiptDetailDto> WaitUntilReadAsync(HttpClient client, Guid id)
     {
         var deadline = DateTime.UtcNow.AddSeconds(30);
@@ -32,10 +28,6 @@ internal static class TestReceipts
         }
     }
 
-    /// <summary>
-    /// Uploads a photo and waits for the (fake) AI. By default it reads as an Office Supplies receipt dated
-    /// 19 Oct 2026, waiting for review; <see cref="TestFiles.NotAReceiptJpeg"/> comes back unreadable.
-    /// </summary>
     public static async Task<ReceiptDetailDto> UploadAndReadAsync(HttpClient client, byte[]? photo = null)
     {
         var form = new MultipartFormDataContent();
@@ -49,11 +41,6 @@ internal static class TestReceipts
         return await WaitUntilReadAsync(client, uploaded.Id);
     }
 
-    /// <summary>
-    /// A receipt read by AI and approved at exactly <paramref name="amountCharged"/> in the base currency, so sums
-    /// in tests are easy to check. The receipt date can be moved to put it in another month, and the category changed
-    /// (AI picks Office Supplies by name, so a renamed one has to be set by hand).
-    /// </summary>
     public static async Task<ReceiptDetailDto> ApprovedAsync(
         HttpClient client, decimal amountCharged, DateOnly? receiptDate = null, Guid? categoryId = null)
     {

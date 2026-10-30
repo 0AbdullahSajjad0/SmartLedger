@@ -154,32 +154,32 @@
         <a class="mono section-head__link" routerLink="/receipts">Full ledger →</a>
       </div>
       <div class="ledger-scroll">
-        <table class="ledger recent__table">
-          <thead>
-            <tr>
-              <th scope="col">Entry</th>
-              <th scope="col">Date</th>
-              <th scope="col">Vendor</th>
-              <th scope="col">Category</th>
-              <th scope="col" class="num">Amount</th>
-              <th scope="col">Status</th>
+        <table class="ledger recent__table" role="table">
+          <thead role="rowgroup">
+            <tr role="row">
+              <th scope="col" role="columnheader">Entry</th>
+              <th scope="col" role="columnheader">Date</th>
+              <th scope="col" role="columnheader">Vendor</th>
+              <th scope="col" role="columnheader">Category</th>
+              <th scope="col" class="num" role="columnheader">Amount</th>
+              <th scope="col" role="columnheader">Status</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody role="rowgroup">
             @for (receipt of s.recent; track receipt.id) {
-              <tr>
-                <td class="mono"><a [routerLink]="['/receipts', receipt.id]">{{ receipt.number | entryNumber }}</a></td>
-                <td class="mono">{{ receipt.receiptDate ? (receipt.receiptDate | date: 'dd MMM y' | uppercase) : '—' }}</td>
-                <td>{{ receipt.vendorName ?? receipt.fileName }}</td>
-                <td class="muted">{{ categoryName(receipt.categoryId) ?? '—' }}</td>
-                <td class="num">
+              <tr role="row">
+                <td class="mono recent__entry" role="cell"><a [routerLink]="['/receipts', receipt.id]">{{ receipt.number | entryNumber }}</a></td>
+                <td class="mono recent__date" role="cell">{{ receipt.receiptDate ? (receipt.receiptDate | date: 'dd MMM y' | uppercase) : '—' }}</td>
+                <td class="recent__vendor" role="cell">{{ receipt.vendorName ?? receipt.fileName }}</td>
+                <td class="muted recent__category" role="cell">{{ categoryName(receipt.categoryId) ?? '—' }}</td>
+                <td class="num recent__amount" role="cell">
                   @if (receipt.total !== null) {
                     {{ receipt.total | number: '1.2-2' }} <span class="currency">{{ receipt.currency }}</span>
                   } @else {
                     —
                   }
                 </td>
-                <td><app-status-stamp [status]="receipt.status" /></td>
+                <td class="recent__status" role="cell"><app-status-stamp [status]="receipt.status" /></td>
               </tr>
             }
           </tbody>

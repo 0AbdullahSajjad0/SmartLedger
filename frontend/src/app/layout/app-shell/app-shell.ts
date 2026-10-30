@@ -6,9 +6,9 @@ import { ConfirmEmailBanner } from '../../shared/ui/confirm-email-banner/confirm
 interface NavItem {
   label: string;
   path: string;
+  icon: 'overview' | 'receipts' | 'scan' | 'reports' | 'categories';
 }
 
-/** Frame for every signed-in page: the espresso masthead with navigation, then the page. */
 @Component({
   selector: 'app-shell',
   imports: [RouterOutlet, RouterLink, RouterLinkActive, ConfirmEmailBanner],
@@ -20,11 +20,11 @@ export class AppShell {
   protected readonly auth = inject(AuthStore);
 
   protected readonly nav: readonly NavItem[] = [
-    { label: 'Overview', path: '/overview' },
-    { label: 'Receipts', path: '/receipts' },
-    { label: 'Scan', path: '/scan' },
-    { label: 'Reports', path: '/reports' },
-    { label: 'Categories', path: '/categories' },
+    { label: 'Overview', path: '/overview', icon: 'overview' },
+    { label: 'Receipts', path: '/receipts', icon: 'receipts' },
+    { label: 'Scan', path: '/scan', icon: 'scan' },
+    { label: 'Reports', path: '/reports', icon: 'reports' },
+    { label: 'Categories', path: '/categories', icon: 'categories' },
   ];
 
   protected signOut(): void {

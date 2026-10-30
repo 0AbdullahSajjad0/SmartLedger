@@ -1,13 +1,9 @@
-// Mirrors SmartLedger.Application.Auth contracts on the API.
-
 export interface User {
   id: string;
   email: string;
   displayName: string;
   baseCurrency: string;
-  /** Email when a category reaches 80% and 100% of its monthly budget. */
   budgetAlerts: boolean;
-  /** Whether the user proved the address is theirs. Budget alerts go only to confirmed addresses. */
   emailConfirmed: boolean;
 }
 
@@ -32,5 +28,4 @@ export interface RegisterRequest {
   baseCurrency: string;
 }
 
-/** `restoring` while a saved session is being checked on page load. */
 export type SessionStatus = 'restoring' | 'signed-in' | 'signed-out';

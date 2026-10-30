@@ -4,7 +4,6 @@ import { Observable } from 'rxjs';
 import { API_BASE_URL } from '../config/api-base-url';
 import { AuthResponse, RegisterRequest, SignInRequest, User } from './auth.models';
 
-/** Marks requests the auth interceptor must leave alone (they manage tokens themselves). */
 export const SKIP_AUTH = new HttpContextToken<boolean>(() => false);
 
 const skipAuth = () => ({ context: new HttpContext().set(SKIP_AUTH, true) });
@@ -30,7 +29,6 @@ export class AuthApi {
     return this.http.post<void>(`${this.baseUrl}/logout`, { refreshToken }, skipAuth());
   }
 
-  /** Always succeeds, whether or not an account uses the address. */
   forgotPassword(email: string): Observable<void> {
     return this.http.post<void>(`${this.baseUrl}/forgot-password`, { email }, skipAuth());
   }
@@ -39,7 +37,6 @@ export class AuthApi {
     return this.http.post<void>(`${this.baseUrl}/reset-password`, { userId, token, newPassword }, skipAuth());
   }
 
-  /** Works signed in or not: the token in the link says whose address it is. */
   confirmEmail(userId: string, token: string): Observable<User> {
     return this.http.post<User>(`${this.baseUrl}/confirm-email`, { userId, token }, skipAuth());
   }

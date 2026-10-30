@@ -1,4 +1,5 @@
 @use 'record';
+@use '../../../styles/phone';
 
 .crumb {
   color: inherit;
@@ -11,8 +12,6 @@
   align-items: flex-start;
   padding-top: 32px;
 }
-
-// ---- Original, in a dark frame like the scanner bed ----
 
 .original {
   flex: 4 1 320px;
@@ -104,8 +103,6 @@
   }
 }
 
-// ---- Delete: quiet until asked, then a ruled confirmation that says what's lost ----
-
 .danger {
   align-self: stretch;
   padding-top: 14px;
@@ -132,8 +129,6 @@
     gap: 14px;
   }
 }
-
-// ---- The record, as an invoice sheet ----
 
 .sheet {
   flex: 7 1 520px;
@@ -198,7 +193,6 @@
   color: var(--color-accent);
 }
 
-// How an approved receipt went into the ledger: the frozen amount and what it's based on.
 .posted {
   display: flex;
   flex-wrap: wrap;
@@ -235,4 +229,45 @@
   align-items: flex-start;
   gap: 16px;
   padding: 32px 0;
+}
+
+@include phone.phone {
+  .items {
+    @include phone.stacked-table;
+
+    tr {
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      grid-template-areas:
+        'no description amount'
+        '. qty unit';
+      gap: 2px 12px;
+    }
+  }
+
+  .items__no {
+    grid-area: no;
+  }
+
+  .items__description {
+    grid-area: description;
+  }
+
+  .items__amount {
+    grid-area: amount;
+  }
+
+  .items__qty {
+    grid-area: qty;
+    font-size: 12px;
+    text-align: left;
+    color: var(--color-muted);
+    @include phone.cell-label('Qty');
+  }
+
+  .items__unit {
+    grid-area: unit;
+    font-size: 12px;
+    color: var(--color-muted);
+    @include phone.cell-label('Each');
+  }
 }

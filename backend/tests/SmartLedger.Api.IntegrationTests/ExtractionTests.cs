@@ -10,7 +10,6 @@ using SmartLedger.Domain.Enums;
 
 namespace SmartLedger.Api.IntegrationTests;
 
-/// <summary>Upload → background worker → preview → AI (faked) → sanitizer → the receipt the user sees.</summary>
 [Collection(ApiCollection.Name)]
 public class ExtractionTests(SmartLedgerApiFactory factory)
 {
@@ -33,10 +32,9 @@ public class ExtractionTests(SmartLedgerApiFactory factory)
         Assert.Equal("USD", receipt.Currency);
         Assert.Equal(126.45m, receipt.Total);
         Assert.Equal(3, receipt.LineItems.Count);
-        Assert.Equal("VISA ····4242", receipt.PaymentMethod); // the full card number never reaches the database
+        Assert.Equal("VISA ····4242", receipt.PaymentMethod);
         Assert.Equal("PaymentMethod", Assert.Single(receipt.ExtractionFlags).Field);
 
-        // Suggested category is one of the user's own default categories.
         var categories = await client.GetFromJsonAsync<List<CategoryDto>>("/api/categories", Json);
         Assert.Equal("Office Supplies", categories!.Single(c => c.Id == receipt.CategoryId).Name);
         Assert.True(receipt.CategorySuggestedByAi);
@@ -65,7 +63,6 @@ public class ExtractionTests(SmartLedgerApiFactory factory)
         var preview = await client.GetAsync($"/api/receipts/{receipt.Id}/preview");
         var original = await client.GetAsync($"/api/receipts/{receipt.Id}/file");
 
-        // AI (faked) only accepts the cleaned JPEG for photos, so reaching review proves that's what it was sent.
         Assert.Equal(ReceiptStatus.NeedsReview, receipt.Status);
         Assert.True(receipt.HasPreview);
 
@@ -76,7 +73,7 @@ public class ExtractionTests(SmartLedgerApiFactory factory)
         using (var image = new MagickImage(await preview.Content.ReadAsByteArrayAsync()))
         {
             Assert.Equal((200u, 400u), (image.Width, image.Height));
-            Assert.Empty(image.ProfileNames); // no EXIF, so no GPS location
+            Assert.Empty(image.ProfileNames);
         }
 
         Assert.Equal("image/heic", original.Content.Headers.ContentType?.MediaType);
@@ -101,7 +98,6 @@ public class ExtractionTests(SmartLedgerApiFactory factory)
     {
         var client = await SignedInClientAsync();
 
-        // Starts like a JPEG, so the upload accepts it, but there's no picture inside.
         var uploaded = await UploadAsync(client, "broken.jpg", [0xFF, 0xD8, 0xFF, 0xE0, .. new byte[64]]);
         var receipt = await WaitUntilReadAsync(client, uploaded.Id);
         var preview = await client.GetAsync($"/api/receipts/{receipt.Id}/preview");

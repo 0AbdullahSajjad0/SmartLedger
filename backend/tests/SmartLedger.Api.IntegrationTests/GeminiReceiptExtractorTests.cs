@@ -9,7 +9,6 @@ using SmartLedger.Infrastructure.Gemini;
 
 namespace SmartLedger.Api.IntegrationTests;
 
-/// <summary>The Gemini client against a fake HTTP server: what it sends, and how it reads the answer.</summary>
 public class GeminiReceiptExtractorTests
 {
     private const string ReceiptJson = """
@@ -29,7 +28,7 @@ public class GeminiReceiptExtractorTests
         var request = server.LastRequest!.Value;
         Assert.Equal("https://gemini.test/v1beta/models/test-model:generateContent", request.Uri);
         Assert.Equal("test-key", request.ApiKey);
-        Assert.DoesNotContain("test-key", request.Uri); // Never in the URL, where it would end up in logs.
+        Assert.DoesNotContain("test-key", request.Uri);
 
         using var body = JsonDocument.Parse(request.Body);
         var parts = body.RootElement.GetProperty("contents")[0].GetProperty("parts");
@@ -89,7 +88,6 @@ public class GeminiReceiptExtractorTests
     private static ExtractionRequest Request() =>
         new(new MemoryStream("fake image"u8.ToArray()), "image/jpeg", ["Food & Dining", "Travel"], "USD");
 
-    /// <summary>Gemini's envelope: our JSON arrives as text inside the first candidate.</summary>
     private static string Reply(string json) =>
         JsonSerializer.Serialize(new { candidates = new[] { new { content = new { parts = new[] { new { text = json } } } } } });
 

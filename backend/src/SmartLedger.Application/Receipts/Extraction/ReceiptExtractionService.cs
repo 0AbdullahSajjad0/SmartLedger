@@ -10,13 +10,8 @@ namespace SmartLedger.Application.Receipts.Extraction;
 
 public interface IReceiptExtractionService
 {
-    /// <summary>
-    /// Makes the receipt's cleaned preview, then reads it with AI. Does nothing unless the receipt is still waiting
-    /// to be read.
-    /// </summary>
     Task ProcessAsync(Guid receiptId, CancellationToken cancellationToken);
 
-    /// <summary>Receipts still waiting to be read, e.g. after a restart.</summary>
     Task<IReadOnlyList<Guid>> ListPendingAsync(CancellationToken cancellationToken);
 }
 
@@ -30,7 +25,6 @@ internal sealed class ReceiptExtractionService(
     TimeProvider timeProvider,
     ILogger<ReceiptExtractionService> logger) : IReceiptExtractionService
 {
-    /// <summary>After this many failed attempts to reach the AI service, the receipt is marked unreadable.</summary>
     public const int MaxAttempts = 3;
 
     private const string MissingFile = "The original file is missing. Please upload it again.";
@@ -46,11 +40,9 @@ internal sealed class ReceiptExtractionService(
         var preview = await EnsurePreviewAsync(receipt, cancellationToken);
         if (preview is null)
         {
-            return; // The file is missing or can't be opened; the receipt is marked failed with the reason.
+            return;
         }
 
-        // Photos go to AI as the cleaned copy, so their GPS location never leaves the app.
-        // PDFs go as the original: the preview shows page 1 only, and invoices can run to several pages.
         var isPdf = receipt.ContentType == ReceiptFileTypes.Pdf.ContentType;
         var content = isPdf
             ? (await storage.OpenReadAsync(receipt.StorageKey, cancellationToken))?.Content
@@ -105,10 +97,6 @@ internal sealed class ReceiptExtractionService(
     public Task<IReadOnlyList<Guid>> ListPendingAsync(CancellationToken cancellationToken) =>
         receipts.ListIdsWithStatusAsync(ReceiptStatus.Processing, cancellationToken);
 
-    /// <summary>
-    /// The preview's JPEG bytes, made from the original on the first attempt and saved, so a retry after an AI outage
-    /// reuses it. Null when the receipt was marked failed instead.
-    /// </summary>
     private async Task<byte[]?> EnsurePreviewAsync(Receipt receipt, CancellationToken cancellationToken)
     {
         if (receipt.PreviewStorageKey is not null
@@ -146,7 +134,6 @@ internal sealed class ReceiptExtractionService(
             return null;
         }
 
-        // Next to the original, under the same user folder.
         var key = $"{receipt.UserId}/{receipt.Id}.preview{ReceiptFileTypes.Jpeg.Extension}";
         using (var stream = new MemoryStream(preview))
         {

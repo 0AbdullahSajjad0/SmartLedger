@@ -4,10 +4,8 @@
 
 namespace SmartLedger.Infrastructure.Persistence.Migrations
 {
-    /// <inheritdoc />
     public partial class AddInsightTotalSpent : Migration
     {
-        /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.AlterColumn<string>(
@@ -29,7 +27,6 @@ namespace SmartLedger.Infrastructure.Persistence.Migrations
                 defaultValue: 0m);
         }
 
-        /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropColumn(

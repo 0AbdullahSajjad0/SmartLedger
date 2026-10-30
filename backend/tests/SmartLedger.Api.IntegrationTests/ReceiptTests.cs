@@ -86,7 +86,6 @@ public class ReceiptTests(SmartLedgerApiFactory factory)
         var uploaded = (await (await UploadAsync(client, ("a.jpg", Jpeg))).Content
             .ReadFromJsonAsync<List<ReceiptSummaryDto>>(Json))!.Single();
 
-        // Wait for the background worker, or the status would still be changing while we filter by it.
         await TestReceipts.WaitUntilReadAsync(client, uploaded.Id);
 
         var needsReview = await client.GetFromJsonAsync<PagedResult<ReceiptSummaryDto>>("/api/receipts?status=NeedsReview", Json);
@@ -112,12 +111,11 @@ public class ReceiptTests(SmartLedgerApiFactory factory)
     [Fact]
     public async Task AnotherUsersReceipt_IsNotFound_NotForbidden()
     {
-        // 404 rather than 403, so nobody can even confirm that a receipt id exists.
         var owner = await SignedInClientAsync();
         var stranger = await SignedInClientAsync();
         var receipt = (await (await UploadAsync(owner, ("a.jpg", Jpeg))).Content.ReadFromJsonAsync<List<ReceiptSummaryDto>>(Json))!.Single();
 
-        await TestReceipts.WaitUntilReadAsync(owner, receipt.Id); // so the preview exists, and must still be hidden
+        await TestReceipts.WaitUntilReadAsync(owner, receipt.Id);
 
         var details = await stranger.GetAsync($"/api/receipts/{receipt.Id}");
         var file = await stranger.GetAsync($"/api/receipts/{receipt.Id}/file");

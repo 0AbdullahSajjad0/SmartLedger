@@ -3,10 +3,6 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace SmartLedger.Api.ExceptionHandling;
 
-/// <summary>
-/// Catches any exception not handled elsewhere, logs it, and returns a ProblemDetails (RFC 9457) response
-/// so clients never see a stack trace or an empty 500.
-/// </summary>
 internal sealed class GlobalExceptionHandler(
     IProblemDetailsService problemDetailsService,
     ILogger<GlobalExceptionHandler> logger) : IExceptionHandler
@@ -16,7 +12,6 @@ internal sealed class GlobalExceptionHandler(
         Exception exception,
         CancellationToken cancellationToken)
     {
-        // A request Kestrel refused (e.g. over the size limit) is the client's mistake: answer with its status, don't log an error.
         var problem = exception is BadHttpRequestException badRequest
             ? new ProblemDetails { Status = badRequest.StatusCode, Title = "The request couldn't be accepted." }
             : null;

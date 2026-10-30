@@ -29,7 +29,6 @@ internal sealed class AccountDataReader(AppDbContext db) : IAccountDataReader
             .Where(b => db.Categories.Any(c => c.Id == b.CategoryId && c.UserId == userId))
             .ToListAsync(cancellationToken);
 
-        // Split query: one for receipts and one for their line items, instead of repeating every receipt per line.
         var receipts = await db.Receipts
             .AsNoTracking()
             .Include(r => r.LineItems)

@@ -6,10 +6,6 @@ using SmartLedger.Domain.Enums;
 
 namespace SmartLedger.Api.IntegrationTests;
 
-/// <summary>
-/// The monthly statement on the Overview page. The fake AI files every photo under Office Supplies, dated
-/// 19 Oct 2026; test accounts report in EUR, and amounts are approved as "amount charged" so the sums are exact.
-/// </summary>
 [Collection(ApiCollection.Name)]
 public class OverviewTests(SmartLedgerApiFactory factory)
 {
@@ -37,14 +33,13 @@ public class OverviewTests(SmartLedgerApiFactory factory)
         await TestReceipts.ApprovedAsync(client, amountCharged: 100m);
         await TestReceipts.ApprovedAsync(client, amountCharged: 40m);
         await TestReceipts.ApprovedAsync(client, amountCharged: 50m, receiptDate: new DateOnly(2026, 9, 12));
-        await TestReceipts.UploadAndReadAsync(client); // waiting for review
+        await TestReceipts.UploadAndReadAsync(client);
         var unreadable = await TestReceipts.UploadAndReadAsync(client, TestFiles.NotAReceiptJpeg());
         var travel = (await client.GetFromJsonAsync<List<CategoryDto>>("/api/categories", Json))!.Single(c => c.Name == "Travel");
         (await client.PutAsJsonAsync($"/api/categories/{travel.Id}",
             new UpdateCategoryRequest(travel.Name, travel.Color, 300m, false), Json)).EnsureSuccessStatusCode();
 
         var overview = (await client.GetFromJsonAsync<OverviewDto>("/api/overview?month=2026-10", Json))!;
-        // A budget applies from the month it's set (this one), and counts even for a category with nothing spent.
         var thisMonth = (await client.GetFromJsonAsync<OverviewDto>("/api/overview", Json))!;
         Assert.Equal(300m, thisMonth.TotalBudget);
 
@@ -61,7 +56,6 @@ public class OverviewTests(SmartLedgerApiFactory factory)
         Assert.Equal(140m, office.Spent);
         Assert.Equal(2, office.ReceiptCount);
 
-        // Newest first, every status.
         Assert.Equal([5, 4, 3, 2, 1], overview.Recent.Select(r => r.Number));
         Assert.Equal(unreadable.Id, overview.Recent[0].Id);
         Assert.Equal(ReceiptStatus.Failed, overview.Recent[0].Status);

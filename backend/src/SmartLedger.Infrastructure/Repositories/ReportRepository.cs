@@ -9,7 +9,6 @@ namespace SmartLedger.Infrastructure.Repositories;
 
 internal sealed class ReportRepository(AppDbContext db) : IReportRepository
 {
-    // Grouped in SQL by the receipt date's year and month; uses the (UserId, ReceiptDate) index.
     public async Task<IReadOnlyList<MonthSpending>> MonthlyTotalsAsync(
         Guid userId, DateOnly from, DateOnly to, CancellationToken cancellationToken) =>
         await Approved(userId, from, to)
@@ -37,7 +36,6 @@ internal sealed class ReportRepository(AppDbContext db) : IReportRepository
             await db.SaveChangesAsync(cancellationToken);
             return true;
         }
-        // The unique (UserId, Year, Month) index: another request stored this month's analysis a moment earlier.
         catch (DbUpdateException ex) when (ex.InnerException is SqlException { Number: 2601 or 2627 })
         {
             return false;

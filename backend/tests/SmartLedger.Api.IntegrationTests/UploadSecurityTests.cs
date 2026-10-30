@@ -62,7 +62,6 @@ public class UploadSecurityTests(SmartLedgerApiFactory factory)
     [Fact]
     public async Task Uploads_AreRateLimitedPerUser()
     {
-        // Same database, but an app instance with a tiny upload allowance.
         await using var limited = factory.WithWebHostBuilder(builder => builder.UseSetting("RateLimiting:UploadPermitLimit", "2"));
         var client = await SignedInClientAsync(limited);
 

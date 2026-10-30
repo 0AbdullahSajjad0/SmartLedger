@@ -4,7 +4,6 @@ using SmartLedger.Application.Common;
 
 namespace SmartLedger.Api.Auth;
 
-/// <summary>Reads the user id from the validated access token's "sub" claim.</summary>
 internal sealed class CurrentUser(IHttpContextAccessor httpContextAccessor) : ICurrentUser
 {
     public Guid? UserId =>

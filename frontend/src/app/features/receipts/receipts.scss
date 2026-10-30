@@ -1,3 +1,5 @@
+@use '../../../styles/phone';
+
 .tabs {
   display: flex;
   flex-wrap: wrap;
@@ -29,8 +31,6 @@
   }
 }
 
-// ---- Filters: one row of ledger-line fields under the tabs ----
-
 .filters {
   display: grid;
   grid-template-columns: minmax(200px, 2fr) minmax(160px, 1.2fr) repeat(2, minmax(140px, 1fr)) auto;
@@ -55,6 +55,54 @@
 
     &__search {
       grid-column: 1 / -1;
+    }
+  }
+}
+
+@include phone.phone {
+  .receipts {
+    @include phone.stacked-table;
+
+    tr {
+      grid-template-columns: minmax(0, 1fr) auto;
+      grid-template-areas:
+        'vendor amount'
+        'category status'
+        'date no';
+    }
+
+    &__vendor {
+      grid-area: vendor;
+      font-size: 15px;
+    }
+
+    &__amount {
+      grid-area: amount;
+      white-space: nowrap;
+    }
+
+    &__category {
+      grid-area: category;
+    }
+
+    &__status {
+      grid-area: status;
+      justify-self: end;
+    }
+
+    &__date {
+      grid-area: date;
+      font-size: 12px;
+    }
+
+    &__no {
+      grid-area: no;
+      justify-self: end;
+      font-size: 12px;
+    }
+
+    &__received {
+      @include phone.out-of-sight;
     }
   }
 }
@@ -109,7 +157,6 @@
   color: var(--color-muted);
 }
 
-// While a new page loads, keep the old rows visible but dimmed.
 .is-refreshing {
   opacity: 0.55;
   transition: opacity 150ms ease;

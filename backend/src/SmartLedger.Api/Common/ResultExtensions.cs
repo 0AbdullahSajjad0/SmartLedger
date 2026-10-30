@@ -5,7 +5,6 @@ namespace SmartLedger.Api.Common;
 
 internal static class ResultExtensions
 {
-    /// <summary>200 with the value on success; otherwise a ProblemDetails response matching the error type.</summary>
     public static IActionResult ToActionResult<T>(this Result<T> result, ControllerBase controller)
     {
         if (result.IsSuccess)

@@ -1,36 +1,30 @@
-// Design tokens for the "Fintech Editorial" look. Components use these variables, never raw values,
-// so the palette or type scale can change in one place.
 :root {
-  // Color
-  --color-ink: #1c1a17; // espresso: text, rules, masthead
-  --color-paper: #f4efe4; // cream page
-  --color-sheet: #fbf8f1; // lighter paper for invoice sheets
-  --color-muted: #5e574c; // secondary text (6:1 on paper)
-  --color-faint: #9c9384; // decorative only, never body text
-  --color-hairline: #d8cfbd; // row dividers
-  --color-wash: #efe8da; // row hover
-  --color-flagged: #f6e9dd; // terra cotta wash behind a field AI asks you to check
-  --color-accent: #a84b26; // burnt terra cotta, actions only
+  --color-ink: #1c1a17;
+  --color-paper: #f4efe4;
+  --color-sheet: #fbf8f1;
+  --color-muted: #5e574c;
+  --color-faint: #9c9384;
+  --color-hairline: #d8cfbd;
+  --color-wash: #efe8da;
+  --color-flagged: #f6e9dd;
+  --color-accent: #a84b26;
   --color-accent-strong: #8e3e1e;
   --color-accent-on-dark: #d0703f;
   --color-on-dark: #f4efe4;
   --color-on-dark-muted: #c9bfad;
 
-  --color-positive: #3d4a2f; // olive: approved, under budget
-  --color-caution: #74540c; // mustard: needs review
-  --color-negative: #8c2f1c; // rust: rejected, over budget, errors
+  --color-positive: #3d4a2f;
+  --color-caution: #74540c;
+  --color-negative: #8c2f1c;
 
-  // Type
   --font-display: 'Playfair Display', Georgia, serif;
   --font-ui: 'Space Grotesk', system-ui, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, monospace;
 
-  // Space and lines
   --gutter: clamp(20px, 4vw, 56px);
   --rule: 1px solid var(--color-ink);
   --rule-strong: 2px solid var(--color-ink);
   --rule-faint: 1px solid var(--color-hairline);
 
-  // Controls
   --control-height: 44px;
 }

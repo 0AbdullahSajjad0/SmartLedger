@@ -1,3 +1,5 @@
+@use '../../../styles/phone';
+
 .masthead {
   display: flex;
   flex-wrap: wrap;
@@ -34,6 +36,7 @@
   &__link {
     display: inline-flex;
     align-items: center;
+    gap: 8px;
     min-height: 64px;
     border-bottom: 2px solid transparent;
     color: var(--color-on-dark-muted);
@@ -60,7 +63,6 @@
     gap: 20px;
   }
 
-  // The name opens the Account page, underlined like the other links when it's the current page.
   &__user {
     display: inline-flex;
     align-items: center;
@@ -88,9 +90,93 @@
     background: transparent;
     cursor: pointer;
   }
+
+  &__icon {
+    display: none;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.6;
+    stroke-linecap: square;
+  }
 }
 
 .page {
   display: block;
   padding: 48px var(--gutter) 72px;
+}
+
+@include phone.phone {
+  .masthead {
+    flex-wrap: nowrap;
+    gap: 0 16px;
+    padding: 0 16px;
+
+    &__brand {
+      flex: none;
+      min-height: 56px;
+      font-size: 20px;
+    }
+
+    &__nav {
+      position: fixed;
+      right: 0;
+      bottom: 0;
+      left: 0;
+      z-index: 10;
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 0;
+      padding-bottom: env(safe-area-inset-bottom);
+      border-top: 1px solid #3a352e;
+      background: var(--color-ink);
+    }
+
+    &__nav &__link {
+      flex-direction: column;
+      justify-content: center;
+      gap: 4px;
+      min-height: 60px;
+      border-top: 2px solid transparent;
+      border-bottom: 0;
+      font-size: 9.5px;
+      letter-spacing: 0.06em;
+    }
+
+    &__nav &__link--active {
+      border-top-color: var(--color-accent-on-dark);
+    }
+
+    &__link--scan &__icon {
+      color: var(--color-accent-on-dark);
+    }
+
+    &__icon {
+      display: block;
+    }
+
+    &__account {
+      min-width: 0;
+      margin-left: auto;
+      gap: 14px;
+    }
+
+    &__user {
+      display: block;
+      max-width: 120px;
+      min-height: 0;
+      overflow: hidden;
+      line-height: 56px;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    &__signout {
+      flex: none;
+      min-height: 56px;
+    }
+  }
+
+  .page {
+    padding: 28px 16px calc(60px + 48px + env(safe-area-inset-bottom));
+  }
 }

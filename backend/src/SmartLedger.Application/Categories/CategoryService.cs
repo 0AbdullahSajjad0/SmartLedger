@@ -9,15 +9,12 @@ internal sealed class CategoryService(
     TimeProvider timeProvider,
     ICurrentUser currentUser) : ICategoryService
 {
-    /// <summary>Plenty for a person or a small business, and it keeps AI's list of choices short.</summary>
     public const int MaxCategories = 50;
 
     private static readonly Error NotFound = Error.NotFound("categories.not_found", "Category not found.");
 
-    // Every endpoint behind this service requires sign-in, so a missing user is a bug, not a user error.
     private Guid UserId => currentUser.UserId ?? throw new InvalidOperationException("No signed-in user.");
 
-    /// <summary>The first day of the current month: the only month budgets can be changed in.</summary>
     private DateOnly CurrentMonth => CategoryBudget.FirstOfMonth(DateOnly.FromDateTime(timeProvider.GetUtcNow().UtcDateTime));
 
     public async Task<IReadOnlyList<CategoryDto>> ListAsync(CancellationToken cancellationToken)
@@ -37,9 +34,7 @@ internal sealed class CategoryService(
         var start = parsed.Value;
 
         var categories = await repository.ListAsync(UserId, cancellationToken);
-        // The budgets that month had, not today's: changing a budget never rewrites past months.
         var budgets = await repository.BudgetsAsync(UserId, start, cancellationToken);
-        // Spending counts by receipt date, not approval date: a September dinner approved in October is September's.
         var spending = await repository.SpendingAsync(UserId, start, start.AddMonths(1), cancellationToken);
         var byCategory = spending.Where(s => s.CategoryId is not null).ToDictionary(s => s.CategoryId!.Value);
 
@@ -50,7 +45,6 @@ internal sealed class CategoryService(
                 return new CategorySpendingDto(
                     c.Id, c.Name, c.Color, budgets.GetValueOrDefault(c.Id), c.IsArchived, spent?.ReceiptCount ?? 0, spent?.Spent ?? 0m);
             })
-            // Active first, biggest spend first, as a statement would list them.
             .OrderBy(c => c.IsArchived)
             .ThenByDescending(c => c.Spent)
             .ThenBy(c => c.Name, StringComparer.CurrentCultureIgnoreCase)
@@ -59,7 +53,6 @@ internal sealed class CategoryService(
         return new CategoryMonthDto(
             Months.Format(start),
             await users.GetBaseCurrencyAsync(UserId, cancellationToken) ?? "USD",
-            // Archiving ends a budget from that month, so the month's own budgets already leave archived ones out.
             budgets.Values.Sum(b => b ?? 0m),
             spending.Sum(s => s.Spent),
             rows,
@@ -108,7 +101,6 @@ internal sealed class CategoryService(
             return checkedFields.Error!;
         }
 
-        // AI files every receipt under an active category, so there must always be one to choose.
         if (request.IsArchived && !category.IsArchived && existing.Count(c => !c.IsArchived) <= 1)
         {
             return Error.Validation("categories.last_active", "Keep at least one active category: AI files receipts under them.");
@@ -118,17 +110,12 @@ internal sealed class CategoryService(
         category.Color = checkedFields.Value.Color;
         category.IsArchived = request.IsArchived;
 
-        // An archived category has no budget from this month on; the months before keep theirs.
         var history = await repository.BudgetHistoryForUpdateAsync(category.Id, cancellationToken);
         var budget = SetBudget(category.Id, history, request.IsArchived ? null : Money(request.MonthlyBudget));
 
         return await repository.SaveChangesAsync(cancellationToken) ? ToDto(category, budget) : DuplicateName(category.Name);
     }
 
-    /// <summary>
-    /// Makes <paramref name="amount"/> the budget from the current month on. Past months are closed: only this month's
-    /// entry is ever written, so what earlier months had stays as it was. Returns the budget now in force.
-    /// </summary>
     private decimal? SetBudget(Guid categoryId, List<CategoryBudget> history, decimal? amount)
     {
         var month = CurrentMonth;
@@ -137,7 +124,6 @@ internal sealed class CategoryService(
 
         if (amount == before)
         {
-            // Same as the month before (or set back to it): no entry needed, so the history only records real changes.
             if (thisMonth is not null)
             {
                 repository.RemoveBudget(thisMonth);
@@ -145,7 +131,6 @@ internal sealed class CategoryService(
         }
         else if (thisMonth is not null)
         {
-            // Changed again within the month: the month has one budget, the latest.
             thisMonth.Amount = amount;
         }
         else
@@ -156,7 +141,6 @@ internal sealed class CategoryService(
         return amount;
     }
 
-    /// <summary>A trimmed name no other category of the user's has (in any case), and a colour from the palette.</summary>
     private static Result<(string Name, string Color)> Check(
         string name, string color, IReadOnlyList<Category> existing, Guid? categoryId)
     {

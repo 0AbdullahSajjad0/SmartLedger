@@ -7,8 +7,6 @@
   color: var(--color-muted);
 }
 
-// ---- One setting per row: what it is on the left, the form on the right, ruled like a ledger ----
-
 .setting {
   display: grid;
   grid-template-columns: minmax(0, 4fr) minmax(0, 7fr);
@@ -78,7 +76,6 @@
   }
 }
 
-// A tick box with its label, sized like the other controls.
 .switch {
   display: flex;
   align-items: center;
@@ -115,7 +112,6 @@
     font-size: 15px;
   }
 
-  // "Confirmed" / "Not confirmed yet" under the address, as small capitals like a stamp.
   dd.facts__status {
     font-size: 11px;
   }
@@ -155,7 +151,6 @@
   }
 }
 
-// The same rust margin rule as deleting a receipt: this is the point of no return.
 .confirm {
   padding: 4px 0 4px 16px;
   border-left: 2px solid var(--color-negative);

@@ -10,7 +10,6 @@ using SmartLedger.Infrastructure.Reports;
 
 namespace SmartLedger.Api.IntegrationTests;
 
-/// <summary>The monthly analysis writer against a fake Gemini: what it sends, and how it tidies what comes back.</summary>
 public class GeminiInsightWriterTests
 {
     private static readonly InsightRequest October = new(
@@ -67,7 +66,7 @@ public class GeminiInsightWriterTests
         Assert.Equal("Travel ran over", written.Headline);
         Assert.Equal("First point", written.Paragraphs[0]);
         Assert.Equal("Second point", written.Paragraphs[1]);
-        Assert.Equal(GeminiInsightWriter.MaxParagraphs, written.Paragraphs.Count); // the blank one dropped, then four kept
+        Assert.Equal(GeminiInsightWriter.MaxParagraphs, written.Paragraphs.Count);
         Assert.True(written.Paragraphs[2].Length <= GeminiInsightWriter.MaxParagraphLength + 1);
         Assert.EndsWith("…", written.Paragraphs[2]);
     }
@@ -99,7 +98,6 @@ public class GeminiInsightWriterTests
             Options.Create(new GeminiOptions { ApiKey = "test-key", Model = "test-model" }),
             NullLogger<GeminiApi>.Instance));
 
-    /// <summary>Gemini's envelope: our JSON arrives as text inside the first candidate.</summary>
     private static string Reply(string json) =>
         JsonSerializer.Serialize(new { candidates = new[] { new { content = new { parts = new[] { new { text = json } } } } } });
 

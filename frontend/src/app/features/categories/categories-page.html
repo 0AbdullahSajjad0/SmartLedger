@@ -57,39 +57,39 @@
   </section>
 
   <section class="ledger-scroll" aria-label="Categories">
-    <table class="ledger categories" [class.categories--loading]="data.isLoading()">
-      <thead>
-        <tr>
-          <th scope="col">Category</th>
-          <th scope="col" class="num">Receipts</th>
-          <th scope="col" class="num">Spent</th>
-          <th scope="col" class="num">Budget</th>
-          <th scope="col" class="categories__used">Used</th>
-          <th scope="col"><span class="visually-hidden">Actions</span></th>
+    <table class="ledger categories" role="table" [class.categories--loading]="data.isLoading()">
+      <thead role="rowgroup">
+        <tr role="row">
+          <th scope="col" role="columnheader">Category</th>
+          <th scope="col" class="num" role="columnheader">Receipts</th>
+          <th scope="col" class="num" role="columnheader">Spent</th>
+          <th scope="col" class="num" role="columnheader">Budget</th>
+          <th scope="col" class="categories__used" role="columnheader">Used</th>
+          <th scope="col" role="columnheader"><span class="visually-hidden">Actions</span></th>
         </tr>
       </thead>
-      <tbody>
+      <tbody role="rowgroup">
         @if (editing() === 'new') {
-          <tr app-category-editor [category]="null" [baseCurrency]="m.baseCurrency" (saved)="onSaved()"
+          <tr app-category-editor role="row" [category]="null" [baseCurrency]="m.baseCurrency" (saved)="onSaved()"
             (cancelled)="editing.set(null)"></tr>
         }
         @for (category of active(); track category.id) {
           @if (editing() === category.id) {
-            <tr app-category-editor [category]="category" [baseCurrency]="m.baseCurrency" (saved)="onSaved()"
+            <tr app-category-editor role="row" [category]="category" [baseCurrency]="m.baseCurrency" (saved)="onSaved()"
               (cancelled)="editing.set(null)"></tr>
           } @else {
             @let share = used(category);
-            <tr>
-              <td>
+            <tr role="row">
+              <td class="categories__name" role="cell">
                 <span class="name">
                   <span class="name__chip" [style.background]="category.color" aria-hidden="true"></span>
                   {{ category.name }}
                 </span>
               </td>
-              <td class="num muted">{{ category.receiptCount }}</td>
-              <td class="num strong">{{ category.spent | number: '1.2-2' }}</td>
-              <td class="num muted">{{ category.monthlyBudget !== null ? (category.monthlyBudget | number: '1.2-2') : '—' }}</td>
-              <td>
+              <td class="num muted categories__count" role="cell">{{ category.receiptCount }}</td>
+              <td class="num strong categories__spent" role="cell">{{ category.spent | number: '1.2-2' }}</td>
+              <td class="num muted categories__budget" role="cell">{{ category.monthlyBudget !== null ? (category.monthlyBudget | number: '1.2-2') : '—' }}</td>
+              <td class="categories__usage" role="cell">
                 @if (share !== null) {
                   <div class="usage" [attr.data-tone]="tone(share)">
                     <div class="usage__track" aria-hidden="true">
@@ -101,7 +101,7 @@
                   <span class="muted">No budget</span>
                 }
               </td>
-              <td class="actions">
+              <td class="actions categories__actions" role="cell">
                 @if (!m.isClosed) {
                   <button type="button" class="link-button" [disabled]="editing() !== null"
                     [attr.aria-label]="'Edit ' + category.name" (click)="editing.set(category.id)">Edit</button>

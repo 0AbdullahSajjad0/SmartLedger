@@ -8,10 +8,6 @@ import { describeHttpError } from '../../../core/http/describe-http-error';
 
 type ConfirmState = 'confirming' | 'confirmed' | 'failed';
 
-/**
- * Opened from the emailed link, /confirm-email?user={id}#token={token}, signed in or not. It confirms straight away:
- * there's nothing to fill in. As with reset links, the token travels after "#" and is cleared from the address bar.
- */
 @Component({
   selector: 'app-confirm-email',
   imports: [RouterLink],
@@ -24,7 +20,6 @@ export class ConfirmEmail implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
   protected readonly auth = inject(AuthStore);
 
-  /** Query parameter: the account the link is for. */
   readonly user = input<string>();
 
   private readonly token = new URLSearchParams(inject(ActivatedRoute).snapshot.fragment ?? '').get('token');
@@ -49,7 +44,6 @@ export class ConfirmEmail implements OnInit {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (confirmed) => {
-          // Signed in here as the same person: the banner and Account page update without a reload.
           if (this.auth.user()?.id === confirmed.id) {
             this.auth.updateUser(confirmed);
           }

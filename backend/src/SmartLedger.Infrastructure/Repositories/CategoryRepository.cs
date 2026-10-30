@@ -26,7 +26,6 @@ internal sealed class CategoryRepository(AppDbContext db) : ICategoryRepository
     {
         var start = CategoryBudget.FirstOfMonth(month);
 
-        // A few rows per category (one per change), so the history up to the month is read and resolved here.
         var history = await db.CategoryBudgets
             .AsNoTracking()
             .Where(b => b.EffectiveFrom <= start && db.Categories.Any(c => c.Id == b.CategoryId && c.UserId == userId))
@@ -44,7 +43,6 @@ internal sealed class CategoryRepository(AppDbContext db) : ICategoryRepository
 
     public void RemoveBudget(CategoryBudget budget) => db.CategoryBudgets.Remove(budget);
 
-    // One grouped query in SQL (it uses the (UserId, ReceiptDate) index), not a list of receipts summed in memory.
     public async Task<IReadOnlyList<CategorySpending>> SpendingAsync(
         Guid userId, DateOnly from, DateOnly to, CancellationToken cancellationToken) =>
         await db.Receipts
@@ -60,7 +58,6 @@ internal sealed class CategoryRepository(AppDbContext db) : ICategoryRepository
             await db.SaveChangesAsync(cancellationToken);
             return true;
         }
-        // The unique (UserId, Name) index: another request created or renamed a category to the same name first.
         catch (DbUpdateException ex) when (ex.InnerException is SqlException { Number: 2601 or 2627 })
         {
             return false;

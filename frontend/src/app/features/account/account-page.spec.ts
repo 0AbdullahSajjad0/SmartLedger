@@ -15,7 +15,6 @@ describe('AccountPage', () => {
     TestBed.configureTestingModule({ imports: [AccountPage], providers: provideAuthTesting() });
     http = TestBed.inject(HttpTestingController);
 
-    // Signed in as Ada, with refresh token "refresh-1" saved for this device.
     const signIn = TestBed.inject(AuthStore).signIn({ email: 'ada@example.com', password: 'secret', rememberMe: false });
     http.expectOne(`${TEST_API}/api/auth/login`).flush(authResponse('access-1', 'refresh-1'));
     await signIn;

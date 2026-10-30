@@ -56,14 +56,12 @@ describe('CategoriesPage', () => {
     fixture.detectChanges();
   }
 
-  /** Each row as its cells' text: "Travel | 7 | 1,640.00 | …". */
   function rows(): string[] {
     return [...page.querySelectorAll('table.categories tbody tr')].map((row) =>
       [...row.querySelectorAll('td')].map((cell) => cell.textContent!.replace(/\s+/g, ' ').trim()).join(' | '),
     );
   }
 
-  /** Each big figure as "label: value". */
   function figures(): string[] {
     return [...page.querySelectorAll('.figures__item')].map(
       (item) => `${item.querySelector('.label')!.textContent!.trim()}: ${item.querySelector('.figures__value')!.textContent!.trim()}`,
@@ -101,7 +99,6 @@ describe('CategoriesPage', () => {
       'Misc | 0 | 0.00 | — | No budget | Edit',
     ]);
     const tones = [...page.querySelectorAll('.usage')].map((u) => u.getAttribute('data-tone'));
-    // Travel is over; Food & Dining at 85% is past the 80% warning level, like the budget alert emails.
     expect(tones).toEqual(['over', 'near', 'fine']);
   });
 
@@ -190,7 +187,7 @@ describe('CategoriesPage', () => {
     await render({ ...OCTOBER, month: thisMonth }, undefined);
 
     const links = [...page.querySelectorAll<HTMLAnchorElement>('.months a')];
-    expect(links).toHaveLength(1); // only "back"
+    expect(links).toHaveLength(1);
     expect(links[0].getAttribute('href')).toContain('month=');
   });
 });

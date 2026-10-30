@@ -2,7 +2,6 @@ using SmartLedger.Domain.Entities;
 
 namespace SmartLedger.Infrastructure.Identity;
 
-/// <summary>The categories every new account starts with. Users can rename, archive or budget them later.</summary>
 internal static class DefaultCategories
 {
     public static IEnumerable<Category> For(Guid userId)

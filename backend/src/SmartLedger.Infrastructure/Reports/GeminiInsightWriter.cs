@@ -6,10 +6,6 @@ using SmartLedger.Infrastructure.Gemini;
 
 namespace SmartLedger.Infrastructure.Reports;
 
-/// <summary>
-/// Writes the monthly analysis with Gemini. It sees only the month's totals and names (see <see cref="InsightRequest"/>),
-/// must answer in a fixed shape, and what it writes is cleaned up and length-limited before it's kept.
-/// </summary>
 internal sealed partial class GeminiInsightWriter(GeminiApi gemini) : IInsightWriter
 {
     public const int MaxParagraphs = 4;
@@ -62,7 +58,6 @@ internal sealed partial class GeminiInsightWriter(GeminiApi gemini) : IInsightWr
         string text;
         try
         {
-            // A little variety in wording on "Regenerate", but still anchored to the figures.
             text = await gemini.GenerateJsonAsync(System, [GeminiApi.Text(Figures(request))], ResponseSchema, temperature: 0.4, cancellationToken);
         }
         catch (GeminiUnavailableException ex)
@@ -95,7 +90,6 @@ internal sealed partial class GeminiInsightWriter(GeminiApi gemini) : IInsightWr
         return new WrittenInsight(headline, paragraphs, gemini.Model);
     }
 
-    /// <summary>The month as the AI sees it: a short preamble and the figures as JSON.</summary>
     internal static string Figures(InsightRequest r)
     {
         var figures = new
@@ -105,7 +99,6 @@ internal sealed partial class GeminiInsightWriter(GeminiApi gemini) : IInsightWr
             spent = r.Spent,
             approvedReceipts = r.ReceiptCount,
             totalMonthlyBudget = r.TotalBudget > 0 ? r.TotalBudget : (decimal?)null,
-            // Left out when empty, so the AI isn't tempted into "up from 0.00".
             previousMonth = r.PreviousMonthSpent > 0 ? new { name = r.PreviousMonthName, spent = r.PreviousMonthSpent } : null,
             categories = r.Categories.Select(c => new { name = c.Name, spent = c.Spent, budget = c.Budget, receipts = c.ReceiptCount }),
             topVendors = r.TopVendors.Select(v => new { vendor = v.Vendor, category = v.CategoryName, receipts = v.ReceiptCount, spent = v.Spent }),
@@ -122,7 +115,6 @@ internal sealed partial class GeminiInsightWriter(GeminiApi gemini) : IInsightWr
             + JsonSerializer.Serialize(figures, new JsonSerializerOptions { WriteIndented = true });
     }
 
-    /// <summary>Plain text: markdown and list markers removed, whitespace tidied, length capped at a word boundary.</summary>
     internal static string Clean(string? text, int maxLength)
     {
         if (string.IsNullOrWhiteSpace(text))

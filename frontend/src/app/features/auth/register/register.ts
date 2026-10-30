@@ -6,7 +6,6 @@ import { describeHttpError } from '../../../core/http/describe-http-error';
 
 type RegisterField = 'displayName' | 'email' | 'password' | 'baseCurrency';
 
-/** Currencies offered at sign-up. Receipts can be in any currency; reports convert to this one. */
 const BASE_CURRENCIES = [
   { code: 'USD', name: 'US dollar' },
   { code: 'EUR', name: 'Euro' },
@@ -35,7 +34,6 @@ export class Register {
   protected readonly form = inject(NonNullableFormBuilder).group({
     displayName: ['', [Validators.required, Validators.maxLength(100)]],
     email: ['', [Validators.required, Validators.email]],
-    // Matches the API's rule: length, not forced symbols.
     password: ['', [Validators.required, Validators.minLength(10)]],
     baseCurrency: ['USD', Validators.required],
   });

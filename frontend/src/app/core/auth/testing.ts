@@ -8,7 +8,6 @@ import { AuthResponse } from './auth.models';
 
 export const TEST_API = 'http://api.test';
 
-/** HTTP (with the auth interceptor and a fake backend), an empty router, and a fixed API address. */
 export function provideAuthTesting(): (Provider | EnvironmentProviders)[] {
   return [
     provideHttpClient(withInterceptors([authInterceptor])),
