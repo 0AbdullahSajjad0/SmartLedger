@@ -7,6 +7,8 @@ export interface User {
   baseCurrency: string;
   /** Email when a category reaches 80% and 100% of its monthly budget. */
   budgetAlerts: boolean;
+  /** Whether the user proved the address is theirs. Budget alerts go only to confirmed addresses. */
+  emailConfirmed: boolean;
 }
 
 export interface AuthResponse {

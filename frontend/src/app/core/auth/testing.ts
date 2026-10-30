@@ -25,6 +25,6 @@ export function authResponse(accessToken: string, refreshToken: string): AuthRes
     accessTokenExpiresAt: inMinutes(15),
     refreshToken,
     refreshTokenExpiresAt: inMinutes(60 * 24 * 7),
-    user: { id: 'user-1', email: 'ada@example.com', displayName: 'Ada Lovelace', baseCurrency: 'GBP', budgetAlerts: true },
+    user: { id: 'user-1', email: 'ada@example.com', displayName: 'Ada Lovelace', baseCurrency: 'GBP', budgetAlerts: true, emailConfirmed: true },
   };
 }

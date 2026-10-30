@@ -23,6 +23,12 @@ public interface IAuthService
     /// </summary>
     Task RequestPasswordResetAsync(ForgotPasswordRequest request, CancellationToken cancellationToken);
 
-    /// <summary>Sets a new password from a reset link, signs out every device and lifts any lockout.</summary>
+    /// <summary>Confirms the address from the emailed link. Opening the link again after it worked is still a success.</summary>
+    Task<Result<UserDto>> ConfirmEmailAsync(ConfirmEmailRequest request, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Sets a new password from a reset link, signs out every device and lifts any lockout. Also confirms the email
+    /// address, since the link could only be used by someone who reads that inbox.
+    /// </summary>
     Task<Result<bool>> ResetPasswordAsync(ResetPasswordRequest request, CancellationToken cancellationToken);
 }

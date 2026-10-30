@@ -15,6 +15,11 @@ export class AccountApi {
     return this.http.put<User>(this.url, { displayName });
   }
 
+  /** Sends the "confirm your email" link again (nothing is sent if one went out a few minutes ago). */
+  sendConfirmationEmail(): Observable<void> {
+    return this.http.post<void>(`${this.url}/confirmation-email`, null);
+  }
+
   updateNotifications(budgetAlerts: boolean): Observable<User> {
     return this.http.put<User>(`${this.url}/notifications`, { budgetAlerts });
   }

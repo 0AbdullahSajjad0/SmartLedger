@@ -1,0 +1,34 @@
+<div class="auth-form">
+  <div class="auth-form__heading">
+    <span class="label">Email address</span>
+    <h2 class="auth-form__title">
+      @switch (state()) {
+        @case ('confirmed') { Confirmed }
+        @case ('failed') { Not confirmed }
+        @default { Confirming… }
+      }
+    </h2>
+  </div>
+
+  @switch (state()) {
+    @case ('confirming') {
+      <p class="auth-form__hint" role="status">Checking the link…</p>
+    }
+    @case ('confirmed') {
+      <p class="auth-form__sent" role="status">Thank you. Your email address is confirmed, so budget alerts can now reach you.</p>
+      @if (auth.isSignedIn()) {
+        <a class="btn btn--block" routerLink="/overview">Continue to SmartLedger</a>
+      } @else {
+        <a class="btn btn--block" routerLink="/sign-in">Sign in</a>
+      }
+    }
+    @case ('failed') {
+      <p class="form-alert" role="alert">{{ error() }}</p>
+      @if (auth.isSignedIn()) {
+        <a class="btn btn--block" routerLink="/account">Go to your Account page</a>
+      } @else {
+        <a class="btn btn--block" routerLink="/sign-in">Sign in to send a new link</a>
+      }
+    }
+  }
+</div>

@@ -188,10 +188,16 @@ public static class DependencyInjection
                 options.Lockout.AllowedForNewUsers = true;
                 options.Lockout.MaxFailedAccessAttempts = 5;
                 options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
+
+                // Confirmation links get their own, longer-lived provider; reset links keep the default one.
+                options.Tokens.EmailConfirmationTokenProvider = EmailConfirmationTokenProvider.ProviderName;
             })
             .AddEntityFrameworkStores<AppDbContext>()
             // Password reset tokens: signed with Data Protection, tied to the account's security stamp.
-            .AddDefaultTokenProviders();
+            .AddDefaultTokenProviders()
+            .AddTokenProvider<EmailConfirmationTokenProvider>(EmailConfirmationTokenProvider.ProviderName);
+
+        services.AddOptions<EmailConfirmationTokenProviderOptions>();
 
         services.Configure<DataProtectionTokenProviderOptions>(options =>
             options.TokenLifespan = EmailComposer.PasswordResetLifetime);

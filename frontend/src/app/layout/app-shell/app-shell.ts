@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { AuthStore } from '../../core/auth/auth-store';
+import { ConfirmEmailBanner } from '../../shared/ui/confirm-email-banner/confirm-email-banner';
 
 interface NavItem {
   label: string;
@@ -10,7 +11,7 @@ interface NavItem {
 /** Frame for every signed-in page: the espresso masthead with navigation, then the page. */
 @Component({
   selector: 'app-shell',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, ConfirmEmailBanner],
   templateUrl: './app-shell.html',
   styleUrl: './app-shell.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

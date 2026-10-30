@@ -14,25 +14,32 @@ public sealed class FakeEmailSender : IEmailSender
         return Task.CompletedTask;
     }
 
-    public IReadOnlyList<EmailMessage> SentTo(string address) =>
-        _sent.Where(m => string.Equals(m.To, address, StringComparison.OrdinalIgnoreCase)).ToList();
+    /// <param name="where">Narrows to one kind of email, e.g. <see cref="IsBudgetAlert"/>.</param>
+    public IReadOnlyList<EmailMessage> SentTo(string address, Func<EmailMessage, bool>? where = null) =>
+        _sent.Where(m => string.Equals(m.To, address, StringComparison.OrdinalIgnoreCase) && (where?.Invoke(m) ?? true)).ToList();
 
-    /// <summary>Waits for the background worker to send the <paramref name="count"/>th email to the address.</summary>
-    public async Task<EmailMessage> WaitForAsync(string address, int count = 1)
+    /// <summary>Waits for the background worker to send the <paramref name="count"/>th matching email to the address.</summary>
+    public async Task<EmailMessage> WaitForAsync(string address, Func<EmailMessage, bool>? where = null, int count = 1)
     {
         var deadline = DateTime.UtcNow.AddSeconds(15);
         while (true)
         {
-            var sent = SentTo(address);
+            var sent = SentTo(address, where);
             if (sent.Count >= count)
             {
                 return sent[count - 1];
             }
             if (DateTime.UtcNow > deadline)
             {
-                throw new TimeoutException($"Expected {count} email(s) to {address}, got {sent.Count}.");
+                throw new TimeoutException($"Expected {count} matching email(s) to {address}, got {sent.Count}.");
             }
             await Task.Delay(50);
         }
     }
+
+    public static bool IsConfirmation(EmailMessage email) => email.Subject == "Confirm your email for SmartLedger";
+
+    public static bool IsPasswordReset(EmailMessage email) => email.Subject == "Reset your SmartLedger password";
+
+    public static bool IsBudgetAlert(EmailMessage email) => email.Html.Contains(">Budget alert<", StringComparison.Ordinal);
 }

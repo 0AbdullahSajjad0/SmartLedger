@@ -24,6 +24,9 @@ public enum EmailKind
 
     /// <summary>A category reached 80% or 100% of its monthly budget. The reference is the budget alert.</summary>
     BudgetAlert = 2,
+
+    /// <summary>A link that proves the inbox belongs to the account holder. Skipped if confirmed by the time it's sent.</summary>
+    EmailConfirmation = 3,
 }
 
 /// <summary>
@@ -37,6 +40,12 @@ public interface IEmailOutbox
     /// email exists only if the change that caused it was saved.
     /// </summary>
     void Add(EmailKind kind, Guid userId, Guid? referenceId = null);
+
+    /// <summary>
+    /// Whether an email of this kind was queued for the user after <paramref name="since"/>. Lets a button pressed
+    /// again and again send one email, not many, and protects the mail service's small hourly quota.
+    /// </summary>
+    Task<bool> QueuedSinceAsync(Guid userId, EmailKind kind, DateTimeOffset since, CancellationToken cancellationToken);
 
     /// <summary>After saving: tells the worker there is something new, so it doesn't wait for its next check.</summary>
     void Wake();

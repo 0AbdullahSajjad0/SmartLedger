@@ -114,6 +114,29 @@
     margin: 0;
     font-size: 15px;
   }
+
+  // "Confirmed" / "Not confirmed yet" under the address, as small capitals like a stamp.
+  dd.facts__status {
+    font-size: 11px;
+  }
+
+  &__status {
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+
+    &--confirmed {
+      color: var(--color-positive);
+    }
+
+    &--pending {
+      color: var(--color-caution);
+    }
+  }
+}
+
+.setting__text--pending {
+  color: var(--color-caution);
 }
 
 .contents {

@@ -61,6 +61,18 @@ public sealed class AuthController(IAuthService authService, ICurrentUser curren
         return Accepted();
     }
 
+    /// <summary>
+    /// Confirms the email address from the emailed link. Anonymous, because the link may be opened on a device that
+    /// isn't signed in; the token itself proves who it's for.
+    /// </summary>
+    [HttpPost("confirm-email")]
+    [AllowAnonymous]
+    [EnableRateLimiting(RateLimitPolicies.Auth)]
+    [ProducesResponseType<UserDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> ConfirmEmail(ConfirmEmailRequest request, CancellationToken cancellationToken) =>
+        (await authService.ConfirmEmailAsync(request, cancellationToken)).ToActionResult(this);
+
     /// <summary>Sets a new password from a reset link. Every device is signed out; the user signs in again.</summary>
     [HttpPost("reset-password")]
     [AllowAnonymous]

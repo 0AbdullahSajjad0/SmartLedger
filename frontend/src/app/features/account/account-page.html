@@ -46,6 +46,11 @@
       <div class="facts__item">
         <dt class="label">Email</dt>
         <dd class="mono">{{ auth.user()?.email }}</dd>
+        @if (auth.user()?.emailConfirmed) {
+          <dd class="facts__status facts__status--confirmed">Confirmed</dd>
+        } @else {
+          <dd class="facts__status facts__status--pending">Not confirmed yet</dd>
+        }
       </div>
       <div class="facts__item">
         <dt class="label">Base currency</dt>
@@ -133,6 +138,23 @@
       An email when a category reaches 80% of its monthly budget, and another if it goes over. Once each per category
       and month, for the current month.
     </p>
+    @if (!auth.user()?.emailConfirmed) {
+      <p class="setting__text setting__text--pending">
+        Alerts start once your email address is confirmed. Use the link we emailed you when you signed up.
+      </p>
+      <div class="setting__actions">
+        <button type="button" class="btn btn--ghost" [disabled]="sendConfirmation.busy() || sendConfirmation.done()"
+          (click)="sendConfirmationEmail()">
+          {{ sendConfirmation.busy() ? 'Sending…' : 'Send the link again' }}
+        </button>
+        @if (sendConfirmation.done()) {
+          <span class="setting__done" role="status">Sent. It can take a few minutes; check spam too.</span>
+        }
+      </div>
+      @if (sendConfirmation.error(); as message) {
+        <p class="form-alert" role="alert">{{ message }}</p>
+      }
+    }
     @if (saveAlerts.done()) {
       <span class="setting__done" role="status">Saved. Alerts are {{ auth.user()?.budgetAlerts ? 'on' : 'off' }}.</span>
     }

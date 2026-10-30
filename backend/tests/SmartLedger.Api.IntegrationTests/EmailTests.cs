@@ -42,7 +42,7 @@ public partial class EmailTests(SmartLedgerApiFactory factory)
         var response = await factory.CreateClient().PostAsJsonAsync("/api/auth/forgot-password", new ForgotPasswordRequest(auth.User.Email));
         Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
 
-        var email = await factory.Emails.WaitForAsync(auth.User.Email);
+        var email = await factory.Emails.WaitForAsync(auth.User.Email, FakeEmailSender.IsPasswordReset);
         Assert.Equal("Reset your SmartLedger password", email.Subject);
         var (userId, token) = ReadResetLink(email);
         Assert.Equal(auth.User.Id, userId);
@@ -71,7 +71,7 @@ public partial class EmailTests(SmartLedgerApiFactory factory)
         Assert.Equal(HttpStatusCode.Unauthorized, (await SignInAsync(auth.User.Email, TestAuth.Password)).StatusCode);
 
         await factory.CreateClient().PostAsJsonAsync("/api/auth/forgot-password", new ForgotPasswordRequest(auth.User.Email));
-        var (userId, token) = ReadResetLink(await factory.Emails.WaitForAsync(auth.User.Email));
+        var (userId, token) = ReadResetLink(await factory.Emails.WaitForAsync(auth.User.Email, FakeEmailSender.IsPasswordReset));
         await ResetAsync(userId, token, NewPassword);
 
         Assert.Equal(HttpStatusCode.OK, (await SignInAsync(auth.User.Email, NewPassword)).StatusCode);
@@ -89,7 +89,7 @@ public partial class EmailTests(SmartLedgerApiFactory factory)
         Assert.Equal(HttpStatusCode.Accepted, second.StatusCode);
         await using var scope = factory.Services.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        Assert.Equal(1, await db.OutgoingEmails.CountAsync(e => e.UserId == auth.User.Id));
+        Assert.Equal(1, await db.OutgoingEmails.CountAsync(e => e.UserId == auth.User.Id && e.Kind == EmailKind.PasswordReset));
     }
 
     [Fact]
@@ -103,7 +103,89 @@ public partial class EmailTests(SmartLedgerApiFactory factory)
         Assert.Equal(HttpStatusCode.OK, (await SignInAsync(auth.User.Email, TestAuth.Password)).StatusCode);
     }
 
+    [Fact]
+    public async Task ResetLink_AlsoConfirmsTheEmailAddress()
+    {
+        var auth = await TestAuth.RegisterAsync(factory.CreateClient());
+        Assert.False(auth.User.EmailConfirmed);
+
+        await factory.CreateClient().PostAsJsonAsync("/api/auth/forgot-password", new ForgotPasswordRequest(auth.User.Email));
+        var (userId, token) = ReadResetLink(await factory.Emails.WaitForAsync(auth.User.Email, FakeEmailSender.IsPasswordReset));
+        await ResetAsync(userId, token, NewPassword);
+
+        var signedIn = await (await SignInAsync(auth.User.Email, NewPassword)).Content.ReadFromJsonAsync<AuthResponse>();
+        Assert.True(signedIn!.User.EmailConfirmed);
+    }
+
+    // ---- Email confirmation ----
+
+    [Fact]
+    public async Task NewAccounts_GetAConfirmationLink_ThatConfirmsTheAddress()
+    {
+        var (client, auth) = await SignedInAsync(confirmed: false);
+        Assert.False(auth.User.EmailConfirmed);
+
+        var email = await factory.Emails.WaitForAsync(auth.User.Email, FakeEmailSender.IsConfirmation);
+        Assert.Contains("Thanks for opening a SmartLedger account, Test User.", email.PlainText);
+        var (userId, token) = ReadConfirmLink(email);
+        Assert.Equal(auth.User.Id, userId);
+
+        var confirmed = await ConfirmAsync(userId, token);
+
+        Assert.Equal(HttpStatusCode.OK, confirmed.StatusCode);
+        Assert.True((await confirmed.Content.ReadFromJsonAsync<UserDto>())!.EmailConfirmed);
+        Assert.True((await client.GetFromJsonAsync<UserDto>("/api/auth/me"))!.EmailConfirmed);
+        // Opening the link again, e.g. from another device, still says it's confirmed.
+        Assert.Equal(HttpStatusCode.OK, (await ConfirmAsync(userId, token)).StatusCode);
+    }
+
+    [Fact]
+    public async Task ConfirmEmail_WithAMadeUpToken_Returns400()
+    {
+        var auth = await TestAuth.RegisterAsync(factory.CreateClient());
+
+        var response = await ConfirmAsync(auth.User.Id, "bm90LWEtcmVhbC10b2tlbg");
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal("This link has expired or isn't complete. Send a new one from your Account page.",
+            (await response.Content.ReadFromJsonAsync<ProblemDetails>())!.Title);
+    }
+
+    [Fact]
+    public async Task SendingTheLinkAgain_RightAfterSigningUp_SendsNothingMore()
+    {
+        var (client, auth) = await SignedInAsync(confirmed: false);
+
+        var response = await client.PostAsync("/api/account/confirmation-email", null);
+
+        Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
+        await using var scope = factory.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        Assert.Equal(1, await db.OutgoingEmails.CountAsync(e => e.UserId == auth.User.Id && e.Kind == EmailKind.EmailConfirmation));
+    }
+
+    [Fact]
+    public async Task SendingTheLinkAgain_IsNotAllowedWithoutSigningIn()
+    {
+        var response = await factory.CreateClient().PostAsync("/api/account/confirmation-email", null);
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
     // ---- Budget alerts ----
+
+    [Fact]
+    public async Task BudgetAlerts_GoOnlyToConfirmedAddresses()
+    {
+        var (client, auth) = await SignedInAsync(confirmed: false);
+        await BudgetAsync(client, "Office Supplies", 50m);
+
+        await TestReceipts.ApprovedAsync(client, 60m, Today());
+
+        await Task.Delay(500);
+        Assert.Empty(factory.Emails.SentTo(auth.User.Email, FakeEmailSender.IsBudgetAlert));
+        Assert.Empty(await AlertsAsync(auth.User.Id));
+    }
 
     [Fact]
     public async Task BudgetAlerts_WarnAt80Percent_ThenSayExceededAt100_OncePerLevel()
@@ -113,7 +195,7 @@ public partial class EmailTests(SmartLedgerApiFactory factory)
         var today = Today();
 
         await TestReceipts.ApprovedAsync(client, 85m, today, category.Id);
-        var warning = await factory.Emails.WaitForAsync(auth.User.Email);
+        var warning = await factory.Emails.WaitForAsync(auth.User.Email, FakeEmailSender.IsBudgetAlert);
 
         Assert.Equal($"Snacks & <Treats> has used 85% of its {Month(today)} budget", warning.Subject);
         Assert.Contains("You've spent EUR 85.00 of your EUR 100.00 budget for Snacks & <Treats>", warning.PlainText);
@@ -125,13 +207,13 @@ public partial class EmailTests(SmartLedgerApiFactory factory)
 
         await TestReceipts.ApprovedAsync(client, 10m, today, category.Id); // 95%: already warned
         await TestReceipts.ApprovedAsync(client, 10m, today, category.Id); // 105%
-        var exceeded = await factory.Emails.WaitForAsync(auth.User.Email, count: 2);
+        var exceeded = await factory.Emails.WaitForAsync(auth.User.Email, FakeEmailSender.IsBudgetAlert, count: 2);
         Assert.Equal($"Snacks & <Treats> is over its {Month(today)} budget", exceeded.Subject);
         Assert.Contains("That's EUR 5.00 more than you planned.", exceeded.PlainText);
 
         await TestReceipts.ApprovedAsync(client, 10m, today, category.Id); // 115%: already told
         await Task.Delay(500);
-        Assert.Equal(2, factory.Emails.SentTo(auth.User.Email).Count);
+        Assert.Equal(2, factory.Emails.SentTo(auth.User.Email, FakeEmailSender.IsBudgetAlert).Count);
         Assert.Equal(category.Id, (await AlertsAsync(auth.User.Id)).Select(a => a.CategoryId).Distinct().Single());
     }
 
@@ -143,9 +225,9 @@ public partial class EmailTests(SmartLedgerApiFactory factory)
 
         await TestReceipts.ApprovedAsync(client, 60m, Today());
 
-        Assert.Contains("is over its", (await factory.Emails.WaitForAsync(auth.User.Email)).Subject);
+        Assert.Contains("is over its", (await factory.Emails.WaitForAsync(auth.User.Email, FakeEmailSender.IsBudgetAlert)).Subject);
         await Task.Delay(300);
-        Assert.Single(factory.Emails.SentTo(auth.User.Email));
+        Assert.Single(factory.Emails.SentTo(auth.User.Email, FakeEmailSender.IsBudgetAlert));
     }
 
     [Fact]
@@ -160,7 +242,7 @@ public partial class EmailTests(SmartLedgerApiFactory factory)
         await TestReceipts.ApprovedAsync(client, 60m, Today());
 
         await Task.Delay(500);
-        Assert.Empty(factory.Emails.SentTo(auth.User.Email));
+        Assert.Empty(factory.Emails.SentTo(auth.User.Email, FakeEmailSender.IsBudgetAlert));
         Assert.Empty(await AlertsAsync(auth.User.Id));
     }
 
@@ -173,7 +255,7 @@ public partial class EmailTests(SmartLedgerApiFactory factory)
         await TestReceipts.ApprovedAsync(client, 60m, Today().AddMonths(-1));
 
         await Task.Delay(500);
-        Assert.Empty(factory.Emails.SentTo(auth.User.Email));
+        Assert.Empty(factory.Emails.SentTo(auth.User.Email, FakeEmailSender.IsBudgetAlert));
     }
 
     [Fact]
@@ -201,13 +283,34 @@ public partial class EmailTests(SmartLedgerApiFactory factory)
 
     private static string Month(DateOnly date) => date.ToString("MMMM", System.Globalization.CultureInfo.InvariantCulture);
 
-    private async Task<(HttpClient Client, AuthResponse Auth)> SignedInAsync()
+    [GeneratedRegex(@"confirm-email\?user=(?<user>[0-9a-f-]{36})#token=(?<token>[A-Za-z0-9_-]+)")]
+    private static partial Regex ConfirmLink();
+
+    private static (Guid UserId, string Token) ReadConfirmLink(EmailMessage email)
+    {
+        var match = ConfirmLink().Match(email.PlainText);
+        Assert.True(match.Success, "The email has no confirmation link.");
+        Assert.Contains($"{SmartLedgerApiFactory.AppUrl}/confirm-email?user=", email.PlainText);
+        return (Guid.Parse(match.Groups["user"].Value), match.Groups["token"].Value);
+    }
+
+    /// <summary>A new account, signed in. Confirmed through its emailed link unless asked not to, as budget alerts need that.</summary>
+    private async Task<(HttpClient Client, AuthResponse Auth)> SignedInAsync(bool confirmed = true)
     {
         var client = factory.CreateClient();
         var auth = await TestAuth.RegisterAsync(client);
         client.Authorize(auth.AccessToken);
+
+        if (confirmed)
+        {
+            var (userId, token) = ReadConfirmLink(await factory.Emails.WaitForAsync(auth.User.Email, FakeEmailSender.IsConfirmation));
+            (await ConfirmAsync(userId, token)).EnsureSuccessStatusCode();
+        }
         return (client, auth);
     }
+
+    private Task<HttpResponseMessage> ConfirmAsync(Guid userId, string token) =>
+        factory.CreateClient().PostAsJsonAsync("/api/auth/confirm-email", new ConfirmEmailRequest(userId, token));
 
     /// <summary>Gives the user's Office Supplies category (where the fake AI files every receipt) a name and budget.</summary>
     private static async Task<CategoryDto> BudgetAsync(HttpClient client, string name, decimal budget)
