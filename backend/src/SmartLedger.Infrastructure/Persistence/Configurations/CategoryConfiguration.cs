@@ -13,7 +13,6 @@ internal sealed class CategoryConfiguration : IEntityTypeConfiguration<Category>
 
         builder.Property(c => c.Name).HasMaxLength(60);
         builder.Property(c => c.Color).HasMaxLength(7).IsFixedLength().IsUnicode(false);
-        builder.Property(c => c.MonthlyBudget).HasPrecision(18, 2);
 
         builder.HasIndex(c => new { c.UserId, c.Name }).IsUnique();
 

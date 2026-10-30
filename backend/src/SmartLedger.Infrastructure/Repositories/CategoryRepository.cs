@@ -21,6 +21,29 @@ internal sealed class CategoryRepository(AppDbContext db) : ICategoryRepository
 
     public void Add(Category category) => db.Categories.Add(category);
 
+    public async Task<IReadOnlyDictionary<Guid, decimal?>> BudgetsAsync(
+        Guid userId, DateOnly month, CancellationToken cancellationToken)
+    {
+        var start = CategoryBudget.FirstOfMonth(month);
+
+        // A few rows per category (one per change), so the history up to the month is read and resolved here.
+        var history = await db.CategoryBudgets
+            .AsNoTracking()
+            .Where(b => b.EffectiveFrom <= start && db.Categories.Any(c => c.Id == b.CategoryId && c.UserId == userId))
+            .ToListAsync(cancellationToken);
+
+        return history
+            .GroupBy(b => b.CategoryId)
+            .ToDictionary(g => g.Key, g => CategoryBudget.For(g, start));
+    }
+
+    public Task<List<CategoryBudget>> BudgetHistoryForUpdateAsync(Guid categoryId, CancellationToken cancellationToken) =>
+        db.CategoryBudgets.Where(b => b.CategoryId == categoryId).ToListAsync(cancellationToken);
+
+    public void AddBudget(CategoryBudget budget) => db.CategoryBudgets.Add(budget);
+
+    public void RemoveBudget(CategoryBudget budget) => db.CategoryBudgets.Remove(budget);
+
     // One grouped query in SQL (it uses the (UserId, ReceiptDate) index), not a list of receipts summed in memory.
     public async Task<IReadOnlyList<CategorySpending>> SpendingAsync(
         Guid userId, DateOnly from, DateOnly to, CancellationToken cancellationToken) =>

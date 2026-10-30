@@ -13,6 +13,27 @@
 
 // ---- Month: previous · this · next ----
 
+// A past month is a closed page of the ledger: said once, quietly, above the figures.
+.closed {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 14px;
+  margin: 24px 0 0;
+  padding: 10px 0 10px 14px;
+  border-left: 2px solid var(--color-ink);
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--color-muted);
+
+  &__label {
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--color-ink);
+  }
+}
+
 .months {
   display: flex;
   align-items: baseline;

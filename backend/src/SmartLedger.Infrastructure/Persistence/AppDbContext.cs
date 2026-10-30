@@ -12,6 +12,8 @@ namespace SmartLedger.Infrastructure.Persistence;
 public class AppDbContext(DbContextOptions<AppDbContext> options, TimeProvider timeProvider)
     : IdentityDbContext<ApplicationUser, IdentityRole<Guid>, Guid>(options), IDataProtectionKeyContext
 {
+    public DbSet<CategoryBudget> CategoryBudgets => Set<CategoryBudget>();
+
     public DbSet<BudgetAlert> BudgetAlerts => Set<BudgetAlert>();
 
     public DbSet<OutgoingEmail> OutgoingEmails => Set<OutgoingEmail>();

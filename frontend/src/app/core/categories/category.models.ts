@@ -17,11 +17,13 @@ export interface CategoryMonth {
   /** "yyyy-MM". */
   month: string;
   baseCurrency: string;
-  /** Sum of the active categories' budgets. */
+  /** Sum of the budgets that month had (archiving ends a budget from its month). */
   totalBudget: number;
   /** Everything approved in the month, archived categories included. */
   totalSpent: number;
   categories: CategorySpending[];
+  /** A past month: its budgets are as they were then and can't be changed. */
+  isClosed: boolean;
 }
 
 export interface CategoryRequest {

@@ -2,9 +2,14 @@
   <div class="page-header__titles">
     <span class="eyebrow">Chart of accounts</span>
     <h1 class="page-header__title">Categories <em>&amp;</em> budgets</h1>
-    <p class="intro">AI files every new receipt under one of these. Budgets apply to every month and reset on the first.</p>
+    <p class="intro">
+      AI files every new receipt under one of these. A budget resets on the first of each month and applies from the
+      month you set it; earlier months keep the budgets they had.
+    </p>
   </div>
-  <button type="button" class="btn" [disabled]="editing() === 'new'" (click)="editing.set('new')">New category</button>
+  @if (!closed()) {
+    <button type="button" class="btn" [disabled]="editing() === 'new'" (click)="editing.set('new')">New category</button>
+  }
 </header>
 
 <nav class="months mono" aria-label="Month">
@@ -14,6 +19,14 @@
     <a [routerLink]="[]" [queryParams]="{ month: nextMonth() }">{{ label(nextMonth(), 'short') }} →</a>
   }
 </nav>
+
+@if (closed()) {
+  <p class="closed" role="note">
+    <span class="closed__label mono">Closed month</span>
+    These are the budgets {{ monthName() }} had. Past months can't be changed; edits apply from
+    <a [routerLink]="[]" [queryParams]="{ month: null }">{{ label(currentMonth) }}</a> on.
+  </p>
+}
 
 @if (errorMessage(); as message) {
   <p class="form-alert" role="alert">{{ message }}</p>
@@ -89,8 +102,10 @@
                 }
               </td>
               <td class="actions">
-                <button type="button" class="link-button" [disabled]="editing() !== null"
-                  [attr.aria-label]="'Edit ' + category.name" (click)="editing.set(category.id)">Edit</button>
+                @if (!m.isClosed) {
+                  <button type="button" class="link-button" [disabled]="editing() !== null"
+                    [attr.aria-label]="'Edit ' + category.name" (click)="editing.set(category.id)">Edit</button>
+                }
               </td>
             </tr>
           }
@@ -116,10 +131,12 @@
             @if (category.receiptCount > 0) {
               <span class="num muted">{{ category.spent | number: '1.2-2' }} in {{ label(m.month, 'short') }}</span>
             }
-            <button type="button" class="link-button" [disabled]="unarchiving() === category.id"
-              [attr.aria-label]="'Unarchive ' + category.name" (click)="unarchive(category)">
-              {{ unarchiving() === category.id ? 'Unarchiving…' : 'Unarchive' }}
-            </button>
+            @if (!m.isClosed) {
+              <button type="button" class="link-button" [disabled]="unarchiving() === category.id"
+                [attr.aria-label]="'Unarchive ' + category.name" (click)="unarchive(category)">
+                {{ unarchiving() === category.id ? 'Unarchiving…' : 'Unarchive' }}
+              </button>
+            }
           </li>
         }
       </ul>

@@ -50,6 +50,9 @@ export class CategoriesPage {
     this.data.hasValue() ? this.data.value().totalBudget - this.data.value().totalSpent : 0,
   );
 
+  /** A past month: shown with the budgets it had, and read-only (budget changes apply from this month on). */
+  protected readonly closed = computed(() => this.data.hasValue() && this.data.value().isClosed);
+
   protected readonly errorMessage = computed(() => (this.data.error() ? describeHttpError(this.data.error()) : null));
 
   /** The row being edited: a category's id, 'new' for the add row, or null. One at a time. */
@@ -76,7 +79,10 @@ export class CategoriesPage {
     this.data.reload();
   }
 
-  /** Brings an archived category back into the pickers and AI's choices, as it was. */
+  /**
+   * Brings an archived category back into the pickers and AI's choices. Archiving ended its budget, so it comes back
+   * without one; Edit sets a new one, from this month on.
+   */
   protected async unarchive(category: CategorySpending): Promise<void> {
     this.unarchiving.set(category.id);
     this.unarchiveError.set(null);

@@ -39,16 +39,22 @@ public sealed class DevelopmentDataSeeder(AppDbContext db, UserManager<Applicati
         }
 
         var categories = CreateCategories(user.Id);
-        db.Categories.AddRange(categories.Values);
-        db.Receipts.AddRange(CreateReceipts(user.Id, categories));
+        db.Categories.AddRange(categories.Values.Select(c => c.Category));
+        var receipts = CreateReceipts(user.Id, categories.ToDictionary(c => c.Key, c => c.Value.Category)).ToList();
+        db.Receipts.AddRange(receipts);
+
+        // The budgets apply from the month of the oldest demo receipt, so every month shown has them.
+        var firstMonth = CategoryBudget.FirstOfMonth(receipts.Min(r => r.ReceiptDate!.Value));
+        db.CategoryBudgets.AddRange(categories.Values.Select(c =>
+            new CategoryBudget { CategoryId = c.Category.Id, EffectiveFrom = firstMonth, Amount = c.Budget }));
 
         await db.SaveChangesAsync(cancellationToken);
     }
 
-    private static Dictionary<string, Category> CreateCategories(Guid userId)
+    private static Dictionary<string, (Category Category, decimal Budget)> CreateCategories(Guid userId)
     {
-        Category Create(string name, string color, decimal budget) =>
-            new() { UserId = userId, Name = name, Color = color, MonthlyBudget = budget };
+        (Category, decimal) Create(string name, string color, decimal budget) =>
+            (new Category { UserId = userId, Name = name, Color = color }, budget);
 
         return new[]
         {
@@ -58,7 +64,7 @@ public sealed class DevelopmentDataSeeder(AppDbContext db, UserManager<Applicati
             Create("Food & Dining", "#B08A2E", 600m),
             Create("Office Supplies", "#8C8270", 500m),
             Create("Utilities", "#4A4038", 400m),
-        }.ToDictionary(c => c.Name);
+        }.ToDictionary(c => c.Item1.Name);
     }
 
     private IEnumerable<Receipt> CreateReceipts(Guid userId, Dictionary<string, Category> categories)

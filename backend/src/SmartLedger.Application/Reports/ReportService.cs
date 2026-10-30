@@ -157,6 +157,8 @@ internal sealed class ReportService(
     {
         var userId = UserId;
         var userCategories = await categories.ListAsync(userId, cancellationToken);
+        // The budgets this month had, not today's: changing a budget never rewrites past months.
+        var budgets = await categories.BudgetsAsync(userId, start, cancellationToken);
         var approved = await reports.ApprovedAsync(userId, start, start.AddMonths(1), cancellationToken);
         var previous = await categories.SpendingAsync(userId, start.AddMonths(-1), start, cancellationToken);
         var baseCurrency = await users.GetBaseCurrencyAsync(userId, cancellationToken) ?? "USD";
@@ -174,7 +176,7 @@ internal sealed class ReportService(
             .Select(c =>
             {
                 var (count, spent) = spentByCategory.GetValueOrDefault(c.Id);
-                return new CategorySpendingDto(c.Id, c.Name, c.Color, c.MonthlyBudget, c.IsArchived, count, spent);
+                return new CategorySpendingDto(c.Id, c.Name, c.Color, budgets.GetValueOrDefault(c.Id), c.IsArchived, count, spent);
             })
             .OrderByDescending(c => c.Spent)
             .ThenBy(c => c.Name, StringComparer.CurrentCultureIgnoreCase)
@@ -186,7 +188,7 @@ internal sealed class ReportService(
             approved,
             approved.Sum(r => r.BaseCurrencyTotal ?? 0m),
             previous.Sum(s => s.Spent),
-            userCategories.Where(c => !c.IsArchived).Sum(c => c.MonthlyBudget ?? 0m),
+            budgets.Values.Sum(b => b ?? 0m),
             categoryRows,
             TopVendors(approved, names),
             names);

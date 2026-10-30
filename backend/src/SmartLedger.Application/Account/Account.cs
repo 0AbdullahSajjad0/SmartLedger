@@ -64,6 +64,7 @@ public sealed record AccountProfile(string Email, string DisplayName, string Bas
 public sealed record AccountData(
     AccountProfile Profile,
     IReadOnlyList<Category> Categories,
+    IReadOnlyList<CategoryBudget> Budgets,
     IReadOnlyList<Receipt> Receipts,
     IReadOnlyList<MonthlyInsight> Insights);
 
