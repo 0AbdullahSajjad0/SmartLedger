@@ -31,8 +31,11 @@ internal sealed class AuthService(
     private static readonly Error InvalidResetLink = Error.Validation(
         "auth.invalid_reset_link", "This link has expired or was already used. Ask for a new one.");
 
-    /// <summary>A second reset email for the same account is not sent sooner than this.</summary>
-    private static readonly TimeSpan ResetRequestCooldown = TimeSpan.FromMinutes(5);
+    private static readonly Error InvalidConfirmationLink = Error.Validation(
+        "auth.invalid_confirmation_link", "This link has expired or isn't complete. Send a new one from your Account page.");
+
+    /// <summary>A second reset or confirmation email for the same account is not sent sooner than this.</summary>
+    internal static readonly TimeSpan EmailCooldown = TimeSpan.FromMinutes(5);
 
     public async Task<Result<AuthResponse>> RegisterAsync(RegisterRequest request, CancellationToken cancellationToken)
     {
@@ -61,11 +64,32 @@ internal sealed class AuthService(
             }
 
             db.Categories.AddRange(DefaultCategories.For(user.Id));
+            // Saved by IssueTokensAsync below, in the same transaction: no account without its confirmation email.
+            outbox.Add(EmailKind.EmailConfirmation, user.Id);
             var response = await IssueTokensAsync(user, rememberMe: false, familyId: Guid.CreateVersion7(), replacing: null, cancellationToken);
 
             await transaction.CommitAsync(cancellationToken);
+            outbox.Wake();
             return response;
         });
+    }
+
+    public async Task<Result<UserDto>> ConfirmEmailAsync(ConfirmEmailRequest request, CancellationToken cancellationToken)
+    {
+        var user = await userManager.FindByIdAsync(request.UserId.ToString());
+        if (user is null || DecodeToken(request.Token) is not { } token)
+        {
+            return InvalidConfirmationLink;
+        }
+
+        // Opening the link twice (or after a reset already confirmed the address) is fine: it's done either way.
+        if (user.EmailConfirmed)
+        {
+            return ToDto(user);
+        }
+
+        var confirmed = await userManager.ConfirmEmailAsync(user, token);
+        return confirmed.Succeeded ? ToDto(user) : InvalidConfirmationLink;
     }
 
     public async Task<Result<AuthResponse>> LoginAsync(LoginRequest request, CancellationToken cancellationToken)
@@ -197,10 +221,8 @@ internal sealed class AuthService(
 
         // Someone pressing the button repeatedly (or using it to flood an inbox) gets one email, not many. It also
         // protects the mail service's small hourly quota, which every user shares.
-        var since = timeProvider.GetUtcNow() - ResetRequestCooldown;
-        var askedRecently = await db.OutgoingEmails.AnyAsync(
-            e => e.UserId == user.Id && e.Kind == EmailKind.PasswordReset && e.CreatedAt > since, cancellationToken);
-        if (askedRecently)
+        var since = timeProvider.GetUtcNow() - EmailCooldown;
+        if (await outbox.QueuedSinceAsync(user.Id, EmailKind.PasswordReset, since, cancellationToken))
         {
             return;
         }
@@ -232,6 +254,14 @@ internal sealed class AuthService(
             .ExecuteUpdateAsync(s => s.SetProperty(t => t.RevokedAt, timeProvider.GetUtcNow()), cancellationToken);
         await userManager.SetLockoutEndDateAsync(user, null);
         await userManager.ResetAccessFailedCountAsync(user);
+
+        // The link arrived in this inbox and was used, which proves the address as well as a confirmation link would.
+        if (!user.EmailConfirmed)
+        {
+            user.EmailConfirmed = true;
+            await userManager.UpdateAsync(user);
+        }
+
         return true;
     }
 
@@ -248,5 +278,5 @@ internal sealed class AuthService(
     }
 
     internal static UserDto ToDto(ApplicationUser user) =>
-        new(user.Id, user.Email!, user.DisplayName, user.BaseCurrency, user.BudgetAlerts);
+        new(user.Id, user.Email!, user.DisplayName, user.BaseCurrency, user.BudgetAlerts, user.EmailConfirmed);
 }

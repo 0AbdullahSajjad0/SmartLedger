@@ -1,4 +1,5 @@
 using System.Threading.Channels;
+using Microsoft.EntityFrameworkCore;
 using SmartLedger.Application.Email;
 using SmartLedger.Infrastructure.Persistence;
 
@@ -18,6 +19,9 @@ internal sealed class EmailOutbox(AppDbContext db, EmailSignal signal, TimeProvi
             NextAttemptAt = now,
         });
     }
+
+    public Task<bool> QueuedSinceAsync(Guid userId, EmailKind kind, DateTimeOffset since, CancellationToken cancellationToken) =>
+        db.OutgoingEmails.AnyAsync(e => e.UserId == userId && e.Kind == kind && e.CreatedAt > since, cancellationToken);
 
     public void Wake() => signal.Wake();
 }

@@ -1,0 +1,40 @@
+:host {
+  display: block;
+}
+
+// A note in the ledger's margin rather than an alarm: paper wash with a mustard rule, like "needs review".
+.note {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 20px;
+  padding: 12px var(--gutter);
+  border-bottom: var(--rule-faint);
+  border-left: 3px solid var(--color-caution);
+  background: var(--color-wash);
+
+  &__label {
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--color-caution);
+  }
+
+  &__text {
+    flex: 1 1 320px;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  &__actions {
+    display: flex;
+    gap: 18px;
+  }
+
+  &__error {
+    flex-basis: 100%;
+    font-size: 13px;
+    color: var(--color-negative);
+  }
+}

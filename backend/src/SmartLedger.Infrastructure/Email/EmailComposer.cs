@@ -35,9 +35,39 @@ internal sealed class EmailComposer(
         {
             EmailKind.PasswordReset => await PasswordResetAsync(user, email),
             EmailKind.BudgetAlert => await BudgetAlertAsync(user, email.ReferenceId, cancellationToken),
+            EmailKind.EmailConfirmation => await EmailConfirmationAsync(user, email),
             _ => null,
         };
     }
+
+    private async Task<EmailMessage?> EmailConfirmationAsync(ApplicationUser user, OutgoingEmail email)
+    {
+        // Confirmed in the meantime (e.g. through a password reset link), or asked for so long ago that a newer
+        // request has surely been sent.
+        if (user.EmailConfirmed || timeProvider.GetUtcNow() - email.CreatedAt > EmailConfirmationTokenProviderOptions.Lifetime)
+        {
+            return null;
+        }
+
+        var token = await userManager.GenerateEmailConfirmationTokenAsync(user);
+        var link = new Uri(options.Value.AppUri, $"confirm-email?user={user.Id}#token={Encode(token)}");
+
+        return EmailTemplate.Render(
+            user.Email!,
+            "Confirm your email for SmartLedger",
+            "Welcome",
+            "Confirm your email address",
+            [
+                $"Thanks for opening a SmartLedger account, {user.DisplayName}. Please confirm that {user.Email} is your address.",
+                "Until then, SmartLedger won't send you budget alerts. The link works for three days.",
+                "If you didn't open an account, ignore this email and nothing more will be sent to you.",
+            ],
+            ("Confirm my email", link),
+            "You're receiving this because this address was used to open a SmartLedger account.");
+    }
+
+    /// <summary>Identity tokens contain "+", "/" and "="; Base64Url makes them safe in a link.</summary>
+    private static string Encode(string token) => WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(token));
 
     private async Task<EmailMessage?> PasswordResetAsync(ApplicationUser user, OutgoingEmail email)
     {
@@ -50,11 +80,10 @@ internal sealed class EmailComposer(
         // Made now, so its hour starts when it is sent. It stops working once used: resetting the password renews the
         // account's security stamp, which the token is tied to.
         var token = await userManager.GeneratePasswordResetTokenAsync(user);
-        var encoded = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(token));
 
         // The token goes after "#": browsers never send that part to a server, so it stays out of hosting logs and
         // the Referer header.
-        var link = new Uri(options.Value.AppUri, $"reset-password?user={user.Id}#token={encoded}");
+        var link = new Uri(options.Value.AppUri, $"reset-password?user={user.Id}#token={Encode(token)}");
 
         return EmailTemplate.Render(
             user.Email!,
@@ -72,8 +101,9 @@ internal sealed class EmailComposer(
 
     private async Task<EmailMessage?> BudgetAlertAsync(ApplicationUser user, Guid? alertId, CancellationToken cancellationToken)
     {
-        // Turned off since the alert was recorded: respect the latest choice.
-        if (!user.BudgetAlerts)
+        // Turned off since the alert was recorded: respect the latest choice. Unconfirmed addresses get no alerts, so
+        // an account opened with someone else's address can't be used to send them mail.
+        if (!user.BudgetAlerts || !user.EmailConfirmed)
         {
             return null;
         }

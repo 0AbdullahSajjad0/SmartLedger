@@ -5,6 +5,7 @@ using SmartLedger.Application.Account;
 using SmartLedger.Application.Auth;
 using SmartLedger.Application.Common;
 using SmartLedger.Application.Common.Storage;
+using SmartLedger.Application.Email;
 using SmartLedger.Infrastructure.Persistence;
 
 namespace SmartLedger.Infrastructure.Identity;
@@ -13,6 +14,7 @@ internal sealed class AccountService(
     UserManager<ApplicationUser> userManager,
     AppDbContext db,
     IFileStorage storage,
+    IEmailOutbox outbox,
     TimeProvider timeProvider,
     ILogger<AccountService> logger) : IAccountService
 {
@@ -66,6 +68,26 @@ internal sealed class AccountService(
         }
 
         return AuthService.ToDto(user);
+    }
+
+    public async Task<Result<bool>> SendConfirmationEmailAsync(Guid userId, CancellationToken cancellationToken)
+    {
+        var user = await userManager.FindByIdAsync(userId.ToString());
+        if (user is null)
+        {
+            return UserNotFound;
+        }
+
+        var since = timeProvider.GetUtcNow() - AuthService.EmailCooldown;
+        if (user.EmailConfirmed || await outbox.QueuedSinceAsync(userId, EmailKind.EmailConfirmation, since, cancellationToken))
+        {
+            return true;
+        }
+
+        outbox.Add(EmailKind.EmailConfirmation, userId);
+        await db.SaveChangesAsync(cancellationToken);
+        outbox.Wake();
+        return true;
     }
 
     public async Task<Result<bool>> ChangePasswordAsync(Guid userId, ChangePasswordRequest request, CancellationToken cancellationToken)

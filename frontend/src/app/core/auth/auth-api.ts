@@ -39,6 +39,11 @@ export class AuthApi {
     return this.http.post<void>(`${this.baseUrl}/reset-password`, { userId, token, newPassword }, skipAuth());
   }
 
+  /** Works signed in or not: the token in the link says whose address it is. */
+  confirmEmail(userId: string, token: string): Observable<User> {
+    return this.http.post<User>(`${this.baseUrl}/confirm-email`, { userId, token }, skipAuth());
+  }
+
   me(): Observable<User> {
     return this.http.get<User>(`${this.baseUrl}/me`);
   }

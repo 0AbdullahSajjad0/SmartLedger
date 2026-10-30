@@ -64,6 +64,7 @@ export class AccountPage {
   protected readonly saveProfile = new RequestState(this.destroyRef);
   protected readonly changePassword = new RequestState(this.destroyRef);
   protected readonly saveAlerts = new RequestState(this.destroyRef);
+  protected readonly sendConfirmation = new RequestState(this.destroyRef);
   protected readonly signOutOthers = new RequestState(this.destroyRef);
   protected readonly download = new RequestState(this.destroyRef);
   protected readonly deleteAccount = new RequestState(this.destroyRef);
@@ -110,6 +111,10 @@ export class AccountPage {
         return describeHttpError(error);
       },
     );
+  }
+
+  protected sendConfirmationEmail(): void {
+    this.sendConfirmation.send(this.api.sendConfirmationEmail());
   }
 
   protected signOutOtherDevices(): void {

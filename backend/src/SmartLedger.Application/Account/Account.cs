@@ -27,6 +27,12 @@ public interface IAccountService
 
     Task<Result<UserDto>> UpdateNotificationsAsync(Guid userId, UpdateNotificationsRequest request, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Sends the "confirm your email" link again. Nothing is sent when the address is already confirmed or a link went
+    /// out in the last few minutes; either way the answer is the same, so the button can't be used to flood an inbox.
+    /// </summary>
+    Task<Result<bool>> SendConfirmationEmailAsync(Guid userId, CancellationToken cancellationToken);
+
     /// <summary>Checks the current password, sets the new one and signs out every other device.</summary>
     Task<Result<bool>> ChangePasswordAsync(Guid userId, ChangePasswordRequest request, CancellationToken cancellationToken);
 

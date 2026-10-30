@@ -52,6 +52,18 @@ export const routes: Routes = [
     ],
   },
   {
+    // No guard: the link works whether or not this browser is signed in.
+    path: 'confirm-email',
+    loadComponent: () => import('./layout/auth-layout/auth-layout').then((m) => m.AuthLayout),
+    children: [
+      {
+        path: '',
+        title: 'Confirm email · SmartLedger',
+        loadComponent: () => import('./features/auth/confirm-email/confirm-email').then((m) => m.ConfirmEmail),
+      },
+    ],
+  },
+  {
     path: '',
     canMatch: [signedInGuard],
     loadComponent: () => import('./layout/app-shell/app-shell').then((m) => m.AppShell),

@@ -1,0 +1,24 @@
+@if (visible()) {
+  <div class="note" role="region" aria-label="Confirm your email">
+    <span class="note__label">Confirm your email</span>
+    <p class="note__text">
+      @if (sent()) {
+        A new link is on its way to <span class="mono">{{ auth.user()?.email }}</span>. It can take a few minutes; check
+        spam too.
+      } @else {
+        We sent a link to <span class="mono">{{ auth.user()?.email }}</span>. Budget alerts start once it's confirmed.
+      }
+    </p>
+    <div class="note__actions">
+      @if (!sent()) {
+        <button type="button" class="link-button" [disabled]="sending()" (click)="sendAgain()">
+          {{ sending() ? 'Sending…' : 'Send the link again' }}
+        </button>
+      }
+      <button type="button" class="link-button link-button--muted" (click)="hide()">Not now</button>
+    </div>
+    @if (error(); as message) {
+      <p class="note__error" role="alert">{{ message }}</p>
+    }
+  </div>
+}

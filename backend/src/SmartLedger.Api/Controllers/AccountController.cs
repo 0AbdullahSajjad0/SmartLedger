@@ -30,6 +30,19 @@ public sealed class AccountController(IAccountService account, IAccountExportSer
         (await account.UpdateNotificationsAsync(UserId, request, cancellationToken)).ToActionResult(this);
 
     /// <summary>
+    /// Sends the "confirm your email" link again. Always 202: nothing goes out if the address is already confirmed or
+    /// a link was sent in the last few minutes.
+    /// </summary>
+    [HttpPost("confirmation-email")]
+    [EnableRateLimiting(RateLimitPolicies.Auth)]
+    [ProducesResponseType(StatusCodes.Status202Accepted)]
+    public async Task<IActionResult> SendConfirmationEmail(CancellationToken cancellationToken)
+    {
+        var result = await account.SendConfirmationEmailAsync(UserId, cancellationToken);
+        return result.IsSuccess ? Accepted() : result.ToActionResult(this);
+    }
+
+    /// <summary>
     /// Changes the password after checking the current one. Every other device is signed out; the session of
     /// <c>refreshToken</c> stays signed in. A wrong current password is a 400 and counts towards the sign-in lockout.
     /// </summary>
