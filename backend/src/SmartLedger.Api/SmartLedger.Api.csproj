@@ -10,6 +10,10 @@
     <!-- Needed only by the "dotnet ef" tool at design time; not shipped with the app. -->
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" PrivateAssets="all" />
     <PackageReference Include="Scalar.AspNetCore" />
+    <!-- SQL Server's client brings Microsoft's Windows sign-in broker, whose native library (libmsalruntime.so, 36 MB)
+         only serves interactive desktop sign-in. The API signs in with its managed identity, so the native part is
+         left out: a third smaller app layer, which is downloaded on a cold start. -->
+    <PackageReference Include="Microsoft.Identity.Client.NativeInterop" ExcludeAssets="native" />
   </ItemGroup>
 
   <ItemGroup>
