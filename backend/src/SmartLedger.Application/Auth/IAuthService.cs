@@ -16,4 +16,13 @@ public interface IAuthService
     Task LogoutAsync(string refreshToken, CancellationToken cancellationToken);
 
     Task<Result<UserDto>> GetUserAsync(Guid userId, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Emails a reset link if an account uses the address. Says nothing either way, so the form can't be used to find
+    /// out who has an account. At most one email per account every few minutes.
+    /// </summary>
+    Task RequestPasswordResetAsync(ForgotPasswordRequest request, CancellationToken cancellationToken);
+
+    /// <summary>Sets a new password from a reset link, signs out every device and lifts any lockout.</summary>
+    Task<Result<bool>> ResetPasswordAsync(ResetPasswordRequest request, CancellationToken cancellationToken);
 }

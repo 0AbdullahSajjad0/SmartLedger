@@ -1,0 +1,238 @@
+using System.Net;
+using System.Net.Http.Json;
+using System.Text.RegularExpressions;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using SmartLedger.Application.Account;
+using SmartLedger.Application.Auth;
+using SmartLedger.Application.Categories;
+using SmartLedger.Application.Email;
+using SmartLedger.Infrastructure.Persistence;
+
+namespace SmartLedger.Api.IntegrationTests;
+
+/// <summary>Password reset by email and budget alerts, sent by the background worker through a fake mail service.</summary>
+[Collection(ApiCollection.Name)]
+public partial class EmailTests(SmartLedgerApiFactory factory)
+{
+    private const string NewPassword = "a brand new long passphrase";
+
+    private static readonly System.Text.Json.JsonSerializerOptions Json = TestReceipts.Json;
+
+    // ---- Password reset ----
+
+    [Fact]
+    public async Task ForgotPassword_ForAnUnknownAddress_Answers202_AndSendsNothing()
+    {
+        var email = TestAuth.NewEmail();
+
+        var response = await factory.CreateClient().PostAsJsonAsync("/api/auth/forgot-password", new ForgotPasswordRequest(email));
+
+        Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
+        await Task.Delay(300);
+        Assert.Empty(factory.Emails.SentTo(email));
+    }
+
+    [Fact]
+    public async Task ResetLink_SetsANewPassword_SignsOutEverywhere_AndWorksOnce()
+    {
+        var auth = await TestAuth.RegisterAsync(factory.CreateClient());
+
+        var response = await factory.CreateClient().PostAsJsonAsync("/api/auth/forgot-password", new ForgotPasswordRequest(auth.User.Email));
+        Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
+
+        var email = await factory.Emails.WaitForAsync(auth.User.Email);
+        Assert.Equal("Reset your SmartLedger password", email.Subject);
+        var (userId, token) = ReadResetLink(email);
+        Assert.Equal(auth.User.Id, userId);
+
+        var reset = await ResetAsync(userId, token, NewPassword);
+
+        Assert.Equal(HttpStatusCode.NoContent, reset.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await SignInAsync(auth.User.Email, NewPassword)).StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await SignInAsync(auth.User.Email, TestAuth.Password)).StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await RefreshAsync(auth.RefreshToken)).StatusCode);
+
+        var again = await ResetAsync(userId, token, "yet another long passphrase");
+        Assert.Equal(HttpStatusCode.BadRequest, again.StatusCode);
+        Assert.Equal("This link has expired or was already used. Ask for a new one.",
+            (await again.Content.ReadFromJsonAsync<ProblemDetails>())!.Title);
+    }
+
+    [Fact]
+    public async Task ResetLink_LiftsALockout()
+    {
+        var auth = await TestAuth.RegisterAsync(factory.CreateClient());
+        for (var attempt = 0; attempt < 5; attempt++)
+        {
+            await SignInAsync(auth.User.Email, "wrong guess " + attempt);
+        }
+        Assert.Equal(HttpStatusCode.Unauthorized, (await SignInAsync(auth.User.Email, TestAuth.Password)).StatusCode);
+
+        await factory.CreateClient().PostAsJsonAsync("/api/auth/forgot-password", new ForgotPasswordRequest(auth.User.Email));
+        var (userId, token) = ReadResetLink(await factory.Emails.WaitForAsync(auth.User.Email));
+        await ResetAsync(userId, token, NewPassword);
+
+        Assert.Equal(HttpStatusCode.OK, (await SignInAsync(auth.User.Email, NewPassword)).StatusCode);
+    }
+
+    [Fact]
+    public async Task ForgotPassword_AskedTwiceInAFewMinutes_SendsOneEmail()
+    {
+        var auth = await TestAuth.RegisterAsync(factory.CreateClient());
+        var client = factory.CreateClient();
+
+        await client.PostAsJsonAsync("/api/auth/forgot-password", new ForgotPasswordRequest(auth.User.Email));
+        var second = await client.PostAsJsonAsync("/api/auth/forgot-password", new ForgotPasswordRequest(auth.User.Email));
+
+        Assert.Equal(HttpStatusCode.Accepted, second.StatusCode);
+        await using var scope = factory.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        Assert.Equal(1, await db.OutgoingEmails.CountAsync(e => e.UserId == auth.User.Id));
+    }
+
+    [Fact]
+    public async Task ResetPassword_WithAMadeUpToken_Returns400()
+    {
+        var auth = await TestAuth.RegisterAsync(factory.CreateClient());
+
+        var response = await ResetAsync(auth.User.Id, "bm90LWEtcmVhbC10b2tlbg", NewPassword);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await SignInAsync(auth.User.Email, TestAuth.Password)).StatusCode);
+    }
+
+    // ---- Budget alerts ----
+
+    [Fact]
+    public async Task BudgetAlerts_WarnAt80Percent_ThenSayExceededAt100_OncePerLevel()
+    {
+        var (client, auth) = await SignedInAsync();
+        var category = await BudgetAsync(client, "Snacks & <Treats>", 100m);
+        var today = Today();
+
+        await TestReceipts.ApprovedAsync(client, 85m, today, category.Id);
+        var warning = await factory.Emails.WaitForAsync(auth.User.Email);
+
+        Assert.Equal($"Snacks & <Treats> has used 85% of its {Month(today)} budget", warning.Subject);
+        Assert.Contains("You've spent EUR 85.00 of your EUR 100.00 budget for Snacks & <Treats>", warning.PlainText);
+        Assert.Contains("That leaves EUR 15.00 for the rest of the month.", warning.PlainText);
+        // The category name is the user's own text: it must arrive as text, never as HTML.
+        Assert.Contains("Snacks &amp; &lt;Treats&gt;", warning.Html);
+        Assert.DoesNotContain("<Treats>", warning.Html);
+        Assert.Contains($"{SmartLedgerApiFactory.AppUrl}/categories?month={today.ToString("yyyy-MM", System.Globalization.CultureInfo.InvariantCulture)}", warning.PlainText);
+
+        await TestReceipts.ApprovedAsync(client, 10m, today, category.Id); // 95%: already warned
+        await TestReceipts.ApprovedAsync(client, 10m, today, category.Id); // 105%
+        var exceeded = await factory.Emails.WaitForAsync(auth.User.Email, count: 2);
+        Assert.Equal($"Snacks & <Treats> is over its {Month(today)} budget", exceeded.Subject);
+        Assert.Contains("That's EUR 5.00 more than you planned.", exceeded.PlainText);
+
+        await TestReceipts.ApprovedAsync(client, 10m, today, category.Id); // 115%: already told
+        await Task.Delay(500);
+        Assert.Equal(2, factory.Emails.SentTo(auth.User.Email).Count);
+        Assert.Equal(category.Id, (await AlertsAsync(auth.User.Id)).Select(a => a.CategoryId).Distinct().Single());
+    }
+
+    [Fact]
+    public async Task BudgetAlerts_GoingStraightPast100_SendsOnlyExceeded()
+    {
+        var (client, auth) = await SignedInAsync();
+        await BudgetAsync(client, "Office Supplies", 50m);
+
+        await TestReceipts.ApprovedAsync(client, 60m, Today());
+
+        Assert.Contains("is over its", (await factory.Emails.WaitForAsync(auth.User.Email)).Subject);
+        await Task.Delay(300);
+        Assert.Single(factory.Emails.SentTo(auth.User.Email));
+    }
+
+    [Fact]
+    public async Task BudgetAlerts_TurnedOff_SendNothing()
+    {
+        var (client, auth) = await SignedInAsync();
+        await BudgetAsync(client, "Office Supplies", 50m);
+
+        var off = await client.PutAsJsonAsync("/api/account/notifications", new UpdateNotificationsRequest(false));
+        Assert.False((await off.Content.ReadFromJsonAsync<UserDto>())!.BudgetAlerts);
+
+        await TestReceipts.ApprovedAsync(client, 60m, Today());
+
+        await Task.Delay(500);
+        Assert.Empty(factory.Emails.SentTo(auth.User.Email));
+        Assert.Empty(await AlertsAsync(auth.User.Id));
+    }
+
+    [Fact]
+    public async Task BudgetAlerts_AreOnlyForTheCurrentMonth()
+    {
+        var (client, auth) = await SignedInAsync();
+        await BudgetAsync(client, "Office Supplies", 50m);
+
+        await TestReceipts.ApprovedAsync(client, 60m, Today().AddMonths(-1));
+
+        await Task.Delay(500);
+        Assert.Empty(factory.Emails.SentTo(auth.User.Email));
+    }
+
+    [Fact]
+    public async Task NewAccounts_HaveBudgetAlertsOn()
+    {
+        var auth = await TestAuth.RegisterAsync(factory.CreateClient());
+
+        Assert.True(auth.User.BudgetAlerts);
+    }
+
+    // ---- Helpers ----
+
+    [GeneratedRegex(@"reset-password\?user=(?<user>[0-9a-f-]{36})#token=(?<token>[A-Za-z0-9_-]+)")]
+    private static partial Regex ResetLink();
+
+    private static (Guid UserId, string Token) ReadResetLink(EmailMessage email)
+    {
+        var match = ResetLink().Match(email.PlainText);
+        Assert.True(match.Success, "The email has no reset link.");
+        Assert.Contains($"{SmartLedgerApiFactory.AppUrl}/reset-password?user=", email.PlainText);
+        return (Guid.Parse(match.Groups["user"].Value), match.Groups["token"].Value);
+    }
+
+    private static DateOnly Today() => DateOnly.FromDateTime(DateTime.UtcNow);
+
+    private static string Month(DateOnly date) => date.ToString("MMMM", System.Globalization.CultureInfo.InvariantCulture);
+
+    private async Task<(HttpClient Client, AuthResponse Auth)> SignedInAsync()
+    {
+        var client = factory.CreateClient();
+        var auth = await TestAuth.RegisterAsync(client);
+        client.Authorize(auth.AccessToken);
+        return (client, auth);
+    }
+
+    /// <summary>Gives the user's Office Supplies category (where the fake AI files every receipt) a name and budget.</summary>
+    private static async Task<CategoryDto> BudgetAsync(HttpClient client, string name, decimal budget)
+    {
+        var categories = (await client.GetFromJsonAsync<List<CategoryDto>>("/api/categories", Json))!;
+        var office = categories.Single(c => c.Name == "Office Supplies");
+        var response = await client.PutAsJsonAsync($"/api/categories/{office.Id}",
+            new UpdateCategoryRequest(name, office.Color, budget, IsArchived: false), Json);
+        response.EnsureSuccessStatusCode();
+        return (await response.Content.ReadFromJsonAsync<CategoryDto>(Json))!;
+    }
+
+    private async Task<List<Domain.Entities.BudgetAlert>> AlertsAsync(Guid userId)
+    {
+        await using var scope = factory.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        return await db.BudgetAlerts.Where(a => a.UserId == userId).ToListAsync();
+    }
+
+    private Task<HttpResponseMessage> ResetAsync(Guid userId, string token, string password) =>
+        factory.CreateClient().PostAsJsonAsync("/api/auth/reset-password", new ResetPasswordRequest(userId, token, password));
+
+    private Task<HttpResponseMessage> SignInAsync(string email, string password) =>
+        factory.CreateClient().PostAsJsonAsync("/api/auth/login", new LoginRequest(email, password, RememberMe: false));
+
+    private Task<HttpResponseMessage> RefreshAsync(string refreshToken) =>
+        factory.CreateClient().PostAsJsonAsync("/api/auth/refresh", new RefreshRequest(refreshToken));
+}

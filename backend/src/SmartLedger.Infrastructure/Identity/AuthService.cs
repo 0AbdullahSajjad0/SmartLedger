@@ -1,8 +1,11 @@
+using System.Text;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using SmartLedger.Application.Auth;
 using SmartLedger.Application.Common;
+using SmartLedger.Application.Email;
 using SmartLedger.Infrastructure.Persistence;
 
 namespace SmartLedger.Infrastructure.Identity;
@@ -12,6 +15,7 @@ internal sealed class AuthService(
     AppDbContext db,
     TokenService tokenService,
     IOptions<JwtOptions> jwtOptions,
+    IEmailOutbox outbox,
     TimeProvider timeProvider) : IAuthService
 {
     // The same message for "no such email" and "wrong password", so the login form can't be used to find accounts.
@@ -23,6 +27,12 @@ internal sealed class AuthService(
 
     private static readonly Error InvalidRefreshToken =
         Error.Unauthorized("auth.invalid_refresh_token", "Your session has ended. Please sign in again.");
+
+    private static readonly Error InvalidResetLink = Error.Validation(
+        "auth.invalid_reset_link", "This link has expired or was already used. Ask for a new one.");
+
+    /// <summary>A second reset email for the same account is not sent sooner than this.</summary>
+    private static readonly TimeSpan ResetRequestCooldown = TimeSpan.FromMinutes(5);
 
     public async Task<Result<AuthResponse>> RegisterAsync(RegisterRequest request, CancellationToken cancellationToken)
     {
@@ -177,6 +187,66 @@ internal sealed class AuthService(
         return new AuthResponse(accessToken, accessExpiresAt, refreshToken, stored.ExpiresAt, ToDto(user));
     }
 
+    public async Task RequestPasswordResetAsync(ForgotPasswordRequest request, CancellationToken cancellationToken)
+    {
+        var user = await userManager.FindByEmailAsync(request.Email);
+        if (user is null)
+        {
+            return;
+        }
+
+        // Someone pressing the button repeatedly (or using it to flood an inbox) gets one email, not many. It also
+        // protects the mail service's small hourly quota, which every user shares.
+        var since = timeProvider.GetUtcNow() - ResetRequestCooldown;
+        var askedRecently = await db.OutgoingEmails.AnyAsync(
+            e => e.UserId == user.Id && e.Kind == EmailKind.PasswordReset && e.CreatedAt > since, cancellationToken);
+        if (askedRecently)
+        {
+            return;
+        }
+
+        outbox.Add(EmailKind.PasswordReset, user.Id);
+        await db.SaveChangesAsync(cancellationToken);
+        outbox.Wake();
+    }
+
+    public async Task<Result<bool>> ResetPasswordAsync(ResetPasswordRequest request, CancellationToken cancellationToken)
+    {
+        var user = await userManager.FindByIdAsync(request.UserId.ToString());
+        if (user is null || DecodeToken(request.Token) is not { } token)
+        {
+            return InvalidResetLink;
+        }
+
+        var reset = await userManager.ResetPasswordAsync(user, token, request.NewPassword);
+        if (!reset.Succeeded)
+        {
+            return reset.Errors.Any(e => e.Code == nameof(IdentityErrorDescriber.InvalidToken))
+                ? InvalidResetLink
+                : Error.Validation("auth.invalid_password", string.Join(" ", reset.Errors.Select(e => e.Description)));
+        }
+
+        // Whoever knew the old password is signed out everywhere, and failed guesses no longer block the owner.
+        await db.RefreshTokens
+            .Where(t => t.UserId == user.Id && t.RevokedAt == null)
+            .ExecuteUpdateAsync(s => s.SetProperty(t => t.RevokedAt, timeProvider.GetUtcNow()), cancellationToken);
+        await userManager.SetLockoutEndDateAsync(user, null);
+        await userManager.ResetAccessFailedCountAsync(user);
+        return true;
+    }
+
+    private static string? DecodeToken(string encoded)
+    {
+        try
+        {
+            return Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(encoded));
+        }
+        catch (FormatException)
+        {
+            return null;
+        }
+    }
+
     internal static UserDto ToDto(ApplicationUser user) =>
-        new(user.Id, user.Email!, user.DisplayName, user.BaseCurrency);
+        new(user.Id, user.Email!, user.DisplayName, user.BaseCurrency, user.BudgetAlerts);
 }

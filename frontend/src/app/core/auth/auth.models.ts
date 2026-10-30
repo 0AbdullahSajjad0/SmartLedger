@@ -5,6 +5,8 @@ export interface User {
   email: string;
   displayName: string;
   baseCurrency: string;
+  /** Email when a category reaches 80% and 100% of its monthly budget. */
+  budgetAlerts: boolean;
 }
 
 export interface AuthResponse {

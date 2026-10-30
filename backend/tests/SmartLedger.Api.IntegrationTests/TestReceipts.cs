@@ -51,15 +51,17 @@ internal static class TestReceipts
 
     /// <summary>
     /// A receipt read by AI and approved at exactly <paramref name="amountCharged"/> in the base currency, so sums
-    /// in tests are easy to check. The receipt date can be moved to put it in another month.
+    /// in tests are easy to check. The receipt date can be moved to put it in another month, and the category changed
+    /// (AI picks Office Supplies by name, so a renamed one has to be set by hand).
     /// </summary>
-    public static async Task<ReceiptDetailDto> ApprovedAsync(HttpClient client, decimal amountCharged, DateOnly? receiptDate = null)
+    public static async Task<ReceiptDetailDto> ApprovedAsync(
+        HttpClient client, decimal amountCharged, DateOnly? receiptDate = null, Guid? categoryId = null)
     {
         var receipt = await UploadAndReadAsync(client);
-        if (receiptDate is not null)
+        if (receiptDate is not null || categoryId is not null)
         {
-            var edit = new UpdateReceiptRequest(receipt.VendorName, receiptDate, receipt.Currency, receipt.Subtotal, receipt.Tax,
-                receipt.Total, receipt.PaymentMethod, receipt.CategoryId, receipt.Notes,
+            var edit = new UpdateReceiptRequest(receipt.VendorName, receiptDate ?? receipt.ReceiptDate, receipt.Currency, receipt.Subtotal, receipt.Tax,
+                receipt.Total, receipt.PaymentMethod, categoryId ?? receipt.CategoryId, receipt.Notes,
                 receipt.LineItems.Select(l => new LineItemRequest(l.Description, l.Quantity, l.UnitPrice, l.Amount)).ToList());
             (await client.PutAsJsonAsync($"/api/receipts/{receipt.Id}", edit, Json)).EnsureSuccessStatusCode();
         }

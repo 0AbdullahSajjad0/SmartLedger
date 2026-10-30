@@ -15,6 +15,10 @@ export class AccountApi {
     return this.http.put<User>(this.url, { displayName });
   }
 
+  updateNotifications(budgetAlerts: boolean): Observable<User> {
+    return this.http.put<User>(`${this.url}/notifications`, { budgetAlerts });
+  }
+
   /**
    * Every other device is signed out. This one stays signed in: the API keeps the session its refresh token belongs
    * to (even if the token is rotated while the request is on its way).

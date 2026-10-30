@@ -7,6 +7,8 @@ namespace SmartLedger.Application.Account;
 
 public sealed record UpdateProfileRequest([Required, StringLength(100, MinimumLength = 1)] string DisplayName);
 
+public sealed record UpdateNotificationsRequest(bool BudgetAlerts);
+
 /// <param name="RefreshToken">This device's refresh token: its session stays signed in, every other one ends.</param>
 public sealed record ChangePasswordRequest(
     [Required] string CurrentPassword,
@@ -22,6 +24,8 @@ public sealed record DeleteAccountRequest([Required] string Password);
 public interface IAccountService
 {
     Task<Result<UserDto>> UpdateProfileAsync(Guid userId, UpdateProfileRequest request, CancellationToken cancellationToken);
+
+    Task<Result<UserDto>> UpdateNotificationsAsync(Guid userId, UpdateNotificationsRequest request, CancellationToken cancellationToken);
 
     /// <summary>Checks the current password, sets the new one and signs out every other device.</summary>
     Task<Result<bool>> ChangePasswordAsync(Guid userId, ChangePasswordRequest request, CancellationToken cancellationToken);

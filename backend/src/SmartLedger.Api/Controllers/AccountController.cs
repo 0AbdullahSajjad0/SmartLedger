@@ -23,6 +23,12 @@ public sealed class AccountController(IAccountService account, IAccountExportSer
     public async Task<IActionResult> UpdateProfile(UpdateProfileRequest request, CancellationToken cancellationToken) =>
         (await account.UpdateProfileAsync(UserId, request, cancellationToken)).ToActionResult(this);
 
+    /// <summary>Turns budget alert emails (at 80% and 100% of a category's monthly budget) on or off.</summary>
+    [HttpPut("notifications")]
+    [ProducesResponseType<UserDto>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> UpdateNotifications(UpdateNotificationsRequest request, CancellationToken cancellationToken) =>
+        (await account.UpdateNotificationsAsync(UserId, request, cancellationToken)).ToActionResult(this);
+
     /// <summary>
     /// Changes the password after checking the current one. Every other device is signed out; the session of
     /// <c>refreshToken</c> stays signed in. A wrong current password is a 400 and counts towards the sign-in lockout.

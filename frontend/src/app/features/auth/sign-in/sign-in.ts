@@ -23,6 +23,9 @@ export class SignIn {
   /** Query parameter: set when the session ran out. */
   readonly expired = input(false, { transform: booleanAttribute });
 
+  /** Query parameter: set after a new password was chosen from a reset link. */
+  readonly reset = input(false, { transform: booleanAttribute });
+
   /** Query parameter: set after the user deleted their account. */
   readonly deleted = input(false, { transform: booleanAttribute });
 

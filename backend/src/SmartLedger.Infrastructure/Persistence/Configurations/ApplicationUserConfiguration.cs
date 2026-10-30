@@ -10,5 +10,8 @@ internal sealed class ApplicationUserConfiguration : IEntityTypeConfiguration<Ap
     {
         builder.Property(u => u.DisplayName).HasMaxLength(100);
         builder.Property(u => u.BaseCurrency).HasMaxLength(3).IsFixedLength().IsUnicode(false);
+
+        // Existing accounts get alerts on too; the migration's default fills them in.
+        builder.Property(u => u.BudgetAlerts).HasDefaultValue(true).HasSentinel(true);
     }
 }

@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using SmartLedger.Application.Budgets;
 using SmartLedger.Application.Categories;
 using SmartLedger.Application.Common;
 using SmartLedger.Application.Common.Storage;
@@ -16,6 +17,7 @@ internal sealed class ReceiptService(
     ICategoryRepository categories,
     IUserDirectory users,
     IExchangeRateService exchangeRates,
+    IBudgetAlertService budgetAlerts,
     TimeProvider timeProvider,
     ICurrentUser currentUser,
     ILogger<ReceiptService> logger) : IReceiptService
@@ -353,6 +355,9 @@ internal sealed class ReceiptService(
 
         receipt.Approve(baseCurrency, rate, rateDate, amountCharged, timeProvider.GetUtcNow());
         await repository.SaveChangesAsync(cancellationToken);
+
+        // The approval counts towards the category's budget now; tell the user if it crossed 80% or 100%.
+        await budgetAlerts.CheckAsync(receipt, cancellationToken);
         return ToDetail(receipt);
     }
 

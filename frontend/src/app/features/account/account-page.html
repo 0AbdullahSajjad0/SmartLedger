@@ -111,6 +111,37 @@
   </div>
 </section>
 
+<section class="setting" aria-labelledby="alerts-title">
+  <div class="setting__about">
+    <h2 id="alerts-title" class="setting__title">Email alerts</h2>
+    <p>Sent to <span class="mono">{{ auth.user()?.email }}</span>.</p>
+  </div>
+
+  <div class="setting__body">
+    <label class="switch">
+      <input
+        #alerts
+        type="checkbox"
+        aria-describedby="alerts-note"
+        [checked]="auth.user()?.budgetAlerts"
+        [disabled]="saveAlerts.busy()"
+        (change)="setBudgetAlerts(alerts)"
+      />
+      <span>Budget alerts</span>
+    </label>
+    <p id="alerts-note" class="setting__note">
+      An email when a category reaches 80% of its monthly budget, and another if it goes over. Once each per category
+      and month, for the current month.
+    </p>
+    @if (saveAlerts.done()) {
+      <span class="setting__done" role="status">Saved. Alerts are {{ auth.user()?.budgetAlerts ? 'on' : 'off' }}.</span>
+    }
+    @if (saveAlerts.error(); as message) {
+      <p class="form-alert" role="alert">{{ message }}</p>
+    }
+  </div>
+</section>
+
 <section class="setting" aria-labelledby="devices-title">
   <div class="setting__about">
     <h2 id="devices-title" class="setting__title">Devices</h2>

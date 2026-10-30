@@ -28,6 +28,30 @@ export const routes: Routes = [
     ],
   },
   {
+    path: 'forgot-password',
+    canMatch: [signedOutGuard],
+    loadComponent: () => import('./layout/auth-layout/auth-layout').then((m) => m.AuthLayout),
+    children: [
+      {
+        path: '',
+        title: 'Reset password · SmartLedger',
+        loadComponent: () => import('./features/auth/forgot-password/forgot-password').then((m) => m.ForgotPassword),
+      },
+    ],
+  },
+  {
+    path: 'reset-password',
+    canMatch: [signedOutGuard],
+    loadComponent: () => import('./layout/auth-layout/auth-layout').then((m) => m.AuthLayout),
+    children: [
+      {
+        path: '',
+        title: 'New password · SmartLedger',
+        loadComponent: () => import('./features/auth/reset-password/reset-password').then((m) => m.ResetPassword),
+      },
+    ],
+  },
+  {
     path: '',
     canMatch: [signedInGuard],
     loadComponent: () => import('./layout/app-shell/app-shell').then((m) => m.AppShell),

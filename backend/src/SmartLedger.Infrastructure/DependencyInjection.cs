@@ -1,6 +1,9 @@
+using Azure.Communication.Email;
 using Azure.Identity;
 using Azure.Storage.Blobs;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -10,14 +13,17 @@ using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
 using SmartLedger.Application.Account;
 using SmartLedger.Application.Auth;
+using SmartLedger.Application.Budgets;
 using SmartLedger.Application.Categories;
 using SmartLedger.Application.Common;
 using SmartLedger.Application.Common.Storage;
+using SmartLedger.Application.Email;
 using SmartLedger.Application.ExchangeRates;
 using SmartLedger.Application.Receipts;
 using SmartLedger.Application.Receipts.Extraction;
 using SmartLedger.Application.Receipts.Previews;
 using SmartLedger.Application.Reports;
+using SmartLedger.Infrastructure.Email;
 using SmartLedger.Infrastructure.ExchangeRates;
 using SmartLedger.Infrastructure.Extraction;
 using SmartLedger.Infrastructure.Gemini;
@@ -54,13 +60,47 @@ public static class DependencyInjection
         services.AddScoped<IReportRepository, ReportRepository>();
         services.AddScoped<IUserDirectory, UserDirectory>();
         services.AddScoped<IAccountDataReader, AccountDataReader>();
+        services.AddScoped<IBudgetAlertRepository, BudgetAlertRepository>();
 
         AddAuth(services, configuration);
         AddStorage(services, configuration);
         AddExtraction(services, configuration);
         AddExchangeRates(services);
+        AddEmail(services, configuration);
 
         return services;
+    }
+
+    private static void AddEmail(IServiceCollection services, IConfiguration configuration)
+    {
+        services.AddOptions<EmailOptions>()
+            .Bind(configuration.GetSection(EmailOptions.SectionName))
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
+
+        services.AddSingleton<EmailSignal>();
+        services.AddScoped<IEmailOutbox, EmailOutbox>();
+        services.AddScoped<EmailComposer>();
+        services.AddHostedService<EmailOutboxWorker>();
+
+        // Chosen when first used, from the validated options: Local in development, Azure in production.
+        services.AddSingleton<IEmailSender>(provider =>
+        {
+            var options = provider.GetRequiredService<IOptions<EmailOptions>>().Value;
+
+            return options.Provider switch
+            {
+                EmailProvider.Local => ActivatorUtilities.CreateInstance<LocalEmailSender>(provider),
+                // No connection string or key: the Container App's managed identity has a role on the resource.
+                EmailProvider.AzureCommunicationServices => ActivatorUtilities.CreateInstance<AzureEmailSender>(
+                    provider,
+                    new EmailClient(
+                        new Uri(options.Endpoint!),
+                        new DefaultAzureCredential(),
+                        new EmailClientOptions { Retry = { MaxRetries = 0 } })),
+                _ => throw new InvalidOperationException($"Unknown email provider {options.Provider}."),
+            };
+        });
     }
 
     private static void AddExchangeRates(IServiceCollection services)
@@ -149,7 +189,19 @@ public static class DependencyInjection
                 options.Lockout.MaxFailedAccessAttempts = 5;
                 options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
             })
-            .AddEntityFrameworkStores<AppDbContext>();
+            .AddEntityFrameworkStores<AppDbContext>()
+            // Password reset tokens: signed with Data Protection, tied to the account's security stamp.
+            .AddDefaultTokenProviders();
+
+        services.Configure<DataProtectionTokenProviderOptions>(options =>
+            options.TokenLifespan = EmailComposer.PasswordResetLifetime);
+
+        // The signing keys live in the database so reset links survive restarts and deployments. They're stored
+        // unencrypted, as the database is already private (Entra-only sign-in, no public data); Key Vault could wrap
+        // them later.
+        services.AddDataProtection()
+            .SetApplicationName("SmartLedger")
+            .PersistKeysToDbContext<AppDbContext>();
 
         services.AddOptions<JwtOptions>()
             .Bind(configuration.GetSection(JwtOptions.SectionName))

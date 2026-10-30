@@ -49,6 +49,25 @@ internal sealed class AccountService(
         return AuthService.ToDto(user);
     }
 
+    public async Task<Result<UserDto>> UpdateNotificationsAsync(
+        Guid userId, UpdateNotificationsRequest request, CancellationToken cancellationToken)
+    {
+        var user = await userManager.FindByIdAsync(userId.ToString());
+        if (user is null)
+        {
+            return UserNotFound;
+        }
+
+        user.BudgetAlerts = request.BudgetAlerts;
+        var updated = await userManager.UpdateAsync(user);
+        if (!updated.Succeeded)
+        {
+            throw new InvalidOperationException($"Updating user {userId} failed: {Describe(updated)}");
+        }
+
+        return AuthService.ToDto(user);
+    }
+
     public async Task<Result<bool>> ChangePasswordAsync(Guid userId, ChangePasswordRequest request, CancellationToken cancellationToken)
     {
         var user = await userManager.FindByIdAsync(userId.ToString());
